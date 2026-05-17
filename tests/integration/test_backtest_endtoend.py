@@ -131,37 +131,53 @@ class TestMaxLossHardBreach:
         assert len(flatten_fills) == 1
 
 
-class TestDailyLossSoftHalt:
-    def test_dll_blocks_new_entries_but_doesnt_fail_combine(self):
-        # Day 1: buy at 4500, slip to a point that triggers DLL (>$1000 down)
-        #        engine flattens, no new entries.
-        # Day 2: nothing happens (strategy already fired once).
-        # Result: combine NOT failed (just under target), no MLL breach.
+class TestDailyLossOptOut:
+    """The Combine doesn't enforce a DLL, so the default config never
+    halts on intraday loss. We assert both branches: (a) default rules
+    let a -$1,050 day pass with no breach; (b) explicitly configuring a
+    DLL via dataclasses.replace() restores the soft-halt behaviour."""
+
+    def _losing_day_bars(self):
         start = utc(2026, 1, 5, 14)
         bars = []
-        # Day 1: 4500 -> 4479 = -21 pts * $50 = -$1,050 (past DLL of $1,000)
+        # Day 1: 4500 -> 4479 = -21 pts * $50 = -$1,050
         for i, p in enumerate([4500, 4500, 4490, 4479]):
             bars.append(Bar(
                 ts=start + timedelta(hours=i),
                 open=p, high=p + 0.25, low=p - 0.25,
                 close=p, volume=100,
             ))
-        # Day 2: flat market
+        # Day 2 stays flat to let the engine see a day rollover
         for i, p in enumerate([4480, 4480, 4480]):
             bars.append(Bar(
                 ts=start + timedelta(days=1, hours=i),
                 open=p, high=p + 0.25, low=p - 0.25,
                 close=p, volume=100,
             ))
-        result = run(HoldOneLong(), {"ES": bars})
-        # Should NOT be passed (didn't hit profit target), but should NOT
-        # have a hard breach either.
+        return bars
+
+    def test_default_combine_does_not_halt_on_dll_sized_loss(self):
+        result = run(HoldOneLong(), {"ES": self._losing_day_bars()})
         assert not result.passed
-        # DLL is recorded as a SOFT breach in audit but breach_result
-        # is reserved for HARD/end-of-cycle breaches that prevent passing.
+        assert result.breach is None
+        dll_breaches = [
+            e for e in result.audit.of_kind("breach")
+            if e.payload["reason"] == "daily_loss_limit"
+        ]
+        assert dll_breaches == []
+
+    def test_with_configured_dll_soft_halts(self):
+        from dataclasses import replace
+        bars = self._losing_day_bars()
+        clock = Clock(utc(2026, 1, 5) - timedelta(seconds=1))
+        data = InMemoryBarSource({"ES": bars}, clock)
+        rules = replace(combine_50k(), daily_loss_limit=Decimal("1000"))
+        bt = Backtester(rules=rules, instruments={"ES": ES},
+                        strategy=HoldOneLong(), audit=InMemoryAuditLog())
+        result = bt.run(clock, data)
         dll_breaches = [
             e for e in result.audit.of_kind("breach")
             if e.payload["reason"] == "daily_loss_limit"
         ]
         assert len(dll_breaches) == 1
-        assert result.breach is None  # not a hard breach
+        assert result.breach is None  # soft, not a Combine fail

@@ -26,8 +26,7 @@ the corresponding constants in `topstep.py` and the test fixtures in
 | Profit target | $3,000 | EOD equity at start + 3,000 |
 | Max Loss Limit distance | $2,000 (initial line = $48,000) | See "MLL mechanic" below |
 | MLL trail mechanic | **End-of-day**, ratchets on max EOD balance, locks at starting balance | topstep.com blog explicitly says "End-of-Day Drawdown" |
-| Daily Loss Limit | $1,000 | See "DLL platform nuance" below |
-| DLL semantics | Soft: auto-liquidate + halt new entries; does NOT fail Combine | — |
+| Daily Loss Limit | **Not enforced on the Combine** | See "DLL on the Combine" below |
 | Max contracts | 5 standard or 50 micros (account-wide) | 10:1 micro:standard ratio; mixed positions allowed |
 | Consistency rule | Best winning day <= 50% of total cycle PnL | Evaluated at end-of-combine only |
 | Minimum trading days | None on the Combine | XFA / Funded payout has different rules |
@@ -47,19 +46,30 @@ third-party guides confuse the Combine MLL with intraday-trailing
 mechanics used by other prop firms; we follow the topstep.com primary
 source.
 
-## DLL platform nuance
+## DLL on the Combine
 
-In August 2024 Topstep removed the default Daily Loss Limit on
-**TopstepX** (their proprietary platform) for both Trading Combines
-and Express Funded Accounts. As of 2026 this remains the case.
+**The TopStep Trading Combine does NOT enforce a Daily Loss Limit**
+(verified with the account owner, 2026-05). The `combine_50k()`
+preset therefore sets `daily_loss_limit = None`, and the engine's
+`check_daily_loss` returns `None` whenever the limit is unset.
 
-The DLL **is still enforced** on NinjaTrader, Tradovate, Quantower,
-and TradingView. Our backtester models the platform that DOES enforce
-the DLL (the more conservative assumption); a strategy that passes
-under DLL enforcement also passes without it.
+The field is retained on `TopstepRules` so callers can opt in to DLL
+enforcement for two real scenarios:
 
-If we ever add an Express-Funded simulator that explicitly mimics
-TopstepX, the DLL check should be gated by a platform flag.
+  1. A **personal DLL** configured by the trader as a self-imposed
+     risk cap (Topstep supports this via Trailing Personal DLL).
+  2. Some Funded-account configurations and certain front-end
+     platforms (NinjaTrader / Tradovate / Quantower / TradingView)
+     can still impose a DLL at the platform layer.
+
+To model either, override the preset:
+
+    from dataclasses import replace
+    rules = replace(combine_50k(), daily_loss_limit=Decimal("1000"))
+
+The pass-rate measurement and ORB strategy operate against the
+default (no-DLL) Combine rules; the configurable path is exercised
+in tests so the code path doesn't bit-rot.
 
 ## Scaling Plan vs Combine
 

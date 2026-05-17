@@ -75,7 +75,7 @@ class TopstepRules:
     starting_balance: Decimal
     profit_target: Decimal
     max_loss_limit_distance: Decimal  # distance below the trail anchor
-    daily_loss_limit: Decimal
+    daily_loss_limit: Decimal | None  # None = not enforced (Combine default)
     max_contracts_standard: int  # account-wide cap, standard-equivalent
     max_contracts_micro: int     # account-wide cap, micro-equivalent
     consistency_max_best_day_pct: Decimal  # e.g. Decimal("0.50") = 50%
@@ -155,6 +155,16 @@ class TopstepRules:
     def check_daily_loss(
         self, current_equity: Decimal, sod_equity: Decimal
     ) -> RuleBreach | None:
+        """Soft breach when intraday PnL <= -daily_loss_limit.
+
+        Returns None when `daily_loss_limit` is None: the TopStep Combine
+        does not impose a DLL (verified 2026-05; see docs/rules_sources.md).
+        The field is retained for platforms / account types that DO
+        enforce one (Express Funded with a personal DLL configured, or
+        platform-side defaults on NinjaTrader/Tradovate/Quantower).
+        """
+        if self.daily_loss_limit is None:
+            return None
         intraday_pnl = current_equity - sod_equity
         if intraday_pnl <= -self.daily_loss_limit:
             return RuleBreach(
@@ -237,12 +247,18 @@ class TrailingMLL:
 
 
 def combine_50k() -> TopstepRules:
-    """Topstep $50K Trading Combine parameters."""
+    """Topstep $50K Trading Combine parameters.
+
+    The Combine itself does NOT enforce a Daily Loss Limit (verified
+    2026-05; see docs/rules_sources.md). The DLL field is left as None
+    so the engine skips that check. Pass any positive Decimal here if
+    you want to model a personal DLL or a platform that enforces one.
+    """
     return TopstepRules(
         starting_balance=Decimal("50000"),
         profit_target=Decimal("3000"),
         max_loss_limit_distance=Decimal("2000"),
-        daily_loss_limit=Decimal("1000"),
+        daily_loss_limit=None,
         max_contracts_standard=5,
         max_contracts_micro=50,
         consistency_max_best_day_pct=Decimal("0.50"),

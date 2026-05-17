@@ -61,20 +61,41 @@ class TestPositionSize:
 
 
 # ---- daily loss limit -----------------------------------------------------
+#
+# The TopStep $50K Combine does NOT enforce a DLL. The `combine_50k()`
+# preset sets daily_loss_limit=None so check_daily_loss always returns
+# None. The check is retained for callers that want to model a personal
+# DLL or a platform-enforced one (NinjaTrader/Tradovate/Quantower).
 
-class TestDailyLoss:
-    def test_within_limit(self, rules):
-        sod = Decimal("50000")
-        assert rules.check_daily_loss(Decimal("49001"), sod) is None
 
-    def test_exactly_at_limit_breaches(self, rules):
-        sod = Decimal("50000")
-        breach = rules.check_daily_loss(Decimal("49000"), sod)
+class TestDailyLossDisabledByDefault:
+    def test_combine_50k_has_none(self, rules):
+        assert rules.daily_loss_limit is None
+
+    def test_no_breach_regardless_of_loss(self, rules):
+        # Even a $5K intraday drop produces no breach when DLL is None.
+        assert rules.check_daily_loss(Decimal("45000"), Decimal("50000")) is None
+
+
+class TestDailyLossWhenConfigured:
+    """If a caller does configure a DLL, the soft-breach behaviour
+    matches the older platform-enforced semantics."""
+
+    @pytest.fixture
+    def rules_with_dll(self):
+        from dataclasses import replace
+        return replace(combine_50k(), daily_loss_limit=Decimal("1000"))
+
+    def test_within_limit(self, rules_with_dll):
+        assert rules_with_dll.check_daily_loss(Decimal("49001"), Decimal("50000")) is None
+
+    def test_exactly_at_limit_breaches_soft(self, rules_with_dll):
+        breach = rules_with_dll.check_daily_loss(Decimal("49000"), Decimal("50000"))
         assert breach is not None
-        assert breach.breach_type is BreachType.SOFT  # important: NOT hard
+        assert breach.breach_type is BreachType.SOFT
 
-    def test_below_limit_still_soft(self, rules):
-        breach = rules.check_daily_loss(Decimal("48500"), Decimal("50000"))
+    def test_well_below_limit_still_soft(self, rules_with_dll):
+        breach = rules_with_dll.check_daily_loss(Decimal("48500"), Decimal("50000"))
         assert breach.breach_type is BreachType.SOFT
 
 
