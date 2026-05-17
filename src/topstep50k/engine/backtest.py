@@ -219,12 +219,17 @@ class Backtester:
                 delta = target.qty - cur
                 if delta == 0:
                     continue
-                # Position-cap check on the resulting position size
-                cap_breach = self.rules.check_position_size(target.symbol, abs(target.qty))
+                # Account-level position-cap check: simulate the post-fill
+                # exposure across all open positions and reject if it
+                # would exceed the account's micro-equivalent cap.
+                projected = {s: p.qty for s, p in ledger.positions.items()}
+                projected[target.symbol] = target.qty
+                cap_breach = self.rules.check_position_size(projected)
                 if cap_breach is not None:
                     emit("order_rejected", symbol=target.symbol,
                          reason="position_cap", target_qty=target.qty,
-                         cap=cap_breach.limit, tag=target.tag)
+                         cap=cap_breach.limit, observed=cap_breach.observed,
+                         tag=target.tag)
                     continue
                 side = OrderSide.BUY if delta > 0 else OrderSide.SELL
                 pending.append(_PendingOrder(

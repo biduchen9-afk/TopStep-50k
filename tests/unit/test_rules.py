@@ -29,22 +29,35 @@ def rules() -> TopstepRules:
 # ---- position size --------------------------------------------------------
 
 class TestPositionSize:
-    def test_standard_cap_5(self, rules):
-        assert rules.check_position_size("ES", 5) is None
+    def test_standard_only_at_cap(self, rules):
+        # 5 ES = 50 micro-equivalents = exactly the cap
+        assert rules.check_position_size({"ES": 5}) is None
 
-    def test_standard_cap_breached_at_6(self, rules):
-        breach = rules.check_position_size("ES", 6)
+    def test_standard_only_over_cap(self, rules):
+        breach = rules.check_position_size({"ES": 6})
         assert breach is not None
         assert breach.reason is BreachReason.POSITION_SIZE_EXCEEDED
         assert breach.breach_type is BreachType.HARD
 
-    def test_micro_cap_50(self, rules):
-        assert rules.check_position_size("MES", 50) is None
-        assert rules.check_position_size("MES", 51) is not None
+    def test_micros_only_at_cap(self, rules):
+        assert rules.check_position_size({"MES": 50}) is None
+        assert rules.check_position_size({"MES": 51}) is not None
 
-    def test_unknown_symbol_uses_standard_cap(self, rules):
+    def test_mixed_under_cap(self, rules):
+        # 2 ES (=20 micros) + 30 MES = 50 micros total -> OK
+        assert rules.check_position_size({"ES": 2, "MES": 30}) is None
+
+    def test_mixed_over_cap(self, rules):
+        # 3 ES (=30 micros) + 21 MES = 51 micros total -> breach
+        assert rules.check_position_size({"ES": 3, "MES": 21}) is not None
+
+    def test_signed_qty_uses_abs(self, rules):
+        # Short positions count by absolute size
+        assert rules.check_position_size({"ES": -6}) is not None
+
+    def test_unknown_symbol_treated_as_standard(self, rules):
         # An unknown symbol must not silently get the looser micro cap.
-        assert rules.check_position_size("CL", 6) is not None
+        assert rules.check_position_size({"CL": 6}) is not None
 
 
 # ---- daily loss limit -----------------------------------------------------

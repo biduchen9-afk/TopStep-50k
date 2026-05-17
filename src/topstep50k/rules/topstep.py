@@ -61,17 +61,25 @@ class TopstepRules:
     """Parameters for a single Trading Combine account size.
 
     All monetary values are in account currency (USD) and stored as
-    Decimal so the rule arithmetic is exact — never float comparisons
+    Decimal so the rule arithmetic is exact -- never float comparisons
     against limit values.
+
+    Contract-cap semantics (verified 2026-05): on the $50K Combine the
+    cap is ACCOUNT-LEVEL total exposure, not per-symbol. Topstep counts
+    each standard contract as `micro_to_standard_ratio` micros toward
+    the cap (default 10:1). So the legal maxima are 5 standard, or 50
+    micros, or any mix totalling <= 50 micro-equivalents. See
+    docs/rules_sources.md for sources.
     """
 
     starting_balance: Decimal
     profit_target: Decimal
     max_loss_limit_distance: Decimal  # distance below the trail anchor
     daily_loss_limit: Decimal
-    max_contracts_standard: int  # cap on any one symbol at one time
-    max_contracts_micro: int
+    max_contracts_standard: int  # account-wide cap, standard-equivalent
+    max_contracts_micro: int     # account-wide cap, micro-equivalent
     consistency_max_best_day_pct: Decimal  # e.g. Decimal("0.50") = 50%
+    micro_to_standard_ratio: int = 10
     # Symbols recognised as "micro" for the contract cap. The standard cap
     # applies to everything else.
     micro_symbols: frozenset[str] = field(
@@ -79,21 +87,46 @@ class TopstepRules:
     )
 
     def position_cap(self, symbol: str) -> int:
+        """Per-symbol convenience cap. Returns the maximum number of
+        contracts of `symbol` you could hold if it were the ONLY open
+        position. For the actual account-level check use
+        `check_position_size`.
+        """
         return self.max_contracts_micro if symbol in self.micro_symbols else self.max_contracts_standard
+
+    def micro_equivalents(self, positions: Mapping[str, int]) -> int:
+        """Sum of |qty| across positions, scaling standard contracts up
+        by `micro_to_standard_ratio`. This is the quantity TopStep
+        compares to the cap."""
+        total = 0
+        for sym, qty in positions.items():
+            size = abs(int(qty))
+            if size == 0:
+                continue
+            total += size if sym in self.micro_symbols else size * self.micro_to_standard_ratio
+        return total
 
     # ----- core evaluators -------------------------------------------------
 
     def check_position_size(
-        self, symbol: str, new_abs_position: int
+        self, projected_positions: Mapping[str, int]
     ) -> RuleBreach | None:
-        cap = self.position_cap(symbol)
-        if new_abs_position > cap:
+        """Account-level total-exposure check.
+
+        `projected_positions` is what the open-position dict would look
+        like AFTER the order under consideration fills (engine's job to
+        construct). Cap is `max_contracts_micro` in micro-equivalent
+        units.
+        """
+        total = self.micro_equivalents(projected_positions)
+        cap = self.max_contracts_micro
+        if total > cap:
             return RuleBreach(
                 reason=BreachReason.POSITION_SIZE_EXCEEDED,
                 breach_type=BreachType.HARD,
-                observed=Decimal(new_abs_position),
+                observed=Decimal(total),
                 limit=Decimal(cap),
-                detail=f"symbol={symbol}",
+                detail=f"positions={dict(projected_positions)}",
             )
         return None
 

@@ -1,45 +1,97 @@
-# TopStep Rule Sources
+# TopStep $50K Trading Combine — Rule Sources
 
 The numeric parameters in `src/topstep50k/rules/topstep.py` come from
-Topstep's published help-center articles. If any of these articles change,
-the corresponding constants in `topstep.py` must be updated and the test
-fixtures in `tests/unit/test_rules.py` regenerated.
+Topstep's published help-center articles and the topstep.com blog.
+This document is the source of truth: if any of these articles change,
+the corresponding constants in `topstep.py` and the test fixtures in
+`tests/unit/test_rules.py` must be updated in a single commit titled
+`rules: sync to <date>`.
 
-## $50K Trading Combine — sources
+## Authoritative URLs
 
-| Parameter | Value | Source |
+| Topic | URL |
+|---|---|
+| Combine parameters | https://help.topstep.com/en/articles/8284197-trading-combine-parameters |
+| Maximum Loss Limit | https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit |
+| Daily Loss Limit | https://help.topstep.com/en/articles/10490293-daily-loss-limit-in-the-trading-combine-and-express-funded-account |
+| Scaling Plan | https://help.topstep.com/en/articles/8284223-what-is-the-scaling-plan |
+| Consistency | https://help.topstep.com/en/articles/8284208-consistency-at-topstep |
+| Drawdown blog | https://www.topstep.com/blog/prop-firm-drawdown-rules/ |
+
+## $50K Combine — current values (verified 2026-05)
+
+| Parameter | Value | Notes |
 |---|---|---|
-| Starting balance | $50,000 | Topstep Help: "Trading Combine Parameters" |
-| Profit target | $3,000 | Topstep Help: "Trading Combine Parameters" |
-| Max Loss Limit distance | $2,000 (line = $48,000 at start) | Topstep Help: "What is the Maximum Loss Limit?" |
-| MLL trail mechanic | End-of-day, locks at starting balance | Topstep Help: "What is the Maximum Loss Limit?" |
-| Daily Loss Limit | $1,000 | Topstep Help: "Daily Loss Limit in the Trading Combine" |
-| DLL semantics | Auto-liquidate for session, NOT a Combine fail | Topstep Help: "Daily Loss Limit in the Trading Combine" |
-| Max contracts (standard) | 5 per symbol | Topstep Help: "What is the Scaling Plan?" / max contracts breakdowns |
-| Max contracts (micro) | 50 per symbol | Topstep Help: per-account contract limits |
-| Consistency rule | Best winning day <= 50% of total cycle PnL | Topstep Help: consistency / "$150 Winning Day" article |
+| Starting balance | $50,000 | — |
+| Profit target | $3,000 | EOD equity at start + 3,000 |
+| Max Loss Limit distance | $2,000 (initial line = $48,000) | See "MLL mechanic" below |
+| MLL trail mechanic | **End-of-day**, ratchets on max EOD balance, locks at starting balance | topstep.com blog explicitly says "End-of-Day Drawdown" |
+| Daily Loss Limit | $1,000 | See "DLL platform nuance" below |
+| DLL semantics | Soft: auto-liquidate + halt new entries; does NOT fail Combine | — |
+| Max contracts | 5 standard or 50 micros (account-wide) | 10:1 micro:standard ratio; mixed positions allowed |
+| Consistency rule | Best winning day <= 50% of total cycle PnL | Evaluated at end-of-combine only |
+| Minimum trading days | None on the Combine | XFA / Funded payout has different rules |
 
-URLs (https://help.topstep.com):
-* /en/articles/8284197-trading-combine-parameters
-* /en/articles/8284204-what-is-the-maximum-loss-limit
-* /en/articles/8284207-what-is-the-daily-loss-limit-and-what-happens-if-i-exceed-it
-* /en/articles/8284223-what-is-the-scaling-plan
+## MLL mechanic — clarification
+
+Topstep's own blog (`topstep.com/blog/prop-firm-drawdown-rules`) states
+that the firm "uses End-of-Day Drawdown, which mirrors real market
+conditions." On the Combine and the Express Funded Account, the MLL:
+
+  1. Starts at `starting_balance - distance` ($48,000 for $50K).
+  2. Trails the highest END-OF-DAY balance, never decreasing.
+  3. Locks at the starting balance once the trail reaches it.
+
+This matches the `TrailingMLL` state machine in `topstep.py`. Some
+third-party guides confuse the Combine MLL with intraday-trailing
+mechanics used by other prop firms; we follow the topstep.com primary
+source.
+
+## DLL platform nuance
+
+In August 2024 Topstep removed the default Daily Loss Limit on
+**TopstepX** (their proprietary platform) for both Trading Combines
+and Express Funded Accounts. As of 2026 this remains the case.
+
+The DLL **is still enforced** on NinjaTrader, Tradovate, Quantower,
+and TradingView. Our backtester models the platform that DOES enforce
+the DLL (the more conservative assumption); a strategy that passes
+under DLL enforcement also passes without it.
+
+If we ever add an Express-Funded simulator that explicitly mimics
+TopstepX, the DLL check should be gated by a platform flag.
+
+## Scaling Plan vs Combine
+
+The Scaling Plan (2 -> 3 -> 5 contracts at $1,500 / $2,000 profit
+thresholds) is an **Express Funded Account** rule, NOT a Combine rule.
+The $50K Combine has the flat 5-standard / 50-micro cap from day one.
+Our preset `combine_50k()` encodes the Combine cap; a separate `xfa_*`
+preset would be needed for the funded account.
 
 ## What is intentionally NOT enforced yet
 
-* **Minimum trading days for Combine pass** — Topstep documents this for
-  Express Funded payouts; the Combine itself doesn't currently mandate a
-  minimum count. Add only when confirmed.
-* **News/event blackout** — not a Combine rule. Funded-account rules differ
-  and should be encoded in a separate class when we add the funded sim.
-* **Weekend / overnight holding** — allowed on Combine. Funded accounts
-  have additional flatten-by-time-X rules; out of scope here.
+* **News/event blackout** — not a Combine rule. Funded accounts apply
+  flatten-by-news rules separately.
+* **Weekend / overnight holding** — allowed on Combine. Express Funded
+  has additional flatten-by-time-X rules; out of scope here.
+* **$150 winning day** — counts toward minimum trading days for
+  Express Funded payouts. Not relevant to passing the Combine itself.
+* **Dynamic Live Risk Expansion** — a topstep.com feature article
+  exists; not part of the standard $50K Combine evaluation.
 
 ## Verification protocol
 
-1. WebFetch each URL above (or open in browser if Cloudflare blocks the
-   automated fetch).
-2. For each parameter in the table, confirm the article still asserts
-   the same value.
+1. WebFetch each URL above. (If the sandbox network policy blocks the
+   help.topstep.com host, use WebSearch with a query targeting
+   topstep.com to retrieve excerpts; cross-check at least two
+   independent third-party sources from the same year.)
+2. For each parameter in the table above, confirm the article still
+   asserts the same value.
 3. If any value changed, update `topstep.py` constants, this doc, and
    tests in a single commit titled `rules: sync to <date>`.
+
+Last verification: 2026-05-17 (via WebSearch; help.topstep.com is
+denied at the sandbox network policy level so direct WebFetch was not
+possible -- the verification used the topstep.com blog and two
+independent third-party 2026 references as cross-checks).
