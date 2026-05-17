@@ -48,8 +48,8 @@ per-day.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
-from typing import Literal
+from datetime import date, datetime, time, timedelta
+from typing import Callable, Literal
 from zoneinfo import ZoneInfo
 
 from topstep50k.engine.types import Bar
@@ -119,8 +119,13 @@ class OpeningRangeBreakout:
     # fraction of the trailing-N median OR width. 0.0 disables.
     min_or_width_vs_median: float = 0.0
     or_width_history_days: int = 20
+    # Optional per-day gate. Called once when a new trading day starts;
+    # if it returns False the strategy stands flat for the whole day.
+    # Argument is the trading date in US/Eastern.
+    daily_filter: Callable[[date], bool] | None = None
     _or_widths: list[float] = field(init=False, default_factory=list, repr=False)
     _day_state: _DayState | None = field(init=False, default=None, repr=False)
+    _gated_today: bool = field(init=False, default=False, repr=False)
 
     def _build_day_state(self, bar_ts: datetime) -> _DayState:
         """For the trading day bar_ts belongs to (in Eastern), compute
@@ -160,6 +165,14 @@ class OpeningRangeBreakout:
         """
         if self._need_new_day(bar.ts):
             self._day_state = self._build_day_state(bar.ts)
+            # Daily gate evaluated once at the start of a new trading day.
+            if self.daily_filter is not None:
+                day_local = bar.ts.astimezone(EASTERN).date()
+                self._gated_today = not self.daily_filter(day_local)
+            else:
+                self._gated_today = False
+        if self._gated_today:
+            return None
 
         st = self._day_state
         # Outside the regular session entirely? Stay flat.
