@@ -87,6 +87,15 @@ class Backtester:
     instruments: dict[str, Instrument]
     strategy: Strategy
     audit: AuditLog = field(default_factory=InMemoryAuditLog)
+    # combine_enforcement=True (default): MLL and consistency rule
+    # checks halt / flatten the run as a real Combine would. Setting
+    # False makes the engine a pure strategy simulator -- the audit log
+    # still records breach events so you can analyse them, but trading
+    # continues. Use this mode to produce a continuous daily-PnL trace
+    # for downstream realized_pass_rate / bootstrap analysis. Position
+    # cap is ALWAYS enforced (it's a platform-level order rejection,
+    # not a Combine rule).
+    combine_enforcement: bool = True
 
     def run(self, clock: Clock, data: "BarStream") -> BacktestResult:
         ledger = Ledger(starting_balance=self.rules.starting_balance, instruments=self.instruments)
@@ -193,15 +202,17 @@ class Backtester:
 
             mll_breach = self.rules.check_max_loss(equity, mll.anchor)
             if mll_breach is not None:
-                breach_result = mll_breach
+                # Always log; only act on it in Combine-enforcement mode.
                 emit("breach", **{
                     "reason": mll_breach.reason.value,
                     "type": mll_breach.breach_type.value,
                     "observed": mll_breach.observed,
                     "limit": mll_breach.limit,
                 })
-                flatten_all("max_loss_limit")
-                break
+                if self.combine_enforcement:
+                    breach_result = mll_breach
+                    flatten_all("max_loss_limit")
+                    break
 
             dll_breach = self.rules.check_daily_loss(equity, ledger.sod_equity)
             if dll_breach is not None and not day_state["halt_entries"]:
@@ -252,13 +263,16 @@ class Backtester:
                  eod_equity=eod, day_pnl=day_delta,
                  mll_anchor=mll.anchor, mll_locked=mll.locked)
 
-        # Consistency check (end-of-cycle)
-        consistency = self.rules.check_consistency(ledger.daily_pnl)
-        if consistency is not None and breach_result is None:
-            breach_result = consistency
-            emit("breach", reason=consistency.reason.value,
-                 type=consistency.breach_type.value,
-                 observed=consistency.observed, limit=consistency.limit)
+        # Consistency check (end-of-cycle). Only matters in Combine
+        # enforcement mode -- consistency is a per-cycle rule and doesn't
+        # apply to a continuous 4-year trading trace.
+        if self.combine_enforcement:
+            consistency = self.rules.check_consistency(ledger.daily_pnl)
+            if consistency is not None and breach_result is None:
+                breach_result = consistency
+                emit("breach", reason=consistency.reason.value,
+                     type=consistency.breach_type.value,
+                     observed=consistency.observed, limit=consistency.limit)
 
         final_equity = ledger.equity(last_marks)
         passed = (
