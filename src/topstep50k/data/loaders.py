@@ -66,6 +66,7 @@ def _parse_iso_dt(parts: list[str]) -> Bar | None:
 
 def detect_schema(path: Path) -> SchemaResult:
     """Sniff the file's separator and date format from its first ~5 lines."""
+    path = Path(path)
     with path.open("r", encoding="utf-8", errors="replace") as f:
         sample_lines = []
         for _ in range(8):
@@ -114,6 +115,7 @@ def detect_schema(path: Path) -> SchemaResult:
 def load_bars_csv(path: Path) -> Iterator[Bar]:
     """Stream Bars from a cleaned bar file. Skips unparseable rows but
     counts them; caller can compare emitted count to file linecount."""
+    path = Path(path)
     schema, splitter, row_parser = detect_schema(path)
     with path.open("r", encoding="utf-8", errors="replace") as f:
         first = f.readline()
@@ -131,6 +133,7 @@ def load_bars_csv(path: Path) -> Iterator[Bar]:
 
 def load_bars_df(path: Path) -> pd.DataFrame:
     """Eager pandas DataFrame loader for ad-hoc analysis. Indexed by ts."""
+    path = Path(path)
     rows = list(load_bars_csv(path))
     if not rows:
         return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
