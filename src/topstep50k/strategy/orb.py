@@ -115,6 +115,11 @@ class OpeningRangeBreakout:
     session_open_local: time = time(9, 30)
     session_close_local: time = time(16, 0)
     tick_size: float = 0.25
+    # Optional chop filter: skip a day when its OR width is < this
+    # fraction of the trailing-N median OR width. 0.0 disables.
+    min_or_width_vs_median: float = 0.0
+    or_width_history_days: int = 20
+    _or_widths: list[float] = field(init=False, default_factory=list, repr=False)
     _day_state: _DayState | None = field(init=False, default=None, repr=False)
 
     def _build_day_state(self, bar_ts: datetime) -> _DayState:
@@ -176,6 +181,19 @@ class OpeningRangeBreakout:
                 return None
             st.or_width = st.or_high - st.or_low
             st.armed = True
+            # Chop filter: if today's OR is much narrower than recent
+            # median, skip the day entirely (no entries). Causal --
+            # uses only the past or_width_history_days closed days.
+            if self.min_or_width_vs_median > 0 and len(self._or_widths) >= 5:
+                hist = sorted(self._or_widths[-self.or_width_history_days:])
+                median = hist[len(hist) // 2]
+                if median > 0 and st.or_width < self.min_or_width_vs_median * median:
+                    st.triggered = True  # mark as already entered -> no signal
+            # Record this day's OR width for the rolling history
+            self._or_widths.append(st.or_width)
+            if len(self._or_widths) > self.or_width_history_days * 4:
+                # bound memory growth
+                self._or_widths = self._or_widths[-self.or_width_history_days * 2 :]
 
         # ----- post-OR: manage open position or look for breakout -----------
         # Time stop overrides everything.
