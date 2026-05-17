@@ -1,0 +1,216 @@
+"""TopStep Trading Combine rule encoding.
+
+The numbers and mechanics here come from Topstep's published help-center
+articles. Citations live in docs/rules_sources.md so any update to those
+articles forces a code-level diff.
+
+Design notes
+------------
+* Rules are encoded as PURE FUNCTIONS over an account-state snapshot plus
+  the event being evaluated. They never read clocks, files, or globals.
+* Every breach returns a structured RuleBreach with the deterministic
+  inputs that produced it, so the audit log can reproduce the decision.
+* The Max Loss Limit (MLL) trails the highest END-OF-DAY balance and
+  locks at the starting balance once it gets there. Intraday equity does
+  not move the trail — confirmed by Topstep's MLL help-center article.
+* The Daily Loss Limit (DLL) is a SOFT breach: hitting it auto-flattens
+  and bars new entries for the session, but does not fail the Combine.
+* The consistency rule (best-day <= 50% of total cycle PnL) is a
+  payout/eval-completion gate, not an intra-session liquidation trigger.
+* The scaling-plan max-position cap on the $50K Combine is 5 standard
+  contracts or 50 micros at any one time.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal
+from enum import Enum
+from typing import Mapping
+
+
+class BreachType(str, Enum):
+    """Hard = ends the Combine. Soft = blocks the rest of the session only."""
+
+    HARD = "hard"
+    SOFT = "soft"
+
+
+class BreachReason(str, Enum):
+    MAX_LOSS_LIMIT = "max_loss_limit"
+    DAILY_LOSS_LIMIT = "daily_loss_limit"
+    POSITION_SIZE_EXCEEDED = "position_size_exceeded"
+    CONSISTENCY = "consistency"  # evaluated at end-of-combine only
+
+
+@dataclass(frozen=True)
+class RuleBreach:
+    reason: BreachReason
+    breach_type: BreachType
+    observed: Decimal
+    limit: Decimal
+    detail: str = ""
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return f"{self.reason.value}[{self.breach_type.value}] observed={self.observed} limit={self.limit} {self.detail}"
+
+
+@dataclass(frozen=True)
+class TopstepRules:
+    """Parameters for a single Trading Combine account size.
+
+    All monetary values are in account currency (USD) and stored as
+    Decimal so the rule arithmetic is exact — never float comparisons
+    against limit values.
+    """
+
+    starting_balance: Decimal
+    profit_target: Decimal
+    max_loss_limit_distance: Decimal  # distance below the trail anchor
+    daily_loss_limit: Decimal
+    max_contracts_standard: int  # cap on any one symbol at one time
+    max_contracts_micro: int
+    consistency_max_best_day_pct: Decimal  # e.g. Decimal("0.50") = 50%
+    # Symbols recognised as "micro" for the contract cap. The standard cap
+    # applies to everything else.
+    micro_symbols: frozenset[str] = field(
+        default_factory=lambda: frozenset({"MES", "MNQ", "MYM", "M2K", "MGC", "MCL"})
+    )
+
+    def position_cap(self, symbol: str) -> int:
+        return self.max_contracts_micro if symbol in self.micro_symbols else self.max_contracts_standard
+
+    # ----- core evaluators -------------------------------------------------
+
+    def check_position_size(
+        self, symbol: str, new_abs_position: int
+    ) -> RuleBreach | None:
+        cap = self.position_cap(symbol)
+        if new_abs_position > cap:
+            return RuleBreach(
+                reason=BreachReason.POSITION_SIZE_EXCEEDED,
+                breach_type=BreachType.HARD,
+                observed=Decimal(new_abs_position),
+                limit=Decimal(cap),
+                detail=f"symbol={symbol}",
+            )
+        return None
+
+    def check_max_loss(
+        self, current_equity: Decimal, mll_anchor: Decimal
+    ) -> RuleBreach | None:
+        """MLL line = mll_anchor - max_loss_limit_distance.
+
+        mll_anchor starts at starting_balance and only moves UP, anchored
+        to the highest end-of-day balance, and locks once
+        anchor - distance >= starting_balance.
+
+        Caller is responsible for maintaining the anchor (see TrailingMLL).
+        """
+        line = mll_anchor - self.max_loss_limit_distance
+        if current_equity <= line:
+            return RuleBreach(
+                reason=BreachReason.MAX_LOSS_LIMIT,
+                breach_type=BreachType.HARD,
+                observed=current_equity,
+                limit=line,
+                detail=f"anchor={mll_anchor}",
+            )
+        return None
+
+    def check_daily_loss(
+        self, current_equity: Decimal, sod_equity: Decimal
+    ) -> RuleBreach | None:
+        intraday_pnl = current_equity - sod_equity
+        if intraday_pnl <= -self.daily_loss_limit:
+            return RuleBreach(
+                reason=BreachReason.DAILY_LOSS_LIMIT,
+                breach_type=BreachType.SOFT,
+                observed=intraday_pnl,
+                limit=-self.daily_loss_limit,
+                detail=f"sod_equity={sod_equity}",
+            )
+        return None
+
+    def check_consistency(
+        self, daily_pnl: Mapping[date, Decimal]
+    ) -> RuleBreach | None:
+        """End-of-combine evaluation. Pass requires
+            max(positive daily pnl) / sum(daily pnl) <= consistency_max_best_day_pct
+        with sum > 0.
+        """
+        if not daily_pnl:
+            return None
+        total = sum(daily_pnl.values(), start=Decimal(0))
+        if total <= 0:
+            return None  # consistency only matters if you actually made money
+        best = max((v for v in daily_pnl.values() if v > 0), default=Decimal(0))
+        ratio = best / total
+        if ratio > self.consistency_max_best_day_pct:
+            return RuleBreach(
+                reason=BreachReason.CONSISTENCY,
+                breach_type=BreachType.HARD,
+                observed=ratio,
+                limit=self.consistency_max_best_day_pct,
+                detail=f"best_day={best} total={total}",
+            )
+        return None
+
+    def reached_profit_target(self, eod_equity: Decimal) -> bool:
+        return eod_equity - self.starting_balance >= self.profit_target
+
+
+# ----- trailing-anchor state machine ---------------------------------------
+
+
+@dataclass
+class TrailingMLL:
+    """End-of-day trailing Maximum Loss Limit anchor.
+
+    Mechanics (per Topstep MLL article):
+      * Starts at starting_balance.
+      * After each trading day, anchor = max(anchor, end_of_day_balance).
+      * Once anchor - distance >= starting_balance, the anchor LOCKS at
+        the value that produces a line == starting_balance.
+      * Anchor never decreases.
+    """
+
+    starting_balance: Decimal
+    distance: Decimal
+    anchor: Decimal = field(init=False)
+    locked: bool = False
+
+    def __post_init__(self) -> None:
+        self.anchor = self.starting_balance
+
+    @property
+    def line(self) -> Decimal:
+        return self.anchor - self.distance
+
+    def update_end_of_day(self, eod_balance: Decimal) -> None:
+        if self.locked:
+            return
+        candidate = max(self.anchor, eod_balance)
+        # Will the new anchor push the line >= starting_balance?
+        if candidate - self.distance >= self.starting_balance:
+            self.anchor = self.starting_balance + self.distance
+            self.locked = True
+        else:
+            self.anchor = candidate
+
+
+# ----- presets -------------------------------------------------------------
+
+
+def combine_50k() -> TopstepRules:
+    """Topstep $50K Trading Combine parameters."""
+    return TopstepRules(
+        starting_balance=Decimal("50000"),
+        profit_target=Decimal("3000"),
+        max_loss_limit_distance=Decimal("2000"),
+        daily_loss_limit=Decimal("1000"),
+        max_contracts_standard=5,
+        max_contracts_micro=50,
+        consistency_max_best_day_pct=Decimal("0.50"),
+    )
