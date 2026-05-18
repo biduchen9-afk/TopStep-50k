@@ -1,0 +1,54 @@
+Loading ES bars...
+  1,522,612 bars in 19.2s
+
+Running each strategy independently (qty=1)...
+  [ORB] 1348 trading days, 11.8s
+  [MeanRev] 1348 trading days, 6.9s
+  [OvernightDrift] 1348 trading days, 11.7s
+
+Unified day index: 1348 days, 2021-12-31 -> 2026-04-24
+  TRAIN: 2021-12-31 -> 2023-12-29 (623 days)
+  TEST : 2023-12-31 -> 2026-04-24 (725 days)
+
+=== Individual strategies, TRAIN window ===
+           ORB (TRAIN) : days= 623  total=$      -45  Sharpe=-0.00  win-rate=44.8%  PF=1.00  MaxDD=$ -24,858  best=$+2,732  worst=$-3,480  pass30=21.0% (125/594)  pass45=14.7%
+       MeanRev (TRAIN) : days= 623  total=$   +7,352  Sharpe=+0.63  win-rate=29.5%  PF=1.12  MaxDD=$  -4,685  best=$+1,745  worst=$  -418  pass30= 6.7% (40/594)  pass45=11.7%
+  OvernightDrift (TRAIN) : days= 623  total=$  -22,902  Sharpe=-0.42  win-rate=48.3%  PF=0.93  MaxDD=$ -43,515  best=$+7,220  worst=$-6,630  pass30= 6.6% (39/594)  pass45= 6.9%
+
+=== TRAIN-window per-day stdev ===
+                   ORB : stdev=$+1,003.44
+               MeanRev : stdev=$ +296.79
+        OvernightDrift : stdev=$+1,381.66
+
+=== Inverse-vol weights (TRAIN-derived) ===
+                   ORB : weight=0.196
+               MeanRev : weight=0.662
+        OvernightDrift : weight=0.142
+
+=== Individual strategies, TEST window ===
+            ORB (TEST) : days= 725  total=$  +15,368  Sharpe=+0.31  win-rate=43.3%  PF=1.05  MaxDD=$ -26,485  best=$+6,132  worst=$-4,792  pass30=15.1% (105/696)  pass45=11.9%
+        MeanRev (TEST) : days= 725  total=$     +938  Sharpe=+0.07  win-rate=29.5%  PF=1.01  MaxDD=$ -10,425  best=$+1,582  worst=$-1,305  pass30= 1.0% (7/696)  pass45= 7.8%
+  OvernightDrift (TEST) : days= 725  total=$  +55,302  Sharpe=+0.69  win-rate=55.3%  PF=1.15  MaxDD=$ -53,868  best=$+7,232  worst=$-15,818  pass30=18.0% (125/696)  pass45=21.9%
+
+=== TEST-window correlation matrix ===
+                                   ORB         MeanRev  OvernightDrift
+                   ORB          +1.000          -0.138          -0.124
+               MeanRev          -0.138          +1.000          +0.035
+        OvernightDrift          -0.124          +0.035          +1.000
+
+=== Headline ensemble (all three, TRAIN-weighted) ===
+      ALL-THREE (TEST) : days= 725  total=$  +11,494  Sharpe=+0.72  win-rate=53.9%  PF=1.14  MaxDD=$  -7,704  best=$+1,679  worst=$-1,790  pass30= 8.8% (61/696)  pass45=23.6%
+
+=== Drop-one diagnostics (sensitivity check) ===
+              drop ORB : days= 725  total=$  +10,550  Sharpe=+0.58  win-rate=50.3%  PF=1.12  MaxDD=$ -11,511  best=$+1,966  worst=$-3,058  pass30=11.8% (82/696)  pass45=22.9%
+          drop MeanRev : days= 725  total=$  +32,169  Sharpe=+0.77  win-rate=53.7%  PF=1.15  MaxDD=$ -17,686  best=$+5,480  worst=$-4,673  pass30=16.8% (117/696)  pass45=16.3%
+   drop OvernightDrift : days= 725  total=$   +4,231  Sharpe=+0.30  win-rate=45.5%  PF=1.06  MaxDD=$  -9,365  best=$+1,782  worst=$-1,353  pass30= 4.7% (33/696)  pass45=13.2%
+
+=== Deflated Sharpe ===
+  N trials reported this pass: 7
+  winner: ALL-THREE
+    raw Sharpe (annual): 0.718
+    expected-max Sharpe under null: 0.370
+    trial-sharpe stdev: 0.267
+    DSR: 0.7211
+    -> NOT statistically distinguishable from selection bias.
