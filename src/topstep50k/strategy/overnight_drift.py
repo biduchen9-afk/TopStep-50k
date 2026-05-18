@@ -27,7 +27,8 @@ on this dataset.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
+from typing import Callable
 from zoneinfo import ZoneInfo
 
 from topstep50k.engine.types import Bar
@@ -68,6 +69,12 @@ class OvernightDrift:
     exit_offset_minutes: int = 5
     session_open_local: time = time(9, 30)
     session_close_local: time = time(16, 0)
+    # Optional per-entry gate. Called once when the entry trigger fires
+    # (in the late afternoon of day N). The argument is the US/Eastern
+    # date of the trade's entry day. If it returns False the strategy
+    # skips that overnight cycle. This is the place to plug in the
+    # NY-Fed-style "prior RTH session down" conditioner.
+    entry_filter: Callable[[date], bool] | None = None
     _state: _ODState = field(init=False, default_factory=_ODState, repr=False)
 
     def _maybe_roll_day(self, bar_ts: datetime) -> None:
@@ -104,6 +111,14 @@ class OvernightDrift:
         # Entry window: at-or-after today's entry trigger, if flat, go long.
         if s.cur_entry_utc is not None and bar.ts >= s.cur_entry_utc:
             if cur_qty == 0 and s.target_qty == 0:
+                # Consult the entry filter, if any. Uses the date in
+                # US/Eastern of the entry bar.
+                if self.entry_filter is not None:
+                    entry_date = bar.ts.astimezone(EASTERN).date()
+                    if not self.entry_filter(entry_date):
+                        # Still mark target so we don't re-attempt this
+                        # cycle (target_qty stays 0; next day-roll clears).
+                        return None
                 s.target_qty = self.qty
                 return TargetPosition(symbol=self.symbol, qty=self.qty,
                                        tag="od_enter")

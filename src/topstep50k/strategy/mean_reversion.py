@@ -42,8 +42,8 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
-from typing import Deque
+from datetime import date, datetime, time, timedelta
+from typing import Callable, Deque
 from zoneinfo import ZoneInfo
 
 from topstep50k.engine.types import Bar
@@ -103,9 +103,13 @@ class MeanReversionBollinger:
     session_close_local: time = time(16, 0)
     flat_before_close_minutes: int = 15
     tick_size: float = 0.25
+    # Optional per-day gate. Called once when a new trading day starts;
+    # if it returns False the strategy stands flat for the whole day.
+    daily_filter: Callable[[date], bool] | None = None
     _closes: Deque[float] = field(init=False, repr=False,
                                    default_factory=lambda: deque(maxlen=60))
     _day_state: _MRDayState | None = field(init=False, default=None, repr=False)
+    _gated_today: bool = field(init=False, default=False, repr=False)
 
     def __post_init__(self) -> None:
         # deque maxlen needs to match self.lookback (not the default 60)
@@ -141,6 +145,18 @@ class MeanReversionBollinger:
             # intraday signal but the band stays sensible at the
             # session boundary using the trailing window.
             self._day_state = self._build_day_state(bar.ts)
+            if self.daily_filter is not None:
+                d = bar.ts.astimezone(EASTERN).date()
+                self._gated_today = not self.daily_filter(d)
+            else:
+                self._gated_today = False
+        if self._gated_today:
+            # Flat enforcement: if we already hold a position from before
+            # the day started (we don't, but for safety), flatten.
+            if ctx.position(self.symbol) != 0:
+                return TargetPosition(symbol=self.symbol, qty=0,
+                                       tag="mr_gated_flat")
+            return None
         st = self._day_state
 
         # Outside RTH: stay flat, ignore data (overnight bars would
