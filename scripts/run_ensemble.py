@@ -40,7 +40,7 @@ from topstep50k.data.loaders import load_bars_csv
 from topstep50k.data.source import InMemoryBarSource
 from topstep50k.engine import Backtester, Clock, Instrument
 from topstep50k.portfolio import PortfolioStrategy
-from topstep50k.rules import combine_50k
+from topstep50k.rules import combine_25k, combine_50k
 from topstep50k.strategy.mean_reversion import MeanReversionBollinger
 from topstep50k.strategy.orb import OpeningRangeBreakout
 from topstep50k.strategy.overnight_drift import OvernightDrift
@@ -49,7 +49,15 @@ from topstep50k.strategy.overnight_drift import OvernightDrift
 ES = Instrument(symbol="ES", point_value=Decimal("50"),
                 tick_size=Decimal("0.25"),
                 commission_per_side=Decimal("2.50"))
-RULES = combine_50k()
+# Strategies run rule-agnostically (combine_enforcement=False); the
+# rule sets below are only used at pass-rate evaluation time so we can
+# compare $50K vs $25K Combine pass-rates on the SAME daily PnL streams.
+RULESETS = {
+    "$50K Combine": combine_50k(),
+    "$25K Combine": combine_25k(),
+}
+RULES = combine_50k()  # used only when a non-pass-rate metric needs a
+                       # starting balance reference (DSR fractions, etc.)
 
 # PRE-COMMITTED parameters. Do not tune from here.
 ORB_PARAMS = dict(qty=1, or_minutes=30, direction="both",
@@ -90,16 +98,18 @@ def sharpe_annual(daily: np.ndarray) -> float:
     return (daily.mean() / daily.std(ddof=1)) * np.sqrt(252)
 
 
-def pass_rate_from_daily(daily: np.ndarray, day_index, window=30):
+def pass_rate_from_daily(daily: np.ndarray, day_index, window=30,
+                          rules=None):
     """Realized sliding-window pass-rate on a daily PnL np array.
 
     The pass-rate calc expects Decimal values (it adds them to the
     Decimal starting balance), so quantise here to two decimal places.
     """
+    r = rules if rules is not None else RULES
     daily_pnl = {d: Decimal(str(round(float(v), 2)))
                  for d, v in zip(day_index, daily)}
-    return realized_pass_rate(daily_pnl, rules=RULES,
-                               starting_balance=RULES.starting_balance,
+    return realized_pass_rate(daily_pnl, rules=r,
+                               starting_balance=r.starting_balance,
                                window_days=window, stride_days=1)
 
 
@@ -111,7 +121,10 @@ def max_drawdown(daily: np.ndarray) -> float:
     return float((eq - peaks).min())
 
 
-def report_block(label, daily, day_index):
+def report_block(label, daily, day_index, *, rules_table=None):
+    """Print one summary row. If `rules_table` is provided as a dict of
+    {ruleset_name: TopstepRules}, pass-rates are reported separately
+    for each ruleset; otherwise only the Sharpe/MaxDD/etc. line."""
     if daily.size < 30:
         print(f"  [{label}] insufficient data ({daily.size} days)")
         return
@@ -120,17 +133,21 @@ def report_block(label, daily, day_index):
         if (daily < 0).any() else float("inf")
     wr = float((daily > 0).sum()) / float(daily.size)
     mdd = max_drawdown(daily)
-    rr30 = pass_rate_from_daily(daily, day_index, window=30)
-    rr45 = pass_rate_from_daily(daily, day_index, window=45)
     total = float(daily.sum())
     best = float(daily.max())
     worst = float(daily.min())
-    print(f"  {label:>20} : days={daily.size:>4}  "
-          f"total=${total:>+9,.0f}  Sharpe={sh:>+5.2f}  "
-          f"win-rate={wr:.1%}  PF={pf:>4.2f}  "
-          f"MaxDD=${mdd:>+8,.0f}  best=${best:>+6,.0f}  worst=${worst:>+6,.0f}  "
-          f"pass30={rr30.pass_rate:>5.1%} ({rr30.n_passed}/{rr30.n_windows})  "
-          f"pass45={rr45.pass_rate:>5.1%}")
+    line1 = (f"  {label:>20} : days={daily.size:>4}  "
+             f"total=${total:>+9,.0f}  Sharpe={sh:>+5.2f}  "
+             f"win-rate={wr:.1%}  PF={pf:>4.2f}  "
+             f"MaxDD=${mdd:>+8,.0f}  best=${best:>+6,.0f}  worst=${worst:>+6,.0f}")
+    print(line1)
+    if rules_table:
+        for rname, rules in rules_table.items():
+            rr30 = pass_rate_from_daily(daily, day_index, window=30, rules=rules)
+            rr45 = pass_rate_from_daily(daily, day_index, window=45, rules=rules)
+            print(f"  {'':>20}   {rname:<14}  "
+                  f"pass30={rr30.pass_rate:>5.1%} ({rr30.n_passed}/{rr30.n_windows})  "
+                  f"pass45={rr45.pass_rate:>5.1%} ({rr45.n_passed}/{rr45.n_windows})")
 
 
 def main():
@@ -181,7 +198,8 @@ def main():
     train_arrays = {}
     for name, s in series.items():
         train_arrays[name] = s[train_mask]
-        report_block(f"{name} (TRAIN)", train_arrays[name], train_days)
+        report_block(f"{name} (TRAIN)", train_arrays[name], train_days,
+                     rules_table=RULESETS)
 
     # =====================================================================
     # SIZING -- compute inverse-vol weights on TRAIN only
@@ -227,7 +245,8 @@ def main():
     test_arrays = {}
     for name, s in series.items():
         test_arrays[name] = s[test_mask]
-        report_block(f"{name} (TEST)", test_arrays[name], test_days)
+        report_block(f"{name} (TEST)", test_arrays[name], test_days,
+                     rules_table=RULESETS)
 
     # Correlation matrix on TEST series
     print(f"\n=== TEST-window correlation matrix ===")
@@ -248,14 +267,16 @@ def main():
     # Headline ensemble (all three, TEST)
     print(f"\n=== Headline ensemble (all three, TRAIN-weighted) ===")
     ensemble_test = build_ensemble(test_arrays)
-    report_block("ALL-THREE (TEST)", ensemble_test, test_days)
+    report_block("ALL-THREE (TEST)", ensemble_test, test_days,
+                 rules_table=RULESETS)
 
     # Drop-one diagnostics (sensitivity, NOT selection)
     print(f"\n=== Drop-one diagnostics (sensitivity check) ===")
     for drop in names:
         sub = {n: a for n, a in test_arrays.items() if n != drop}
         comb = build_ensemble(sub)
-        report_block(f"drop {drop}", comb, test_days)
+        report_block(f"drop {drop}", comb, test_days,
+                     rules_table=RULESETS)
 
     # =====================================================================
     # DSR with honest trial count (3 individual + 1 ensemble + 3 drop-one)

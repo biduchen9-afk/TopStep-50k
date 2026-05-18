@@ -3,6 +3,7 @@ from topstep50k.rules.topstep import (
     BreachType,
     RuleBreach,
     TopstepRules,
+    combine_25k,
     combine_50k,
 )
 
@@ -11,5 +12,6 @@ __all__ = [
     "BreachType",
     "RuleBreach",
     "TopstepRules",
+    "combine_25k",
     "combine_50k",
 ]

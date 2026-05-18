@@ -263,3 +263,31 @@ def combine_50k() -> TopstepRules:
         max_contracts_micro=50,
         consistency_max_best_day_pct=Decimal("0.50"),
     )
+
+
+def combine_25k() -> TopstepRules:
+    """Topstep $25K Trading Combine parameters.
+
+    Same rule SHAPE as $50K (trailing EOD MLL, no DLL on Combine,
+    50% consistency cap); the dollar amounts and contract caps are
+    halved according to Topstep's published account-size table:
+
+      Starting balance   : $25,000
+      Profit target      : $1,500
+      MLL distance       : $1,500  (initial line = $23,500)
+      Max contracts std  : 3       (account-wide cap)
+      Max contracts micro: 30      (account-wide cap; 10:1 conversion)
+
+    Sources: topstep.com pricing / account-size table; consistency
+    rule applies uniformly across Combine sizes (50% best-day cap).
+    DLL is not enforced on the Combine (same finding as $50K).
+    """
+    return TopstepRules(
+        starting_balance=Decimal("25000"),
+        profit_target=Decimal("1500"),
+        max_loss_limit_distance=Decimal("1500"),
+        daily_loss_limit=None,
+        max_contracts_standard=3,
+        max_contracts_micro=30,
+        consistency_max_best_day_pct=Decimal("0.50"),
+    )
