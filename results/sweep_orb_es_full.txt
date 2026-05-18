@@ -1,0 +1,181 @@
+Loading ES bars...
+  1,522,612 bars in 19.6s
+
+Running 144 configs...
+
+  [  1/144] or=15 tp=1.0 stop=opposite_range dir=long chop=0.0: pass30=13.0% pass45=15.7% sharpe=+0.46 MaxDD=$17642.50 (9s)
+  [  2/144] or=15 tp=1.0 stop=opposite_range dir=long chop=0.5: pass30=13.3% pass45=17.2% sharpe=+0.50 MaxDD=$18312.50 (10s)
+  [  3/144] or=15 tp=1.0 stop=opposite_range dir=long chop=1.0: pass30= 9.4% pass45= 9.9% sharpe=+0.29 MaxDD=$15712.50 (14s)
+  [  4/144] or=15 tp=1.0 stop=opposite_range dir=long chop=1.5: pass30= 3.6% pass45= 6.2% sharpe=+0.31 MaxDD=$16537.50 (8s)
+  [  5/144] or=15 tp=1.0 stop=opposite_range dir=both chop=0.0: pass30=16.5% pass45=16.9% sharpe=+0.18 MaxDD=$30485.00 (14s)
+  [  6/144] or=15 tp=1.0 stop=opposite_range dir=both chop=0.5: pass30=17.4% pass45=17.5% sharpe=+0.29 MaxDD=$27895.00 (14s)
+  [  7/144] or=15 tp=1.0 stop=opposite_range dir=both chop=1.0: pass30= 9.1% pass45=10.4% sharpe=-0.02 MaxDD=$28725.00 (16s)
+  [  8/144] or=15 tp=1.0 stop=opposite_range dir=both chop=1.5: pass30= 5.2% pass45=10.3% sharpe=-0.01 MaxDD=$23790.00 (15s)
+  [  9/144] or=15 tp=1.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 7.0% pass45=11.1% sharpe=+0.70 MaxDD=$9192.50 (8s)
+  [ 10/144] or=15 tp=1.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 7.9% pass45=11.8% sharpe=+0.72 MaxDD=$8750.00 (8s)
+  [ 11/144] or=15 tp=1.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 4.7% pass45= 7.3% sharpe=+0.63 MaxDD=$6317.50 (7s)
+  [ 12/144] or=15 tp=1.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.5% pass45= 2.9% sharpe=+0.84 MaxDD=$4385.00 (7s)
+  [ 13/144] or=15 tp=1.0 stop=  fixed_ticks dir=both chop=0.0: pass30=14.3% pass45=19.2% sharpe=+0.72 MaxDD=$9612.50 (7s)
+  [ 14/144] or=15 tp=1.0 stop=  fixed_ticks dir=both chop=0.5: pass30=16.1% pass45=21.2% sharpe=+0.88 MaxDD=$9030.00 (7s)
+  [ 15/144] or=15 tp=1.0 stop=  fixed_ticks dir=both chop=1.0: pass30=10.8% pass45=13.3% sharpe=+0.67 MaxDD=$11375.00 (7s)
+  [ 16/144] or=15 tp=1.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 4.5% pass45= 9.2% sharpe=+0.64 MaxDD=$8140.00 (10s)
+  [ 17/144] or=15 tp=2.0 stop=opposite_range dir=long chop=0.0: pass30=16.6% pass45=16.7% sharpe=+0.85 MaxDD=$18872.50 (9s)
+  [ 18/144] or=15 tp=2.0 stop=opposite_range dir=long chop=0.5: pass30=17.1% pass45=16.6% sharpe=+0.84 MaxDD=$20410.00 (8s)
+  [ 19/144] or=15 tp=2.0 stop=opposite_range dir=long chop=1.0: pass30= 8.6% pass45=10.8% sharpe=+0.38 MaxDD=$17345.00 (13s)
+  [ 20/144] or=15 tp=2.0 stop=opposite_range dir=long chop=1.5: pass30= 2.5% pass45= 3.8% sharpe=+0.45 MaxDD=$18345.00 (10s)
+  [ 21/144] or=15 tp=2.0 stop=opposite_range dir=both chop=0.0: pass30=15.9% pass45=17.9% sharpe=+0.44 MaxDD=$26442.50 (10s)
+  [ 22/144] or=15 tp=2.0 stop=opposite_range dir=both chop=0.5: pass30=15.5% pass45=17.8% sharpe=+0.49 MaxDD=$24665.00 (9s)
+  [ 23/144] or=15 tp=2.0 stop=opposite_range dir=both chop=1.0: pass30= 8.2% pass45= 7.7% sharpe=-0.10 MaxDD=$33797.50 (16s)
+  [ 24/144] or=15 tp=2.0 stop=opposite_range dir=both chop=1.5: pass30= 6.7% pass45= 8.3% sharpe=+0.03 MaxDD=$21297.50 (14s)
+  [ 25/144] or=15 tp=2.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 8.8% pass45=14.6% sharpe=+0.91 MaxDD=$8367.50 (8s)
+  [ 26/144] or=15 tp=2.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 9.0% pass45=14.6% sharpe=+0.88 MaxDD=$8162.50 (8s)
+  [ 27/144] or=15 tp=2.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 2.7% pass45= 4.8% sharpe=+0.66 MaxDD=$5802.50 (8s)
+  [ 28/144] or=15 tp=2.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=+0.84 MaxDD=$6537.50 (7s)
+  [ 29/144] or=15 tp=2.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 9.5% pass45=12.7% sharpe=+0.60 MaxDD=$10545.00 (8s)
+  [ 30/144] or=15 tp=2.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 9.3% pass45=13.1% sharpe=+0.70 MaxDD=$9470.00 (9s)
+  [ 31/144] or=15 tp=2.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 5.1% pass45= 5.4% sharpe=+0.17 MaxDD=$11522.50 (11s)
+  [ 32/144] or=15 tp=2.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 1.4% pass45= 2.8% sharpe=-0.04 MaxDD=$12435.00 (14s)
+  [ 33/144] or=15 tp=3.0 stop=opposite_range dir=long chop=0.0: pass30=14.9% pass45=14.8% sharpe=+0.91 MaxDD=$15555.00 (8s)
+  [ 34/144] or=15 tp=3.0 stop=opposite_range dir=long chop=0.5: pass30=15.0% pass45=14.9% sharpe=+0.91 MaxDD=$16982.50 (8s)
+  [ 35/144] or=15 tp=3.0 stop=opposite_range dir=long chop=1.0: pass30= 7.0% pass45= 8.0% sharpe=+0.43 MaxDD=$18497.50 (12s)
+  [ 36/144] or=15 tp=3.0 stop=opposite_range dir=long chop=1.5: pass30= 1.7% pass45= 3.1% sharpe=+0.59 MaxDD=$19120.00 (8s)
+  [ 37/144] or=15 tp=3.0 stop=opposite_range dir=both chop=0.0: pass30=14.3% pass45=15.7% sharpe=+0.77 MaxDD=$19410.00 (8s)
+  [ 38/144] or=15 tp=3.0 stop=opposite_range dir=both chop=0.5: pass30=14.8% pass45=16.4% sharpe=+0.80 MaxDD=$19135.00 (8s)
+  [ 39/144] or=15 tp=3.0 stop=opposite_range dir=both chop=1.0: pass30= 4.2% pass45= 3.3% sharpe=+0.04 MaxDD=$31015.00 (12s)
+  [ 40/144] or=15 tp=3.0 stop=opposite_range dir=both chop=1.5: pass30= 4.9% pass45= 7.6% sharpe=+0.23 MaxDD=$21357.50 (12s)
+  [ 41/144] or=15 tp=3.0 stop=  fixed_ticks dir=long chop=0.0: pass30=10.5% pass45=15.1% sharpe=+0.89 MaxDD=$10955.00 (8s)
+  [ 42/144] or=15 tp=3.0 stop=  fixed_ticks dir=long chop=0.5: pass30=11.8% pass45=14.0% sharpe=+0.87 MaxDD=$10122.50 (9s)
+  [ 43/144] or=15 tp=3.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 3.5% pass45= 3.6% sharpe=+0.57 MaxDD=$7515.00 (7s)
+  [ 44/144] or=15 tp=3.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=+0.88 MaxDD=$6537.50 (7s)
+  [ 45/144] or=15 tp=3.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 8.9% pass45=12.5% sharpe=+0.94 MaxDD=$10492.50 (7s)
+  [ 46/144] or=15 tp=3.0 stop=  fixed_ticks dir=both chop=0.5: pass30=10.2% pass45=13.6% sharpe=+1.02 MaxDD=$9612.50 (8s)
+  [ 47/144] or=15 tp=3.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 3.8% pass45= 3.7% sharpe=+0.29 MaxDD=$13537.50 (10s)
+  [ 48/144] or=15 tp=3.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 1.0% pass45= 2.3% sharpe=+0.16 MaxDD=$11822.50 (11s)
+  [ 49/144] or=30 tp=1.0 stop=opposite_range dir=long chop=0.0: pass30=13.1% pass45=15.5% sharpe=+0.45 MaxDD=$18662.50 (10s)
+  [ 50/144] or=30 tp=1.0 stop=opposite_range dir=long chop=0.5: pass30=14.0% pass45=15.3% sharpe=+0.41 MaxDD=$19225.00 (10s)
+  [ 51/144] or=30 tp=1.0 stop=opposite_range dir=long chop=1.0: pass30= 8.8% pass45=13.6% sharpe=+0.37 MaxDD=$17760.00 (11s)
+  [ 52/144] or=30 tp=1.0 stop=opposite_range dir=long chop=1.5: pass30= 2.2% pass45= 3.5% sharpe=-0.07 MaxDD=$12907.50 (14s)
+  [ 53/144] or=30 tp=1.0 stop=opposite_range dir=both chop=0.0: pass30=18.3% pass45=14.3% sharpe=+0.17 MaxDD=$27847.50 (13s)
+  [ 54/144] or=30 tp=1.0 stop=opposite_range dir=both chop=0.5: pass30=19.2% pass45=15.0% sharpe=+0.19 MaxDD=$29502.50 (12s)
+  [ 55/144] or=30 tp=1.0 stop=opposite_range dir=both chop=1.0: pass30=12.7% pass45=14.0% sharpe=+0.08 MaxDD=$23440.00 (14s)
+  [ 56/144] or=30 tp=1.0 stop=opposite_range dir=both chop=1.5: pass30= 4.1% pass45= 6.7% sharpe=-0.44 MaxDD=$33422.50 (16s)
+  [ 57/144] or=30 tp=1.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 3.2% pass45= 7.0% sharpe=+0.42 MaxDD=$9410.00 (8s)
+  [ 58/144] or=30 tp=1.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 3.6% pass45= 6.1% sharpe=+0.37 MaxDD=$9112.50 (8s)
+  [ 59/144] or=30 tp=1.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 2.1% pass45= 5.9% sharpe=+0.61 MaxDD=$7432.50 (7s)
+  [ 60/144] or=30 tp=1.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.4% pass45= 1.1% sharpe=+0.34 MaxDD=$4720.00 (9s)
+  [ 61/144] or=30 tp=1.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 8.6% pass45=15.0% sharpe=+0.47 MaxDD=$9247.50 (8s)
+  [ 62/144] or=30 tp=1.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 8.4% pass45=15.4% sharpe=+0.47 MaxDD=$9935.00 (8s)
+  [ 63/144] or=30 tp=1.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 7.0% pass45=13.0% sharpe=+0.46 MaxDD=$10537.50 (9s)
+  [ 64/144] or=30 tp=1.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 1.8% pass45= 3.3% sharpe=+0.18 MaxDD=$6402.50 (11s)
+  [ 65/144] or=30 tp=2.0 stop=opposite_range dir=long chop=0.0: pass30=17.1% pass45=16.7% sharpe=+0.84 MaxDD=$18017.50 (8s)
+  [ 66/144] or=30 tp=2.0 stop=opposite_range dir=long chop=0.5: pass30=16.0% pass45=16.7% sharpe=+0.83 MaxDD=$19122.50 (8s)
+  [ 67/144] or=30 tp=2.0 stop=opposite_range dir=long chop=1.0: pass30= 7.3% pass45=12.8% sharpe=+0.59 MaxDD=$18710.00 (10s)
+  [ 68/144] or=30 tp=2.0 stop=opposite_range dir=long chop=1.5: pass30= 0.6% pass45= 1.9% sharpe=+0.14 MaxDD=$14722.50 (12s)
+  [ 69/144] or=30 tp=2.0 stop=opposite_range dir=both chop=0.0: pass30=16.7% pass45=14.2% sharpe=+0.72 MaxDD=$22780.00 (9s)
+  [ 70/144] or=30 tp=2.0 stop=opposite_range dir=both chop=0.5: pass30=16.8% pass45=14.9% sharpe=+0.75 MaxDD=$23327.50 (9s)
+  [ 71/144] or=30 tp=2.0 stop=opposite_range dir=both chop=1.0: pass30=11.0% pass45=10.9% sharpe=+0.41 MaxDD=$21360.00 (11s)
+  [ 72/144] or=30 tp=2.0 stop=opposite_range dir=both chop=1.5: pass30= 4.1% pass45= 7.0% sharpe=-0.23 MaxDD=$26437.50 (15s)
+  [ 73/144] or=30 tp=2.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 2.8% pass45= 6.7% sharpe=+0.62 MaxDD=$8927.50 (7s)
+  [ 74/144] or=30 tp=2.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 2.5% pass45= 5.7% sharpe=+0.56 MaxDD=$9887.50 (7s)
+  [ 75/144] or=30 tp=2.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 1.1% pass45= 3.5% sharpe=+0.43 MaxDD=$7160.00 (9s)
+  [ 76/144] or=30 tp=2.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.4% pass45= 1.3% sharpe=+0.32 MaxDD=$4607.50 (9s)
+  [ 77/144] or=30 tp=2.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 7.5% pass45=11.5% sharpe=+0.60 MaxDD=$12262.50 (11s)
+  [ 78/144] or=30 tp=2.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 8.0% pass45=11.4% sharpe=+0.59 MaxDD=$12837.50 (12s)
+  [ 79/144] or=30 tp=2.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 2.9% pass45= 5.1% sharpe=+0.35 MaxDD=$10677.50 (10s)
+  [ 80/144] or=30 tp=2.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 1.5% pass45= 2.8% sharpe=+0.01 MaxDD=$10380.00 (12s)
+  [ 81/144] or=30 tp=3.0 stop=opposite_range dir=long chop=0.0: pass30=14.2% pass45=16.3% sharpe=+0.71 MaxDD=$25547.50 (8s)
+  [ 82/144] or=30 tp=3.0 stop=opposite_range dir=long chop=0.5: pass30=14.6% pass45=16.6% sharpe=+0.70 MaxDD=$28255.00 (8s)
+  [ 83/144] or=30 tp=3.0 stop=opposite_range dir=long chop=1.0: pass30= 6.4% pass45=10.7% sharpe=+0.49 MaxDD=$22747.50 (10s)
+  [ 84/144] or=30 tp=3.0 stop=opposite_range dir=long chop=1.5: pass30= 0.2% pass45= 1.4% sharpe=+0.01 MaxDD=$25440.00 (10s)
+  [ 85/144] or=30 tp=3.0 stop=opposite_range dir=both chop=0.0: pass30=12.0% pass45=12.7% sharpe=+0.78 MaxDD=$29715.00 (8s)
+  [ 86/144] or=30 tp=3.0 stop=opposite_range dir=both chop=0.5: pass30=12.9% pass45=12.9% sharpe=+0.81 MaxDD=$31470.00 (8s)
+  [ 87/144] or=30 tp=3.0 stop=opposite_range dir=both chop=1.0: pass30= 5.1% pass45= 5.6% sharpe=+0.36 MaxDD=$29172.50 (9s)
+  [ 88/144] or=30 tp=3.0 stop=opposite_range dir=both chop=1.5: pass30= 1.7% pass45= 3.8% sharpe=-0.49 MaxDD=$37155.00 (16s)
+  [ 89/144] or=30 tp=3.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 2.6% pass45= 5.8% sharpe=+0.49 MaxDD=$9865.00 (8s)
+  [ 90/144] or=30 tp=3.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 0.8% pass45= 4.9% sharpe=+0.44 MaxDD=$11390.00 (8s)
+  [ 91/144] or=30 tp=3.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 1.1% pass45= 2.4% sharpe=+0.42 MaxDD=$7160.00 (9s)
+  [ 92/144] or=30 tp=3.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.4% pass45= 1.3% sharpe=+0.41 MaxDD=$4182.50 (8s)
+  [ 93/144] or=30 tp=3.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 6.0% pass45=10.7% sharpe=+0.70 MaxDD=$13637.50 (11s)
+  [ 94/144] or=30 tp=3.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 5.5% pass45= 9.5% sharpe=+0.68 MaxDD=$13210.00 (11s)
+  [ 95/144] or=30 tp=3.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 2.4% pass45= 3.8% sharpe=+0.43 MaxDD=$11347.50 (11s)
+  [ 96/144] or=30 tp=3.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 1.5% pass45= 2.5% sharpe=-0.08 MaxDD=$10590.00 (12s)
+  [ 97/144] or=60 tp=1.0 stop=opposite_range dir=long chop=0.0: pass30=17.4% pass45=19.4% sharpe=+0.94 MaxDD=$19212.50 (8s)
+  [ 98/144] or=60 tp=1.0 stop=opposite_range dir=long chop=0.5: pass30=17.4% pass45=17.8% sharpe=+0.95 MaxDD=$17582.50 (7s)
+  [ 99/144] or=60 tp=1.0 stop=opposite_range dir=long chop=1.0: pass30= 7.4% pass45=11.3% sharpe=+0.25 MaxDD=$20922.50 (12s)
+  [100/144] or=60 tp=1.0 stop=opposite_range dir=long chop=1.5: pass30= 1.8% pass45= 3.9% sharpe=+0.06 MaxDD=$12955.00 (12s)
+  [101/144] or=60 tp=1.0 stop=opposite_range dir=both chop=0.0: pass30=18.0% pass45=16.5% sharpe=+0.68 MaxDD=$38137.50 (8s)
+  [102/144] or=60 tp=1.0 stop=opposite_range dir=both chop=0.5: pass30=18.8% pass45=18.6% sharpe=+0.74 MaxDD=$35590.00 (8s)
+  [103/144] or=60 tp=1.0 stop=opposite_range dir=both chop=1.0: pass30=12.6% pass45=13.3% sharpe=+0.08 MaxDD=$25270.00 (12s)
+  [104/144] or=60 tp=1.0 stop=opposite_range dir=both chop=1.5: pass30= 8.6% pass45=12.7% sharpe=+0.17 MaxDD=$20370.00 (12s)
+  [105/144] or=60 tp=1.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 7.5% pass45=10.7% sharpe=+0.84 MaxDD=$8125.00 (7s)
+  [106/144] or=60 tp=1.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 6.7% pass45=10.2% sharpe=+0.83 MaxDD=$8105.00 (7s)
+  [107/144] or=60 tp=1.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 1.6% pass45= 1.6% sharpe=+0.18 MaxDD=$8052.50 (13s)
+  [108/144] or=60 tp=1.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=+0.16 MaxDD=$7670.00 (11s)
+  [109/144] or=60 tp=1.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 9.2% pass45=14.3% sharpe=+0.44 MaxDD=$18905.00 (12s)
+  [110/144] or=60 tp=1.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 9.5% pass45=14.4% sharpe=+0.57 MaxDD=$16810.00 (11s)
+  [111/144] or=60 tp=1.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 4.6% pass45= 6.7% sharpe=+0.06 MaxDD=$20425.00 (14s)
+  [112/144] or=60 tp=1.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 0.2% pass45= 0.3% sharpe=+0.12 MaxDD=$10272.50 (14s)
+  [113/144] or=60 tp=2.0 stop=opposite_range dir=long chop=0.0: pass30=12.7% pass45=16.9% sharpe=+0.93 MaxDD=$19785.00 (8s)
+  [114/144] or=60 tp=2.0 stop=opposite_range dir=long chop=0.5: pass30=11.8% pass45=15.3% sharpe=+0.93 MaxDD=$17945.00 (8s)
+  [115/144] or=60 tp=2.0 stop=opposite_range dir=long chop=1.0: pass30= 5.4% pass45= 8.1% sharpe=+0.28 MaxDD=$24722.50 (12s)
+  [116/144] or=60 tp=2.0 stop=opposite_range dir=long chop=1.5: pass30= 2.2% pass45= 3.5% sharpe=+0.16 MaxDD=$13872.50 (11s)
+  [117/144] or=60 tp=2.0 stop=opposite_range dir=both chop=0.0: pass30=14.7% pass45=15.4% sharpe=+0.79 MaxDD=$43650.00 (9s)
+  [118/144] or=60 tp=2.0 stop=opposite_range dir=both chop=0.5: pass30=13.0% pass45=16.5% sharpe=+0.82 MaxDD=$40840.00 (8s)
+  [119/144] or=60 tp=2.0 stop=opposite_range dir=both chop=1.0: pass30= 7.4% pass45= 9.7% sharpe=+0.16 MaxDD=$32317.50 (12s)
+  [120/144] or=60 tp=2.0 stop=opposite_range dir=both chop=1.5: pass30= 5.9% pass45= 7.7% sharpe=+0.22 MaxDD=$25032.50 (11s)
+  [121/144] or=60 tp=2.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 4.1% pass45= 7.1% sharpe=+0.61 MaxDD=$7805.00 (7s)
+  [122/144] or=60 tp=2.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 3.5% pass45= 6.4% sharpe=+0.54 MaxDD=$8417.50 (8s)
+  [123/144] or=60 tp=2.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 1.6% pass45= 1.8% sharpe=-0.08 MaxDD=$13265.00 (15s)
+  [124/144] or=60 tp=2.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=-0.12 MaxDD=$8060.00 (12s)
+  [125/144] or=60 tp=2.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 5.0% pass45= 7.7% sharpe=+0.41 MaxDD=$15295.00 (12s)
+  [126/144] or=60 tp=2.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 5.8% pass45= 8.7% sharpe=+0.48 MaxDD=$14637.50 (10s)
+  [127/144] or=60 tp=2.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 0.5% pass45= 0.7% sharpe=-0.15 MaxDD=$22497.50 (17s)
+  [128/144] or=60 tp=2.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=-0.07 MaxDD=$10545.00 (13s)
+  [129/144] or=60 tp=3.0 stop=opposite_range dir=long chop=0.0: pass30=11.4% pass45=14.9% sharpe=+0.95 MaxDD=$19785.00 (8s)
+  [130/144] or=60 tp=3.0 stop=opposite_range dir=long chop=0.5: pass30=11.4% pass45=13.4% sharpe=+0.98 MaxDD=$17945.00 (9s)
+  [131/144] or=60 tp=3.0 stop=opposite_range dir=long chop=1.0: pass30= 5.2% pass45= 7.7% sharpe=+0.33 MaxDD=$24722.50 (13s)
+  [132/144] or=60 tp=3.0 stop=opposite_range dir=long chop=1.5: pass30= 2.2% pass45= 3.5% sharpe=+0.18 MaxDD=$13872.50 (14s)
+  [133/144] or=60 tp=3.0 stop=opposite_range dir=both chop=0.0: pass30=13.9% pass45=15.0% sharpe=+0.79 MaxDD=$42407.50 (9s)
+  [134/144] or=60 tp=3.0 stop=opposite_range dir=both chop=0.5: pass30=12.5% pass45=15.9% sharpe=+0.83 MaxDD=$39745.00 (8s)
+  [135/144] or=60 tp=3.0 stop=opposite_range dir=both chop=1.0: pass30= 7.4% pass45= 9.3% sharpe=+0.19 MaxDD=$31667.50 (13s)
+  [136/144] or=60 tp=3.0 stop=opposite_range dir=both chop=1.5: pass30= 6.4% pass45= 8.4% sharpe=+0.28 MaxDD=$25032.50 (13s)
+  [137/144] or=60 tp=3.0 stop=  fixed_ticks dir=long chop=0.0: pass30= 3.6% pass45= 6.7% sharpe=+0.57 MaxDD=$9342.50 (10s)
+  [138/144] or=60 tp=3.0 stop=  fixed_ticks dir=long chop=0.5: pass30= 3.6% pass45= 7.7% sharpe=+0.60 MaxDD=$8837.50 (8s)
+  [139/144] or=60 tp=3.0 stop=  fixed_ticks dir=long chop=1.0: pass30= 1.6% pass45= 1.8% sharpe=-0.03 MaxDD=$12152.50 (16s)
+  [140/144] or=60 tp=3.0 stop=  fixed_ticks dir=long chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=-0.12 MaxDD=$8060.00 (13s)
+  [141/144] or=60 tp=3.0 stop=  fixed_ticks dir=both chop=0.0: pass30= 4.1% pass45= 4.8% sharpe=+0.22 MaxDD=$15435.00 (11s)
+  [142/144] or=60 tp=3.0 stop=  fixed_ticks dir=both chop=0.5: pass30= 4.2% pass45= 5.5% sharpe=+0.31 MaxDD=$13725.00 (13s)
+  [143/144] or=60 tp=3.0 stop=  fixed_ticks dir=both chop=1.0: pass30= 0.5% pass45= 0.7% sharpe=-0.42 MaxDD=$23365.00 (16s)
+  [144/144] or=60 tp=3.0 stop=  fixed_ticks dir=both chop=1.5: pass30= 0.0% pass45= 0.0% sharpe=-0.15 MaxDD=$11097.50 (14s)
+
+=== Top 15 by 30-day pass-rate ===
+ or   tp          stop   dir  chop  pass30  pass45  sharpe     MaxDD    best   worst    pf
+ 30  1.0 opposite_range  both   0.5  19.2%  15.0%   +0.19 $  29,502 $ 6,132 $-4,792  1.03
+ 60  1.0 opposite_range  both   0.5  18.8%  18.6%   +0.74 $  35,590 $ 4,658 $-6,380  1.15
+ 30  1.0 opposite_range  both   0.0  18.3%  14.3%   +0.17 $  27,848 $ 6,132 $-4,792  1.03
+ 60  1.0 opposite_range  both   0.0  18.0%  16.5%   +0.68 $  38,138 $ 4,658 $-6,380  1.13
+ 60  1.0 opposite_range  long   0.0  17.4%  19.4%   +0.94 $  19,212 $ 4,158 $-3,605  1.24
+ 60  1.0 opposite_range  long   0.5  17.4%  17.8%   +0.95 $  17,582 $ 4,158 $-3,605  1.25
+ 15  1.0 opposite_range  both   0.5  17.4%  17.5%   +0.29 $  27,895 $ 5,658 $-4,518  1.05
+ 15  2.0 opposite_range  long   0.5  17.1%  16.6%   +0.84 $  20,410 $ 8,420 $-4,518  1.18
+ 30  2.0 opposite_range  long   0.0  17.1%  16.7%   +0.84 $  18,018 $13,832 $-4,518  1.20
+ 30  2.0 opposite_range  both   0.5  16.8%  14.9%   +0.75 $  23,328 $13,832 $-4,792  1.15
+ 30  2.0 opposite_range  both   0.0  16.7%  14.2%   +0.72 $  22,780 $13,832 $-4,792  1.14
+ 15  2.0 opposite_range  long   0.0  16.6%  16.7%   +0.85 $  18,872 $ 8,420 $-4,518  1.18
+ 15  1.0 opposite_range  both   0.0  16.5%  16.9%   +0.18 $  30,485 $ 5,658 $-4,518  1.03
+ 15  1.0   fixed_ticks  both   0.5  16.1%  21.2%   +0.88 $   9,030 $ 1,908 $-1,005  1.17
+ 30  2.0 opposite_range  long   0.5  16.0%  16.7%   +0.83 $  19,122 $13,832 $-4,518  1.21
+
+=== Deflated Sharpe (winner = best-sharpe cell) ===
+  winner params: {'or_min': 15, 'tp': 3.0, 'stop_mode': 'fixed_ticks', 'direction': 'both', 'chop': 0.5}
+  raw Sharpe: 1.022
+  expected-max Sharpe under null: 0.905
+  trial-sharpe stdev: 0.341
+  DSR (prob true SR > deflated bench): 0.6184
+  -> NOT statistically distinguishable from selection bias.
+
+=== PBO across the grid ===
+  N strategies: 144, T periods: 1348
+  PBO: 0.701
+  (PBO > 0.5 = in-sample winner DOES NOT generalise OOS;
+   PBO ~ 0.5 = noise; PBO < 0.2 = genuine edge)
