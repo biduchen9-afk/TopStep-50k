@@ -1,0 +1,73 @@
+Loading ES bars...
+  1,522,612 bars in 21.3s
+
+Building regime conditioners...
+
+Running GATED strategies once each...
+  [ORB-gated] 1348 days, 14.0s
+  [MR-gated] 1348 days, 5.5s
+  [OD-gated] 1348 days, 13.1s
+
+TRAIN: 2021-12-31 -> 2023-12-29 (623 d)
+TEST : 2023-12-31 -> 2026-04-24 (725 d)
+
+========================================================================
+STATIC pass-rate sizing (TRAIN-derived, $25K criterion)
+========================================================================
+  Solo pass-rates on TRAIN (gated, 30-day window, $25K rules):
+                       ORB: 44.1%
+                   MeanRev: 14.5%
+            OvernightDrift: 32.7%
+  -> static weights: {'ORB': 0.483, 'MeanRev': 0.159, 'OvernightDrift': 0.358}
+
+WALK-FORWARD pass-rate weights (252-day lookback)...
+  computed in 2.5s
+
+  WF weights on TEST (mean / range):
+                       ORB: mean=0.451  min=0.300  max=0.559
+                   MeanRev: mean=0.102  min=0.000  max=0.187
+            OvernightDrift: mean=0.447  min=0.339  max=0.544
+
+========================================================================
+TEST window comparison
+========================================================================
+  inverse-vol fixed (prior baseline) : days=725  nz= 628  total=$  +13,285  Sharpe=+1.22  WR=47.4%  PF=1.27  MaxDD=$  -4,176
+                                     $50K Combine    pass30= 2.4% (17/696)  pass45= 3.2% (22/681)
+                                     $25K Combine    pass30=22.8% (159/696)  pass45=30.7% (209/681)
+
+                  STATIC pass-rate : days=725  nz= 628  total=$  +27,143  Sharpe=+1.03  WR=47.4%  PF=1.24  MaxDD=$ -11,171
+                                     $50K Combine    pass30=11.9% (83/696)  pass45=23.9% (163/681)
+                                     $25K Combine    pass30=24.0% (167/696)  pass45=27.5% (187/681)
+
+            WALK-FORWARD pass-rate : days=725  nz= 628  total=$  +31,580  Sharpe=+1.08  WR=47.9%  PF=1.26  MaxDD=$ -10,699
+                                     $50K Combine    pass30=12.8% (89/696)  pass45=21.6% (147/681)
+                                     $25K Combine    pass30=20.8% (145/696)  pass45=23.3% (159/681)
+
+========================================================================
+Drop-one sensitivity (static pass-rate weights)
+========================================================================
+                   static drop ORB : days=725  nz= 569  total=$  +45,661  Sharpe=+1.19  WR=42.6%  PF=1.34  MaxDD=$ -22,199
+                                     $50K Combine    pass30=25.1% (175/696)  pass45=30.0% (204/681)
+                                     $25K Combine    pass30=27.3% (190/696)  pass45=28.8% (196/681)
+               static drop MeanRev : days=725  nz= 583  total=$  +31,457  Sharpe=+1.00  WR=44.6%  PF=1.23  MaxDD=$ -13,205
+                                     $50K Combine    pass30=13.6% (95/696)  pass45=22.2% (151/681)
+                                     $25K Combine    pass30=21.8% (152/696)  pass45=23.3% (159/681)
+        static drop OvernightDrift : days=725  nz= 465  total=$   +6,591  Sharpe=+0.21  WR=33.0%  PF=1.05  MaxDD=$ -20,259
+                                     $50K Combine    pass30= 7.6% (53/696)  pass45=15.0% (102/681)
+                                     $25K Combine    pass30=18.1% (126/696)  pass45=18.9% (129/681)
+
+========================================================================
+Deflated Sharpe
+========================================================================
+  candidate winner: STATIC pass-rate
+    raw Sharpe (annual): 1.025
+    expected-max under null: 0.638
+    DSR: 0.7421
+    trials this pass: 9
+    -> NOT statistically distinguishable from selection bias
+  candidate winner: WALK-FORWARD pass-rate
+    raw Sharpe (annual): 1.082
+    expected-max under null: 0.638
+    DSR: 0.7713
+    trials this pass: 9
+    -> NOT statistically distinguishable from selection bias
