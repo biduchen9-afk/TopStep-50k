@@ -1,0 +1,62 @@
+Loading ES bars...
+  1,522,612 bars in 20.8s
+
+Building regime conditioners from per-day session stats...
+
+Running GATED strategies (literature conditioners) once each...
+  [ORB-gated] 1348 days, 13.9s
+  [MR-gated] 1348 days, 5.4s
+  [OD-gated] 1348 days, 13.1s
+
+Running BASELINE (un-gated) strategies for reference...
+  [ORB-base] 1348 days, 10.5s
+  [MR-base] 1348 days, 6.2s
+  [OD-base] 1348 days, 11.0s
+
+TRAIN: 2021-12-31 -> 2023-12-29 (623 d)
+TEST : 2023-12-31 -> 2026-04-24 (725 d)
+
+FIXED weights (baseline TRAIN inverse-vol): {'ORB': 0.196, 'MeanRev': 0.662, 'OvernightDrift': 0.142}
+
+Walk-forward weights on TEST window (mean +/- stdev):
+                     ORB :  mean=0.154  stdev=0.019  min=0.117  max=0.194
+                 MeanRev :  mean=0.720  stdev=0.044  min=0.614  max=0.792
+          OvernightDrift :  mean=0.126  stdev=0.027  min=0.089  max=0.199
+
+========================================================================
+TEST window: comparison
+========================================================================
+              BASELINE fixed : days=725  nz= 724  total=$  +11,494  Sharpe=+0.72  WR=53.9%  PF=1.14  MaxDD=$  -7,704
+                               $50K Combine    pass30= 8.8% (61/696)  pass45=23.6% (161/681)
+                               $25K Combine    pass30=28.2% (196/696)  pass45=33.3% (227/681)
+
+                 GATED fixed : days=725  nz= 628  total=$  +13,369  Sharpe=+1.16  WR=47.7%  PF=1.26  MaxDD=$  -4,734
+                               $50K Combine    pass30= 2.7% (19/696)  pass45= 3.5% (24/681)
+                               $25K Combine    pass30=22.6% (157/696)  pass45=31.6% (215/681)
+
+          GATED walk-forward : days=725  nz= 628  total=$  +12,284  Sharpe=+1.19  WR=46.9%  PF=1.26  MaxDD=$  -3,839
+                               $50K Combine    pass30= 1.1% (8/696)  pass45= 2.1% (14/681)
+                               $25K Combine    pass30=22.1% (154/696)  pass45=30.5% (208/681)
+
+========================================================================
+Walk-forward drop-one sensitivity (gated)
+========================================================================
+           WF gated drop ORB : days=725  nz= 569  total=$  +12,549  Sharpe=+1.21  WR=41.0%  PF=1.29  MaxDD=$  -4,742
+                               $50K Combine    pass30= 0.0% (0/696)  pass45= 5.6% (38/681)
+                               $25K Combine    pass30=25.0% (174/696)  pass45=39.1% (266/681)
+       WF gated drop MeanRev : days=725  nz= 583  total=$  +34,035  Sharpe=+1.07  WR=44.7%  PF=1.25  MaxDD=$ -13,154
+                               $50K Combine    pass30=15.5% (108/696)  pass45=23.8% (162/681)
+                               $25K Combine    pass30=22.7% (158/696)  pass45=24.5% (167/681)
+  WF gated drop OvernightDrift : days=725  nz= 465  total=$   +5,309  Sharpe=+0.56  WR=32.3%  PF=1.12  MaxDD=$  -4,531
+                               $50K Combine    pass30= 1.1% (8/696)  pass45= 4.7% (32/681)
+                               $25K Combine    pass30=13.2% (92/696)  pass45=16.6% (113/681)
+
+========================================================================
+Deflated Sharpe
+========================================================================
+  winner candidate: GATED walk-forward
+    raw Sharpe (annual): 1.194
+    expected-max under null: 0.694
+    DSR: 0.7992
+    trials accumulated this pass: 12
+    -> NOT statistically distinguishable from selection bias
