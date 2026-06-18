@@ -1,0 +1,37 @@
+Loading NQ 1-minute bars...
+  1,406,058 bars in 14.9s
+
+Running VWAP+StdDev+Fractal strategy (paper params, RR=3)...
+  backtest done in 5.6s
+  total fill events: 66
+
+========================================================================
+PAPER 2 REPLICATION: VWAP + StdDev + Fractal on NQ (RR=3:1)
+========================================================================
+Metric                             Paper claim         Our replication
+------------------------------------------------------------------------
+Period                      2022-04-12 -> 2026-04-09
+Trades                                     212                      33
+Win rate                                 69.8%                   24.2%
+Avg win (pts)                           +21.52                   28.78
+Avg loss (pts)                           -7.65                   -9.15
+Profit factor                             2.81                    1.01
+Net PnL ($, 1 contract)               +$53,895                      30
+Total return on $50K                   +107.8%                    0.1%
+Annualised Sharpe (daily $)             ~12.58                    0.03
+MaxDD (pts)                            ~-1.39%                     -92
+Trading days w/ PnL                                                 33
+
+Exit-tag breakdown:
+  vsf_vwap_flip                      13  (39.4%)
+  vsf_stop                           12  (36.4%)
+  vsf_target                          7  (21.2%)
+  vsf_time_exit                       1  (3.0%)
+
+Year-by-year (our replication):
+  Year        Trades     Win %     PnL (pts)       PnL ($)
+  2022             6     16.7%           -42          -830
+  2023            10     20.0%           -12          -250
+  2024            12     25.0%            19           380
+  2025             4     25.0%            26           525
+  2026             1    100.0%            10           205
