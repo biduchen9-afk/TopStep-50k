@@ -1,0 +1,77 @@
+========================================================================
+STRATEGY #10: INTRADAY MOMENTUM + TAKE-PROFIT (1:1 RR)
+Pre-committed: 30-min signal, stop=1x range, target=1x range
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 20.3s
+
+Running ES IntradayMomentumTP (no filter)...
+  done in 18.6s  (1348 days)
+Running ES IntradayMomentumTP (skip FOMC+NFP)...
+  done in 15.7s  (1348 days)
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)
+
+────────────────────────────────────────────────────────────────────────
+QUICK STATS (IS only)
+────────────────────────────────────────────────────────────────────────
+  ES IMTP raw                        : n_days=943 nz= 516 total=$   -6,130 Sharpe=-0.20 PF=0.96 MaxDD=$ -21,188
+                                       pass30=15.0% (137/914)  pass45=17.7% (159/899)
+  ES IMTP +filter                    : n_days=943 nz= 470 total=$   -6,962 Sharpe=-0.24 PF=0.95 MaxDD=$ -17,490
+                                       pass30=12.4% (113/914)  pass45=16.4% (147/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST (raw variant)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: IntradayMomTP-ES-raw
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=137.892    thr=20.000  
+  [✗] EV per day ($)                 obs=-6.501     thr=0.000  
+  [✗] profit_factor                  obs=0.960      thr=1.000  
+  [✗] t_stat (IS)                    obs=-0.389     thr=1.500  
+  [✗] sharpe_annual (IS)             obs=-0.201     thr=0.300  
+  [✗] max_loss / avg_win             obs=3.744      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST (+FOMC/NFP filter)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: IntradayMomTP-ES-filtered
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=125.599    thr=20.000  
+  [✗] EV per day ($)                 obs=-7.383     thr=0.000  
+  [✗] profit_factor                  obs=0.950      thr=1.000  
+  [✗] t_stat (IS)                    obs=-0.464     thr=1.500  
+  [✗] sharpe_annual (IS)             obs=-0.240     thr=0.300  
+  [✗] max_loss / avg_win             obs=3.568      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS STANDALONE STATS (reference)
+────────────────────────────────────────────────────────────────────────
+  ES IMTP raw OOS                    : n_days=405 nz= 226 total=$   -2,642 Sharpe=-0.14 PF=0.97 MaxDD=$ -16,335
+                                       pass30=19.7% (74/376)  pass45=24.9% (90/361)
+  ES IMTP +filt OOS                  : n_days=405 nz= 207 total=$   -1,810 Sharpe=-0.10 PF=0.98 MaxDD=$ -14,688
+                                       pass30=18.1% (68/376)  pass45=23.3% (84/361)
+
+────────────────────────────────────────────────────────────────────────
+DSR TRIAL ACCOUNTING
+────────────────────────────────────────────────────────────────────────
+  Trials added this evaluation: 2 (raw + filtered)
+  Cumulative project trials: ~38 + 2 = 40
+
+========================================================================
+VERDICT
+========================================================================
+  raw variant    : RETIRED
+  filter variant : RETIRED
