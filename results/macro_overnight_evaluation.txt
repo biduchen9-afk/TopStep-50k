@@ -1,0 +1,55 @@
+========================================================================
+STRATEGY #8: MACRO EVENT OVERNIGHT DRIFT — PROMOTION CHECKLIST
+Pre-committed: long overnight before FOMC+NFP, exit at announcement open
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 19.2s
+
+Running ES MacroOvernight (FOMC + NFP eve)...
+  done in 8.1s  (1348 active days)
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)
+
+Macro events in IS: 121 | OOS: 53
+
+────────────────────────────────────────────────────────────────────────
+QUICK STATS (IS only)
+────────────────────────────────────────────────────────────────────────
+  ES MacroOvernight                  : n_days=943 nz= 121 total=$  +12,838 Sharpe=+0.56 PF=1.33 MaxDD=$  -7,915
+                                       pass30=2.3% (21/914)  pass45=4.1% (37/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: MacroOvernight-ES
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=32.335     thr=20.000  
+  [✓] EV per day ($)                 obs=13.613     thr=0.000  
+  [✓] profit_factor                  obs=1.326      thr=1.000  
+  [✗] t_stat (IS)                    obs=1.084      thr=1.500  
+  [✓] sharpe_annual (IS)             obs=0.560      thr=0.300  
+  [✗] max_loss / avg_win             obs=4.329      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS STANDALONE STATS (reference)
+────────────────────────────────────────────────────────────────────────
+  ES MacroOvernight OOS              : n_days=405 nz=  53 total=$   -8,518 Sharpe=-0.51 PF=0.74 MaxDD=$ -10,832
+                                       pass30=0.0% (0/376)  pass45=0.0% (0/361)
+
+────────────────────────────────────────────────────────────────────────
+DSR TRIAL ACCOUNTING
+────────────────────────────────────────────────────────────────────────
+  Trials added this evaluation: 1 (combined FOMC+NFP, single variant)
+  Cumulative project trials: ~34 + 1 = 35
+
+========================================================================
+VERDICT
+========================================================================
+  MacroOvernight-ES : RETIRED
