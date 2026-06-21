@@ -125,6 +125,8 @@ def simulate_combine_window(
         mll.update_end_of_day(eq)
         if passed_target_on is None and rules.reached_profit_target(eq):
             passed_target_on = i
+            break  # Combine ends the moment the target is hit; post-target
+                   # days must not contaminate the MLL or consistency check.
 
     if passed_target_on is not None:
         cons = rules.check_consistency(cumulative)

@@ -46,6 +46,7 @@ class _ODState:
     cur_session_open_utc: datetime | None = None
     cur_entry_utc: datetime | None = None       # 15:55 ET prev day
     cur_exit_utc: datetime | None = None        # 09:35 ET this day
+    entry_filter_rejected: bool = False         # True once filter says no for this cycle
 
 
 @dataclass
@@ -83,6 +84,7 @@ class OvernightDrift:
         if self._state.last_seen_date == d:
             return
         self._state.last_seen_date = d
+        self._state.entry_filter_rejected = False
         tz = bar_ts.tzinfo
         so_local = datetime.combine(d, self.session_open_local, tzinfo=EASTERN)
         sc_local = datetime.combine(d, self.session_close_local, tzinfo=EASTERN)
@@ -110,14 +112,14 @@ class OvernightDrift:
 
         # Entry window: at-or-after today's entry trigger, if flat, go long.
         if s.cur_entry_utc is not None and bar.ts >= s.cur_entry_utc:
-            if cur_qty == 0 and s.target_qty == 0:
+            if cur_qty == 0 and s.target_qty == 0 and not s.entry_filter_rejected:
                 # Consult the entry filter, if any. Uses the date in
                 # US/Eastern of the entry bar.
                 if self.entry_filter is not None:
                     entry_date = bar.ts.astimezone(EASTERN).date()
                     if not self.entry_filter(entry_date):
-                        # Still mark target so we don't re-attempt this
-                        # cycle (target_qty stays 0; next day-roll clears).
+                        # Mark so we skip every subsequent bar in this cycle.
+                        s.entry_filter_rejected = True
                         return None
                 s.target_qty = self.qty
                 return TargetPosition(symbol=self.symbol, qty=self.qty,

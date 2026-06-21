@@ -129,3 +129,36 @@ def test_rejects_too_short_history():
         realized_pass_rate(pnls, rules=rules,
                            starting_balance=Decimal("50000"),
                            window_days=30)
+
+
+def test_post_target_mll_breach_does_not_override_pass():
+    """Target hit on day 5; massive loss on day 7 must NOT turn outcome to
+    mll_breach. In a real Combine the trader stops on day 5."""
+    rules = combine_50k()
+    # Days 1-5: +600 each = +3,000 -> target hit on day 5.
+    # Day 6: big loss that would breach MLL if trading continued.
+    pnls = [600] * 5 + [-5000]
+    res = simulate_combine_window(
+        _daily(date(2024, 1, 2), pnls),
+        rules=rules, starting_balance=Decimal("50000"),
+    )
+    assert res.outcome == "pass", (
+        f"Got {res.outcome!r} — post-target day must not override the pass"
+    )
+    assert res.days_to_outcome == 5
+
+
+def test_post_target_days_excluded_from_consistency():
+    """Target hit on day 5 with clean consistency; a huge day on day 6
+    must NOT cause a consistency_fail since the Combine ended on day 5."""
+    rules = combine_50k()
+    # Days 1-5: even +600/day -> target on day 5, best_day/total = 20%.
+    # Day 6: +50,000 (would push best_day ratio > 50% of inflated total).
+    pnls = [600] * 5 + [50000]
+    res = simulate_combine_window(
+        _daily(date(2024, 1, 2), pnls),
+        rules=rules, starting_balance=Decimal("50000"),
+    )
+    assert res.outcome == "pass", (
+        f"Got {res.outcome!r} — post-target day must not contaminate consistency"
+    )
