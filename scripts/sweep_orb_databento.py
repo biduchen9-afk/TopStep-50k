@@ -16,13 +16,15 @@ Run with: python scripts/sweep_orb_databento.py
 
 from __future__ import annotations
 
+import gc
 import sys
 import time as _time
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from datetime import date, time as dtime, timedelta, timezone
+from datetime import date, datetime, time as dtime, timedelta, timezone
 from decimal import Decimal
 from itertools import product
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
@@ -57,6 +59,7 @@ ASSETS = {
                tick_size_f=0.10, data_path=ROOT / "data" / "raw" / "gc_databento.txt"),
 }
 RULES = combine_50k()
+EASTERN = ZoneInfo("America/New_York")
 
 GRID = {
     "or_min":    [15, 30, 60],
@@ -92,31 +95,38 @@ def _to_series(daily_pnl: dict, day_index: list[date]) -> np.ndarray:
     return out
 
 
-def find_is_cutoff(bars, asset_key, tick_size_f, instrument) -> date:
-    """One full-history baseline run just to locate the IS/OOS day cutoff."""
-    result = run_cell(bars, asset_key, tick_size_f, instrument,
-                       or_min=30, tp=1.0, stop_mode="opposite_range", chop=0.0)
-    days = sorted(result.daily_pnl.keys())
+def is_cutoff_from_bars(bars) -> date:
+    """Derive the IS/OOS day cutoff straight from bar timestamps -- no
+    strategy simulation needed, and no need to hold a second copy of the
+    bar list just to compute it."""
+    days = sorted({b.ts.astimezone(EASTERN).date() for b in bars})
     _, _, is_days, _ = is_oos_split(days, {})
     return is_days[-1]
 
 
 def sweep_asset(asset_key: str) -> dict:
     """Runs entirely in a worker process: load bars, find IS cutoff, slice to
-    IS-only bars, sweep the grid, return ranked rows + finalist configs."""
+    IS-only bars, sweep the grid, return ranked rows + finalist configs.
+
+    Memory note: full-history bar lists are ~2.5-3GB each (5.6M un-slotted
+    Bar dataclass instances). We drop the full-history list immediately
+    after slicing so only the ~70%-sized IS list is held during the grid
+    loop -- holding both simultaneously across 3 parallel workers is what
+    OOM-killed the first attempt at this sweep.
+    """
     cfg = ASSETS[asset_key]
     t0 = _time.time()
     bars = list(load_bars_csv(cfg["data_path"]))
     load_s = _time.time() - t0
+    n_bars_full = len(bars)
 
-    cutoff = find_is_cutoff(bars, asset_key, cfg["tick_size_f"], cfg["instrument"])
+    cutoff = is_cutoff_from_bars(bars)
     # Buffer 3 calendar days past the Eastern IS cutoff to be safely inclusive
     # without leaking a meaningful amount of OOS into the phase-1 screen.
-    cutoff_dt = (
-        __import__("datetime").datetime.combine(cutoff, dtime.min, tzinfo=timezone.utc)
-        + timedelta(days=3)
-    )
+    cutoff_dt = datetime.combine(cutoff, dtime.min, tzinfo=timezone.utc) + timedelta(days=3)
     bars_is = [b for b in bars if b.ts <= cutoff_dt]
+    del bars
+    gc.collect()
 
     combos = [dict(zip(GRID.keys(), v, strict=True)) for v in product(*GRID.values())]
     rows = []
@@ -150,7 +160,7 @@ def sweep_asset(asset_key: str) -> dict:
     finalists = gate2_ok[:N_FINALISTS] if gate2_ok else rows[:N_FINALISTS]
 
     return {
-        "asset": asset_key, "load_s": load_s, "n_bars": len(bars),
+        "asset": asset_key, "load_s": load_s, "n_bars": n_bars_full,
         "n_bars_is": len(bars_is), "is_cutoff": cutoff,
         "rows": rows, "finalists": finalists,
         "sweep_s": _time.time() - t0 - load_s,
@@ -183,7 +193,7 @@ def main():
 
     t0 = _time.time()
     screens: dict[str, dict] = {}
-    with ProcessPoolExecutor(max_workers=3) as ex:
+    with ProcessPoolExecutor(max_workers=2) as ex:
         futs = {ex.submit(sweep_asset, ak): ak for ak in ASSETS}
         for fut in as_completed(futs):
             ak = futs[fut]
