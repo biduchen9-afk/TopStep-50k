@@ -17,6 +17,7 @@ import csv
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterator
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -26,13 +27,27 @@ from topstep50k.engine.types import Bar
 # (parser_name, splitter_callable, parse_row_callable)
 SchemaResult = tuple[str, Callable[[str], list[str]], Callable[[list[str]], Bar | None]]
 
+# NinjaTrader/SierraChart bar exports are stamped in the chart's configured
+# session timezone -- never true UTC. Verified empirically against
+# es/nq/gc_databento.txt (2026-08): the CME daily maintenance-halt volume
+# gap sits at raw-labeled 17:00-18:00 in BOTH January (EST) and July (EDT)
+# with zero seasonal drift (true UTC would show it move an hour between
+# winter/summer), and raw-labeled 09:30/16:00 show the classic NYSE
+# cash-open / market-on-close volume spikes. So the raw clock already
+# observes US DST -- it's US/Eastern local time. Tagging it UTC (the old
+# behavior) silently shifted every session-time computation downstream
+# (ORB/MeanRev RTH windows, OD entry/exit timing, the regime gates' RTH
+# open/close) by the EST/EDT offset.
+_NINJATRADER_SOURCE_TZ = ZoneInfo("America/New_York")
+
 
 def _sep_split(sep: str) -> Callable[[str], list[str]]:
     return lambda line: line.rstrip("\n").split(sep)
 
 
 def _parse_yyyymmdd_hhmmss(parts: list[str]) -> Bar | None:
-    # YYYYMMDD HHMMSS;O;H;L;C;V  (NinjaTrader/SierraChart export)
+    # YYYYMMDD HHMMSS;O;H;L;C;V  (NinjaTrader/SierraChart export, stamped
+    # in US/Eastern local time -- see _NINJATRADER_SOURCE_TZ above)
     if len(parts) < 6:
         return None
     dt_str = parts[0]
@@ -40,7 +55,8 @@ def _parse_yyyymmdd_hhmmss(parts: list[str]) -> Bar | None:
         d, t = dt_str.split(" ", 1)
     else:
         d, t = dt_str, "000000"
-    ts = datetime.strptime(d + t, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+    naive = datetime.strptime(d + t, "%Y%m%d%H%M%S")
+    ts = naive.replace(tzinfo=_NINJATRADER_SOURCE_TZ).astimezone(timezone.utc)
     try:
         o, h, l, c = (float(parts[i]) for i in (1, 2, 3, 4))
         v = int(float(parts[5])) if len(parts) > 5 else 0

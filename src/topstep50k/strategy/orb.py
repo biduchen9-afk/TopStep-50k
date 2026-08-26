@@ -95,7 +95,11 @@ class OpeningRangeBreakout:
         'fixed_ticks' uses `stop_ticks` ticks from entry.
     stop_ticks : only used when stop_mode == 'fixed_ticks'.
     tp_multiple : profit target = entry +/- tp_multiple * OR_width.
-        Use None for no take-profit (time stop only).
+        Use None for no take-profit (time stop only). Ignored when
+        `tp_ticks` is set.
+    tp_ticks : profit target = entry +/- tp_ticks * tick_size, independent
+        of OR width. Takes priority over tp_multiple when set -- use this
+        for a fixed risk:reward test (pair with stop_mode='fixed_ticks').
     flat_before_close_minutes : seconds before session close to force
         flat regardless of PnL.
     session_open_local : RTH open in US/Eastern, default 09:30.
@@ -111,6 +115,7 @@ class OpeningRangeBreakout:
     stop_mode: StopMode = "opposite_range"
     stop_ticks: int = 40   # used only if stop_mode=='fixed_ticks'
     tp_multiple: float | None = 1.0
+    tp_ticks: int | None = None  # fixed-tick TP; overrides tp_multiple when set
     flat_before_close_minutes: int = 15
     session_open_local: time = time(9, 30)
     session_close_local: time = time(16, 0)
@@ -242,7 +247,13 @@ class OpeningRangeBreakout:
                 if signal > 0
                 else st.entry_price + self.stop_ticks * self.tick_size
             )
-        if self.tp_multiple is not None and st.or_width:
+        if self.tp_ticks is not None:
+            st.tp_price = (
+                st.entry_price + self.tp_ticks * self.tick_size
+                if signal > 0
+                else st.entry_price - self.tp_ticks * self.tick_size
+            )
+        elif self.tp_multiple is not None and st.or_width:
             st.tp_price = (
                 st.entry_price + self.tp_multiple * st.or_width
                 if signal > 0

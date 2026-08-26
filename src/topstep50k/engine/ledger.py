@@ -17,10 +17,14 @@ Mark-to-market: equity = starting_balance + realised_pnl
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from topstep50k.engine.types import Fill, Instrument, OrderSide
+
+_CENTRAL = ZoneInfo("America/Chicago")
+_SESSION_ROLL_CT = time(16, 0)
 
 
 @dataclass
@@ -145,10 +149,19 @@ class Ledger:
 
 
 def trading_day(ts: datetime) -> date:
-    """Default day-bucketing: UTC calendar date.
+    """CME/Combine session-day bucketing: a trading day runs 16:00 CT ->
+    16:00 CT (the daily maintenance-halt boundary; CME reopens at 17:00 CT
+    but nothing trades 16:00-17:00 CT so the exact cutoff within that gap
+    doesn't matter). A bar at or after 16:00 CT belongs to the NEXT trade
+    date -- matching TopStep's actual Combine day reset and the standard
+    NinjaTrader/Sierra "trade date" convention.
 
-    Swap for a CME session-aware day function when we wire in the
-    16:00 CT → 16:00 CT session convention; the rules engine doesn't care
-    which day function we use as long as it's consistent across a session.
+    Previously this used raw UTC-calendar-date bucketing, which does not
+    line up with either TopStep's real reset or the exchange session
+    boundary -- see the look-ahead/leakage audit that replaced this.
     """
-    return ts.astimezone(timezone.utc).date()
+    ct = ts.astimezone(_CENTRAL)
+    d = ct.date()
+    if ct.time() >= _SESSION_ROLL_CT:
+        d = d + timedelta(days=1)
+    return d
