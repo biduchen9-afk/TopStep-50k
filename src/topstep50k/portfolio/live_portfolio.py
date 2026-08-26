@@ -10,21 +10,31 @@ must match that script's printed weights exactly):
   Data       : es/nq/gc_databento.txt (GitHub Release "Data list" v1.0.0)
   IS period  : 2021-12-31 to 2025-02-25 (815d, 70%)
   OOS period : 2025-02-26 to 2026-07-03 (350d, 30%, one-touch)
-  IS  result : pass30=16.2%, Sharpe=+0.94
-  OOS result : pass30=27.7%, pass45=40.5%, Sharpe=+1.42, EV=+$79/day — OOS_PROMOTED
+  IS  result : pass30=29.8%, Sharpe=+0.96
+  OOS result : pass30=47.7%, pass45=53.6%, Sharpe=+2.07, EV=+$142/day — OOS_PROMOTED
+  Sequential accounts (OOS, non-overlapping, one at a time): 26 accounts,
+    13 pass = 50.0% unconditional pass rate; 19/26 ever reached $1,500+
+    profit, of which 68.4% went on to actually pass.
 
 No new parameters, no re-fitting. Gates are literature-grounded rules with
 zero free parameters tuned to our data (see regime/conditioners.py).
 
-IMPORTANT: this whole result depends on two engine-level fixes made
-2026-08-26 (see git log): (1) data/loaders.py was tagging raw NinjaTrader/
-SierraChart timestamps as UTC when they are actually US/Eastern local
-time -- verified against the CME daily maintenance-halt gap position and
-the NYSE open/close volume spikes; (2) engine/ledger.py's trading_day()
-now rolls at 16:00 CT (the CME session boundary) instead of raw calendar
-date. Re-running any of this on a DIFFERENT data source must re-verify
-the source file's actual timezone convention before trusting the result
--- do not assume it's UTC.
+IMPORTANT: this whole result depends on THREE engine-level fixes:
+(1, 2026-08-26) data/loaders.py was tagging raw NinjaTrader/SierraChart
+timestamps as UTC when they are actually US/Eastern local time --
+verified against the CME daily maintenance-halt gap position and the
+NYSE open/close volume spikes; (2, 2026-08-26) engine/ledger.py's
+trading_day() now rolls at 16:00 CT (the CME session boundary) instead
+of raw calendar date; (3, 2026-08-26) analysis/passrate.py's consistency
+check no longer treats a >50%-best-day violation as a terminal failure
+-- per Topstep's own published mechanic, the effective profit target
+rises to 2x the best day and trading continues, which raised both IS
+and OOS pass30/pass45 materially and reshuffled the EV-gated weights
+below (this fix changed the WEIGHTS themselves, not just the reported
+pass rate, because per-stream IS-pass30 feeds the weight derivation).
+Re-running any of this on a DIFFERENT data source must re-verify the
+source file's actual timezone convention before trusting the result --
+do not assume it's UTC.
 """
 
 from __future__ import annotations
@@ -44,14 +54,14 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 IS_WEIGHTS: dict[tuple[str, str], float] = {
-    ("ES", "ORB"):     0.328,
-    ("GC", "ORB"):     0.208,
-    ("ES", "OD"):      0.129,
-    ("GC", "OD"):      0.121,
-    ("NQ", "ORB"):     0.094,
-    ("NQ", "OD"):      0.054,
-    ("ES", "MeanRev"): 0.050,
-    ("NQ", "MeanRev"): 0.015,
+    ("ES", "ORB"):     0.204,
+    ("NQ", "ORB"):     0.190,
+    ("GC", "OD"):      0.171,
+    ("NQ", "OD"):      0.154,
+    ("GC", "ORB"):     0.141,
+    ("ES", "OD"):      0.103,
+    ("ES", "MeanRev"): 0.028,
+    ("NQ", "MeanRev"): 0.008,
     ("GC", "MeanRev"): 0.000,
 }
 
