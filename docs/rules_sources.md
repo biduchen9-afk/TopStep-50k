@@ -113,12 +113,38 @@ preset would be needed for the funded account.
 
 * **News/event blackout** — not a Combine rule. Funded accounts apply
   flatten-by-news rules separately.
-* **Weekend / overnight holding** — allowed on Combine. Express Funded
-  has additional flatten-by-time-X rules; out of scope here.
 * **$150 winning day** — counts toward minimum trading days for
   Express Funded payouts. Not relevant to passing the Combine itself.
 * **Dynamic Live Risk Expansion** — a topstep.com feature article
   exists; not part of the standard $50K Combine evaluation.
+
+## Overnight / swing holding — CORRECTED 2026-08-26 (was wrong)
+
+**No overnight or weekend holding is allowed at ANY stage** — Combine,
+Express Funded Account, or Live Funded. All positions must be flat by
+**3:10 PM CT every weekday** (risk managers start flattening at 3:08 PM
+CT; Topstep's automated Trade Desk force-flattens ~10 seconds before
+3:10 PM CT if a position is still open; staying flat in time is the
+trader's own responsibility). Trading resumes at 5:00 PM CT weekdays,
+Sundays after the weekend break. Rules confirmed current as of a
+July 1, 2026 update, applied uniformly across all three account
+stages.
+
+This directly overturns what this file previously said in the
+"intentionally not enforced" list below ("Weekend / overnight holding
+— allowed on Combine") — that line was based on May 2026 research and
+was simply wrong, or went stale with the same rules refresh that
+changed the payout caps. **`OvernightDrift` (the `OD` strategy stream)
+is therefore not viable for this project at all** — not just
+unmodeled, actually disallowed — and has been retired from the live
+ensemble. See `src/topstep50k/strategy/overnight_drift.py`'s module
+docstring and `scripts/evaluate_ensemble_databento_recent_evgate.py`
+for the retirement note.
+
+| Topic | URL |
+|---|---|
+| Live Funded Account Rules | https://www.topstep.com/live-funded-account-rules |
+| Express Funded Account Parameters | https://help.topstep.com/en/articles/8284215-express-funded-account-parameters |
 
 ## Express Funded Account (XFA) — added 2026-08-26
 

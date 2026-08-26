@@ -22,6 +22,19 @@ straightforward to add later but starts as long-only here.
 EDGE WARNING: this edge is small and can disappear in bear regimes
 (was negative in 2022 for SPY). Sign of the strategy is empirical
 on this dataset.
+
+RETIRED 2026-08-26: TopStep does not allow overnight or weekend
+holding at ANY account stage (Combine, XFA, or Live Funded) -- all
+positions must be flat by 3:10 PM CT every day, confirmed current as
+of a July 1, 2026 rules update (see docs/rules_sources.md). This
+strategy's entire premise -- holding from before RTH close to after
+the next RTH open -- is therefore not tradeable on this platform at
+all, independent of how well it backtests. It is kept in the codebase
+(and its bugfix history preserved) for reference and because the
+underlying edge/engine code is still useful to have tested, but it
+must not be included in any live-deployed ensemble weight going
+forward. See evaluate_ensemble_databento_recent_evgate.py's retirement
+note for the ensemble-level consequence.
 """
 
 from __future__ import annotations
