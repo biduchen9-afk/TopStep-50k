@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>TopStep $50K Ensemble — Databento Monthly Timesheet</title>
+<style>
+  body { background: #0e0f12; color: #e2e6ee; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+          margin: 0; padding: 24px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #9aa3b2; margin: 0 0 18px; font-size: 13px; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+  .card { background: #181a20; border: 1px solid #262932; border-radius: 8px; padding: 14px 16px; }
+  .card .label { color: #9aa3b2; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .card .value { font-size: 22px; font-weight: 600; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; background: #181a20;
+            border: 1px solid #262932; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+  th, td { padding: 10px 12px; text-align: left; }
+  th { background: #1d2029; font-weight: 600; font-size: 12px; color: #a8b0bf;
+          text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #262932; }
+  td { border-bottom: 1px solid #20232c; font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; }
+  td.month { font-weight: 600; }
+  td.pos { color: #4ade80; }
+  td.neg { color: #f87171; }
+  td.warn { color: #fbbf24; }
+  td.muted { color: #6b7280; }
+  td.neutral { color: #e2e6ee; }
+  td.phase-is { color: #7dd3fc; }
+  td.phase-oos { color: #c084fc; font-weight: 600; }
+  td.phase-mix { color: #a3a3a3; }
+  td.pass-good { background: rgba(74, 222, 128, 0.18); color: #4ade80; }
+  td.pass-ok { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+  td.pass-bad { background: rgba(248, 113, 113, 0.16); color: #f87171; }
+  .footer { margin-top: 24px; color: #6b7280; font-size: 12px; }
+  .legend { margin: 8px 0 18px; color: #9aa3b2; font-size: 12px; }
+  .legend span { display: inline-block; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
+  .legend .good { background: rgba(74, 222, 128, 0.18); color: #4ade80; }
+  .legend .ok { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+  .legend .bad { background: rgba(248, 113, 113, 0.16); color: #f87171; }
+</style>
+</head><body>
+  <h1>TopStep $50K Ensemble — Databento Monthly Timesheet</h1>
+  <p class="sub">Data: es/nq/gc_databento.txt (GitHub Release "Data list" v1.0.0), filtered to
+     <b>2021-12-31</b> → <b>2026-07-02</b> · IS ends <b>2025-02-25</b>, OOS starts the next trading day ·
+     9-stream regime-gated portfolio (ES+NQ+GC × ORB+MeanRev+OvernightDrift) ·
+     EV-gated pass-rate-aware weights (any IS-EV≤0 stream gets zero weight)</p>
+
+  <div class="summary">
+    <div class="card"><div class="label">Full-period Total PnL</div>
+       <div class="value" style="color:#4ade80;">$+33,575</div></div>
+    <div class="card"><div class="label">Full-period Sharpe</div>
+       <div class="value">+0.51</div></div>
+    <div class="card"><div class="label">Months shown</div>
+       <div class="value">56</div></div>
+    <div class="card"><div class="label">Profit Target</div>
+       <div class="value" style="color:#9aa3b2;">$3,000 / +6%</div></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Stream</th><th class="num">Weight</th></tr></thead>
+    <tbody><tr><td>NQ/ORB</td><td class="num">0.510</td></tr><tr><td>ES/ORB</td><td class="num">0.192</td></tr><tr><td>GC/OD</td><td class="num">0.153</td></tr><tr><td>GC/ORB</td><td class="num">0.099</td></tr><tr><td>ES/MeanRev</td><td class="num">0.045</td></tr></tbody>
+  </table>
+
+  <div class="legend">
+    Pass-30 cell color:
+    <span class="good">&ge; 33% (strong)</span>
+    <span class="ok">15-33% (OK)</span>
+    <span class="bad">&lt; 15% (weak)</span>
+    &nbsp;&nbsp;Phase: <span style="color:#7dd3fc">IS</span> = weight-derivation period,
+    <span style="color:#c084fc">OOS</span> = one-touch held-out period
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Month</th><th class="num">Phase</th>
+        <th class="num">PnL</th><th class="num">Cum.</th>
+        <th class="num">Active/Total</th><th class="num">Win%</th>
+        <th class="num">Best Day</th><th class="num">Worst Day</th>
+        <th class="num">Max DD</th><th class="num">Pass-30 (start mo.)</th>
+        <th class="num">MLL Breach</th><th class="num">Consistency</th><th class="num">No Target</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td class="month">Dec 2021</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neutral">$+0</td>
+          <td class="num">$+0</td>
+          <td class="num">0/1</td>
+          <td class="num">0%</td>
+          <td class="num pos">$+0</td>
+          <td class="num neg">$+0</td>
+          <td class="num neutral">$+0</td>
+          <td class="num pass-bad"><b>0%</b> (0/1)</td>
+          <td class="num neg">1</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jan 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+7,124</td>
+          <td class="num">$+7,124</td>
+          <td class="num">23/26</td>
+          <td class="num">61%</td>
+          <td class="num pos">$+3,473</td>
+          <td class="num neg">$-1,915</td>
+          <td class="num neg">$-2,418</td>
+          <td class="num pass-ok"><b>15%</b> (4/26)</td>
+          <td class="num neg">10</td>
+          <td class="num warn">12</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Feb 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-4,124</td>
+          <td class="num">$+3,000</td>
+          <td class="num">22/24</td>
+          <td class="num">50%</td>
+          <td class="num pos">$+1,199</td>
+          <td class="num neg">$-5,250</td>
+          <td class="num neg">$-6,893</td>
+          <td class="num pass-bad"><b>0%</b> (0/24)</td>
+          <td class="num neg">24</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Mar 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-1,254</td>
+          <td class="num">$+1,746</td>
+          <td class="num">21/27</td>
+          <td class="num">43%</td>
+          <td class="num pos">$+839</td>
+          <td class="num neg">$-1,169</td>
+          <td class="num neg">$-2,203</td>
+          <td class="num pass-bad"><b>15%</b> (4/27)</td>
+          <td class="num neg">16</td>
+          <td class="num warn">3</td>
+          <td class="num muted">4</td>
+        </tr>
+
+        <tr>
+          <td class="month">Apr 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+1,105</td>
+          <td class="num">$+2,851</td>
+          <td class="num">24/24</td>
+          <td class="num">46%</td>
+          <td class="num pos">$+1,549</td>
+          <td class="num neg">$-1,508</td>
+          <td class="num neg">$-4,092</td>
+          <td class="num pass-bad"><b>8%</b> (2/24)</td>
+          <td class="num neg">22</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">May 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-14,861</td>
+          <td class="num">$-12,009</td>
+          <td class="num">22/27</td>
+          <td class="num">27%</td>
+          <td class="num pos">$+1,849</td>
+          <td class="num neg">$-2,450</td>
+          <td class="num neg">$-14,702</td>
+          <td class="num pass-bad"><b>11%</b> (3/27)</td>
+          <td class="num neg">21</td>
+          <td class="num warn">0</td>
+          <td class="num muted">3</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jun 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+4,202</td>
+          <td class="num">$-7,808</td>
+          <td class="num">25/26</td>
+          <td class="num">68%</td>
+          <td class="num pos">$+961</td>
+          <td class="num neg">$-695</td>
+          <td class="num neg">$-695</td>
+          <td class="num pass-good"><b>42%</b> (11/26)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">15</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jul 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+2,204</td>
+          <td class="num">$-5,603</td>
+          <td class="num">25/26</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+1,044</td>
+          <td class="num neg">$-607</td>
+          <td class="num neg">$-1,778</td>
+          <td class="num pass-ok"><b>19%</b> (5/26)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">21</td>
+        </tr>
+
+        <tr>
+          <td class="month">Aug 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-580</td>
+          <td class="num">$-6,183</td>
+          <td class="num">26/27</td>
+          <td class="num">50%</td>
+          <td class="num pos">$+604</td>
+          <td class="num neg">$-946</td>
+          <td class="num neg">$-1,531</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">18</td>
+          <td class="num warn">0</td>
+          <td class="num muted">9</td>
+        </tr>
+
+        <tr>
+          <td class="month">Sep 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-623</td>
+          <td class="num">$-6,806</td>
+          <td class="num">26/26</td>
+          <td class="num">42%</td>
+          <td class="num pos">$+1,096</td>
+          <td class="num neg">$-1,224</td>
+          <td class="num neg">$-2,061</td>
+          <td class="num pass-ok"><b>15%</b> (4/26)</td>
+          <td class="num neg">18</td>
+          <td class="num warn">0</td>
+          <td class="num muted">4</td>
+        </tr>
+
+        <tr>
+          <td class="month">Oct 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+3,299</td>
+          <td class="num">$-3,507</td>
+          <td class="num">23/26</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+1,254</td>
+          <td class="num neg">$-756</td>
+          <td class="num neg">$-1,110</td>
+          <td class="num pass-good"><b>96%</b> (25/26)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">1</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Nov 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+2,138</td>
+          <td class="num">$-1,369</td>
+          <td class="num">22/26</td>
+          <td class="num">45%</td>
+          <td class="num pos">$+1,625</td>
+          <td class="num neg">$-1,002</td>
+          <td class="num neg">$-1,927</td>
+          <td class="num pass-bad"><b>8%</b> (2/26)</td>
+          <td class="num neg">14</td>
+          <td class="num warn">5</td>
+          <td class="num muted">5</td>
+        </tr>
+
+        <tr>
+          <td class="month">Dec 2022</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-770</td>
+          <td class="num">$-2,139</td>
+          <td class="num">25/25</td>
+          <td class="num">40%</td>
+          <td class="num pos">$+640</td>
+          <td class="num neg">$-537</td>
+          <td class="num neg">$-2,233</td>
+          <td class="num pass-bad"><b>0%</b> (0/25)</td>
+          <td class="num neg">17</td>
+          <td class="num warn">0</td>
+          <td class="num muted">8</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jan 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-585</td>
+          <td class="num">$-2,725</td>
+          <td class="num">26/26</td>
+          <td class="num">50%</td>
+          <td class="num pos">$+680</td>
+          <td class="num neg">$-724</td>
+          <td class="num neg">$-974</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">15</td>
+          <td class="num warn">0</td>
+          <td class="num muted">11</td>
+        </tr>
+
+        <tr>
+          <td class="month">Feb 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-1,494</td>
+          <td class="num">$-4,219</td>
+          <td class="num">24/24</td>
+          <td class="num">33%</td>
+          <td class="num pos">$+1,427</td>
+          <td class="num neg">$-1,492</td>
+          <td class="num neg">$-2,934</td>
+          <td class="num pass-bad"><b>0%</b> (0/24)</td>
+          <td class="num neg">24</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Mar 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+103</td>
+          <td class="num">$-4,116</td>
+          <td class="num">25/27</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+938</td>
+          <td class="num neg">$-1,187</td>
+          <td class="num neg">$-2,339</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">11</td>
+          <td class="num warn">0</td>
+          <td class="num muted">16</td>
+        </tr>
+
+        <tr>
+          <td class="month">Apr 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-408</td>
+          <td class="num">$-4,524</td>
+          <td class="num">23/25</td>
+          <td class="num">57%</td>
+          <td class="num pos">$+940</td>
+          <td class="num neg">$-599</td>
+          <td class="num neg">$-1,904</td>
+          <td class="num pass-bad"><b>0%</b> (0/25)</td>
+          <td class="num neg">2</td>
+          <td class="num warn">0</td>
+          <td class="num muted">23</td>
+        </tr>
+
+        <tr>
+          <td class="month">May 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+105</td>
+          <td class="num">$-4,419</td>
+          <td class="num">27/27</td>
+          <td class="num">56%</td>
+          <td class="num pos">$+701</td>
+          <td class="num neg">$-589</td>
+          <td class="num neg">$-2,176</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">22</td>
+          <td class="num warn">0</td>
+          <td class="num muted">5</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jun 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+458</td>
+          <td class="num">$-3,961</td>
+          <td class="num">26/26</td>
+          <td class="num">42%</td>
+          <td class="num pos">$+778</td>
+          <td class="num neg">$-698</td>
+          <td class="num neg">$-2,072</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">21</td>
+          <td class="num warn">0</td>
+          <td class="num muted">5</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jul 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+1,046</td>
+          <td class="num">$-2,915</td>
+          <td class="num">26/26</td>
+          <td class="num">50%</td>
+          <td class="num pos">$+473</td>
+          <td class="num neg">$-441</td>
+          <td class="num neg">$-661</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">26</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Aug 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-236</td>
+          <td class="num">$-3,152</td>
+          <td class="num">25/27</td>
+          <td class="num">48%</td>
+          <td class="num pos">$+888</td>
+          <td class="num neg">$-1,993</td>
+          <td class="num neg">$-1,181</td>
+          <td class="num pass-bad"><b>7%</b> (2/27)</td>
+          <td class="num neg">6</td>
+          <td class="num warn">0</td>
+          <td class="num muted">19</td>
+        </tr>
+
+        <tr>
+          <td class="month">Sep 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-1,509</td>
+          <td class="num">$-4,660</td>
+          <td class="num">25/25</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+329</td>
+          <td class="num neg">$-753</td>
+          <td class="num neg">$-2,490</td>
+          <td class="num pass-bad"><b>0%</b> (0/25)</td>
+          <td class="num neg">25</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Oct 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+2,018</td>
+          <td class="num">$-2,642</td>
+          <td class="num">25/27</td>
+          <td class="num">48%</td>
+          <td class="num pos">$+1,603</td>
+          <td class="num neg">$-799</td>
+          <td class="num neg">$-2,180</td>
+          <td class="num pass-good"><b>33%</b> (9/27)</td>
+          <td class="num neg">8</td>
+          <td class="num warn">6</td>
+          <td class="num muted">4</td>
+        </tr>
+
+        <tr>
+          <td class="month">Nov 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+127</td>
+          <td class="num">$-2,515</td>
+          <td class="num">23/26</td>
+          <td class="num">61%</td>
+          <td class="num pos">$+645</td>
+          <td class="num neg">$-428</td>
+          <td class="num neg">$-841</td>
+          <td class="num pass-bad"><b>4%</b> (1/26)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">25</td>
+        </tr>
+
+        <tr>
+          <td class="month">Dec 2023</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+2,485</td>
+          <td class="num">$-30</td>
+          <td class="num">24/24</td>
+          <td class="num">71%</td>
+          <td class="num pos">$+956</td>
+          <td class="num neg">$-434</td>
+          <td class="num neutral">$-456</td>
+          <td class="num pass-bad"><b>0%</b> (0/24)</td>
+          <td class="num neg">13</td>
+          <td class="num warn">0</td>
+          <td class="num muted">11</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jan 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+400</td>
+          <td class="num">$+370</td>
+          <td class="num">27/27</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+643</td>
+          <td class="num neg">$-690</td>
+          <td class="num neg">$-2,268</td>
+          <td class="num pass-ok"><b>26%</b> (7/27)</td>
+          <td class="num neg">11</td>
+          <td class="num warn">0</td>
+          <td class="num muted">9</td>
+        </tr>
+
+        <tr>
+          <td class="month">Feb 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+86</td>
+          <td class="num">$+455</td>
+          <td class="num">24/25</td>
+          <td class="num">46%</td>
+          <td class="num pos">$+799</td>
+          <td class="num neg">$-1,610</td>
+          <td class="num neg">$-2,123</td>
+          <td class="num pass-good"><b>56%</b> (14/25)</td>
+          <td class="num neg">6</td>
+          <td class="num warn">0</td>
+          <td class="num muted">5</td>
+        </tr>
+
+        <tr>
+          <td class="month">Mar 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+1,605</td>
+          <td class="num">$+2,060</td>
+          <td class="num">23/25</td>
+          <td class="num">57%</td>
+          <td class="num pos">$+1,202</td>
+          <td class="num neg">$-1,271</td>
+          <td class="num neg">$-2,345</td>
+          <td class="num pass-bad"><b>12%</b> (3/25)</td>
+          <td class="num neg">22</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Apr 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-930</td>
+          <td class="num">$+1,130</td>
+          <td class="num">25/26</td>
+          <td class="num">44%</td>
+          <td class="num pos">$+1,838</td>
+          <td class="num neg">$-1,774</td>
+          <td class="num neg">$-4,114</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">18</td>
+          <td class="num warn">2</td>
+          <td class="num muted">6</td>
+        </tr>
+
+        <tr>
+          <td class="month">May 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+504</td>
+          <td class="num">$+1,634</td>
+          <td class="num">27/27</td>
+          <td class="num">67%</td>
+          <td class="num pos">$+567</td>
+          <td class="num neg">$-612</td>
+          <td class="num neg">$-1,756</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">7</td>
+          <td class="num warn">0</td>
+          <td class="num muted">20</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jun 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-1,382</td>
+          <td class="num">$+253</td>
+          <td class="num">25/25</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+596</td>
+          <td class="num neg">$-794</td>
+          <td class="num neg">$-2,728</td>
+          <td class="num pass-bad"><b>4%</b> (1/25)</td>
+          <td class="num neg">22</td>
+          <td class="num warn">0</td>
+          <td class="num muted">2</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jul 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+2,594</td>
+          <td class="num">$+2,847</td>
+          <td class="num">27/27</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+1,131</td>
+          <td class="num neg">$-847</td>
+          <td class="num neg">$-1,190</td>
+          <td class="num pass-good"><b>89%</b> (24/27)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">3</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Aug 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+2,897</td>
+          <td class="num">$+5,744</td>
+          <td class="num">18/26</td>
+          <td class="num">56%</td>
+          <td class="num pos">$+2,029</td>
+          <td class="num neg">$-1,199</td>
+          <td class="num neg">$-1,199</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">21</td>
+          <td class="num warn">5</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Sep 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-612</td>
+          <td class="num">$+5,132</td>
+          <td class="num">23/26</td>
+          <td class="num">61%</td>
+          <td class="num pos">$+1,061</td>
+          <td class="num neg">$-1,283</td>
+          <td class="num neg">$-3,263</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">24</td>
+          <td class="num warn">0</td>
+          <td class="num muted">2</td>
+        </tr>
+
+        <tr>
+          <td class="month">Oct 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+1,042</td>
+          <td class="num">$+6,174</td>
+          <td class="num">27/27</td>
+          <td class="num">56%</td>
+          <td class="num pos">$+763</td>
+          <td class="num neg">$-1,117</td>
+          <td class="num neg">$-693</td>
+          <td class="num pass-bad"><b>4%</b> (1/27)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">26</td>
+        </tr>
+
+        <tr>
+          <td class="month">Nov 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num neg">$-641</td>
+          <td class="num">$+5,533</td>
+          <td class="num">23/25</td>
+          <td class="num">48%</td>
+          <td class="num pos">$+839</td>
+          <td class="num neg">$-1,169</td>
+          <td class="num neg">$-1,905</td>
+          <td class="num pass-bad"><b>0%</b> (0/25)</td>
+          <td class="num neg">21</td>
+          <td class="num warn">0</td>
+          <td class="num muted">4</td>
+        </tr>
+
+        <tr>
+          <td class="month">Dec 2024</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+307</td>
+          <td class="num">$+5,840</td>
+          <td class="num">23/27</td>
+          <td class="num">48%</td>
+          <td class="num pos">$+2,861</td>
+          <td class="num neg">$-1,311</td>
+          <td class="num neg">$-3,199</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">25</td>
+          <td class="num warn">2</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jan 2025</td>
+          <td class="num phase-is">IS</td>
+          <td class="num pos">$+3,759</td>
+          <td class="num">$+9,600</td>
+          <td class="num">24/27</td>
+          <td class="num">38%</td>
+          <td class="num pos">$+6,936</td>
+          <td class="num neg">$-1,681</td>
+          <td class="num neg">$-3,373</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">12</td>
+          <td class="num warn">15</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Feb 2025</td>
+          <td class="num phase-mix">IS→OOS</td>
+          <td class="num pos">$+3,453</td>
+          <td class="num">$+13,052</td>
+          <td class="num">24/24</td>
+          <td class="num">67%</td>
+          <td class="num pos">$+1,515</td>
+          <td class="num neg">$-1,790</td>
+          <td class="num neg">$-1,790</td>
+          <td class="num pass-good"><b>92%</b> (22/24)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">2</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Mar 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+3,785</td>
+          <td class="num">$+16,838</td>
+          <td class="num">25/26</td>
+          <td class="num">56%</td>
+          <td class="num pos">$+2,704</td>
+          <td class="num neg">$-1,510</td>
+          <td class="num neg">$-4,500</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">12</td>
+          <td class="num warn">14</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Apr 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num neg">$-2,001</td>
+          <td class="num">$+14,836</td>
+          <td class="num">20/25</td>
+          <td class="num">55%</td>
+          <td class="num pos">$+5,027</td>
+          <td class="num neg">$-3,397</td>
+          <td class="num neg">$-7,791</td>
+          <td class="num pass-bad"><b>0%</b> (0/25)</td>
+          <td class="num neg">23</td>
+          <td class="num warn">2</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">May 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num neg">$-5,482</td>
+          <td class="num">$+9,355</td>
+          <td class="num">24/26</td>
+          <td class="num">38%</td>
+          <td class="num pos">$+621</td>
+          <td class="num neg">$-1,788</td>
+          <td class="num neg">$-6,026</td>
+          <td class="num pass-bad"><b>4%</b> (1/26)</td>
+          <td class="num neg">23</td>
+          <td class="num warn">0</td>
+          <td class="num muted">2</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jun 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+2,418</td>
+          <td class="num">$+11,772</td>
+          <td class="num">26/26</td>
+          <td class="num">42%</td>
+          <td class="num pos">$+1,291</td>
+          <td class="num neg">$-927</td>
+          <td class="num neg">$-1,138</td>
+          <td class="num pass-ok"><b>31%</b> (8/26)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">18</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jul 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+1,826</td>
+          <td class="num">$+13,599</td>
+          <td class="num">26/27</td>
+          <td class="num">58%</td>
+          <td class="num pos">$+987</td>
+          <td class="num neg">$-615</td>
+          <td class="num neg">$-1,036</td>
+          <td class="num pass-good"><b>85%</b> (23/27)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">4</td>
+        </tr>
+
+        <tr>
+          <td class="month">Aug 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+3,879</td>
+          <td class="num">$+17,478</td>
+          <td class="num">22/26</td>
+          <td class="num">68%</td>
+          <td class="num pos">$+949</td>
+          <td class="num neg">$-963</td>
+          <td class="num neg">$-963</td>
+          <td class="num pass-good"><b>100%</b> (26/26)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Sep 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+4,436</td>
+          <td class="num">$+21,914</td>
+          <td class="num">26/26</td>
+          <td class="num">73%</td>
+          <td class="num pos">$+1,215</td>
+          <td class="num neg">$-1,296</td>
+          <td class="num neg">$-2,089</td>
+          <td class="num pass-good"><b>35%</b> (9/26)</td>
+          <td class="num neg">14</td>
+          <td class="num warn">2</td>
+          <td class="num muted">1</td>
+        </tr>
+
+        <tr>
+          <td class="month">Oct 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num neg">$-324</td>
+          <td class="num">$+21,590</td>
+          <td class="num">26/27</td>
+          <td class="num">58%</td>
+          <td class="num pos">$+1,652</td>
+          <td class="num neg">$-4,514</td>
+          <td class="num neg">$-5,259</td>
+          <td class="num pass-good"><b>41%</b> (11/27)</td>
+          <td class="num neg">4</td>
+          <td class="num warn">12</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Nov 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+9,769</td>
+          <td class="num">$+31,359</td>
+          <td class="num">21/25</td>
+          <td class="num">71%</td>
+          <td class="num pos">$+2,957</td>
+          <td class="num neg">$-2,196</td>
+          <td class="num neg">$-4,559</td>
+          <td class="num pass-bad"><b>4%</b> (1/25)</td>
+          <td class="num neg">8</td>
+          <td class="num warn">10</td>
+          <td class="num muted">6</td>
+        </tr>
+
+        <tr>
+          <td class="month">Dec 2025</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num neg">$-487</td>
+          <td class="num">$+30,872</td>
+          <td class="num">24/27</td>
+          <td class="num">54%</td>
+          <td class="num pos">$+941</td>
+          <td class="num neg">$-818</td>
+          <td class="num neg">$-1,701</td>
+          <td class="num pass-bad"><b>0%</b> (0/27)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">15</td>
+          <td class="num muted">12</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jan 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+3,484</td>
+          <td class="num">$+34,356</td>
+          <td class="num">26/26</td>
+          <td class="num">46%</td>
+          <td class="num pos">$+2,462</td>
+          <td class="num neg">$-1,197</td>
+          <td class="num neg">$-3,117</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">12</td>
+          <td class="num warn">14</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Feb 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+2,586</td>
+          <td class="num">$+36,942</td>
+          <td class="num">21/24</td>
+          <td class="num">62%</td>
+          <td class="num pos">$+2,444</td>
+          <td class="num neg">$-2,566</td>
+          <td class="num neg">$-4,037</td>
+          <td class="num pass-bad"><b>12%</b> (3/24)</td>
+          <td class="num neg">13</td>
+          <td class="num warn">8</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Mar 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+1,028</td>
+          <td class="num">$+37,970</td>
+          <td class="num">25/27</td>
+          <td class="num">56%</td>
+          <td class="num pos">$+1,880</td>
+          <td class="num neg">$-4,128</td>
+          <td class="num neg">$-7,812</td>
+          <td class="num pass-good"><b>33%</b> (9/27)</td>
+          <td class="num neg">12</td>
+          <td class="num warn">6</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Apr 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num neg">$-5,414</td>
+          <td class="num">$+32,556</td>
+          <td class="num">23/26</td>
+          <td class="num">52%</td>
+          <td class="num pos">$+2,467</td>
+          <td class="num neg">$-3,835</td>
+          <td class="num neg">$-8,348</td>
+          <td class="num pass-bad"><b>0%</b> (0/26)</td>
+          <td class="num neg">26</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">May 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+1,562</td>
+          <td class="num">$+34,117</td>
+          <td class="num">26/26</td>
+          <td class="num">50%</td>
+          <td class="num pos">$+1,481</td>
+          <td class="num neg">$-1,454</td>
+          <td class="num neg">$-2,814</td>
+          <td class="num pass-good"><b>36%</b> (9/25)</td>
+          <td class="num neg">16</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jun 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num neg">$-4,641</td>
+          <td class="num">$+29,476</td>
+          <td class="num">24/26</td>
+          <td class="num">46%</td>
+          <td class="num pos">$+1,988</td>
+          <td class="num neg">$-3,783</td>
+          <td class="num neg">$-9,767</td>
+          <td class="num pass-bad"><b>0%</b> (0/0)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+
+        <tr>
+          <td class="month">Jul 2026</td>
+          <td class="num phase-oos">OOS</td>
+          <td class="num pos">$+4,099</td>
+          <td class="num">$+33,575</td>
+          <td class="num">2/2</td>
+          <td class="num">100%</td>
+          <td class="num pos">$+2,774</td>
+          <td class="num neg">$+1,326</td>
+          <td class="num neutral">$+0</td>
+          <td class="num pass-bad"><b>0%</b> (0/0)</td>
+          <td class="num neg">0</td>
+          <td class="num warn">0</td>
+          <td class="num muted">0</td>
+        </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <b>Columns explained:</b><br>
+    · <b>Phase</b>: IS = used to derive the stream weights above; OOS = held-out, evaluated once at the
+      frozen IS weights (no re-fitting).<br>
+    · <b>PnL</b>: net P&amp;L for the calendar month on the 9-stream ensemble at the weights above.<br>
+    · <b>Active/Total</b>: trading days with non-zero PnL / all session days in the month.<br>
+    · <b>Win%</b>: percent of active days that closed positive.<br>
+    · <b>Max DD</b>: deepest running drawdown vs running peak <i>within the month</i>.<br>
+    · <b>Pass-30 (start mo.)</b>: of all 30-day Combine windows whose start day falls in this month,
+      what fraction would have PASSED the $50K Combine (hit +$3K target without breaching the $2K
+      trailing MLL or the 50% consistency cap).<br>
+    · <b>MLL Breach</b> / <b>Consistency</b> / <b>No Target</b>: counts of windows starting this month
+      that ended in each failure mode.
+  </div>
+</body></html>
