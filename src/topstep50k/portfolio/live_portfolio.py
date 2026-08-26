@@ -35,6 +35,27 @@ Expected cost to pass one $50K Combine at this pass rate (TopStep
 Standard Path, $49/mo rebill + $149 one-time activation): roughly
 $254-$394, central estimate ~$300.
 
+POSITION-SIZING OVERLAY (added 2026-08-26, evaluate_sizing_overlays.py):
+a genuine, if modest, improvement was found NOT from a new signal but
+from a smarter bet-sizing policy on this same edge -- selected using
+IS Monte Carlo mean pass rate only, then validated with exactly one
+OOS touch (same one-touch discipline as strategy selection; a first
+attempt that picked the policy by comparing OOS numbers directly was
+caught and corrected before being reported). Rule: once an account's
+CUMULATIVE PROFIT reaches $1,500 (the same checkpoint tracked
+elsewhere in this file), cut position size to 0.5x contracts for the
+rest of that account's life. Rationale: past that point the marginal
+value of more profit is lower (nothing is credited for clearing the
+$3,000 target by more), while the marginal cost of a bad day is
+unchanged (still full MLL breach risk) -- so full size stops being the
+right risk/reward trade specifically once you're already ahead.
+Requires the TRADER to track their own account's running profit and
+apply the 0.5x cut manually -- this stateless daily planner has no
+account-state to hook it into automatically. OOS result: Monte Carlo
+mean pass rate 32.4% -> 35.8%, P(true rate > 50%) 2.2% -> 7.3%. Real,
+but still well short of confidently clearing 50% -- treat as a
+worthwhile addition on top of the base ensemble, not a fix on its own.
+
 Run `scripts/generate_daily_signals.py` before 9:30 ET with data through
 yesterday's close to get today's trading plan.
 
