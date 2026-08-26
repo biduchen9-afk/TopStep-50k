@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from topstep50k.analysis.montecarlo import monte_carlo_pass_rate
 from topstep50k.analysis.passrate import (
     realized_pass_rate,
     simulate_combine_window,
@@ -378,6 +379,26 @@ def main():
     n_cp = len(seq.checkpoint_accounts)
     print(f"  Accounts that ever reached $1,500+ profit: {n_cp}/{seq.n_accounts}")
     print(f"  Of those, went on to actually pass: {seq.checkpoint_pass_rate:.1%}")
+
+    # ── Monte Carlo: is that single-path pass rate a stable property of
+    # the strategy, or largely luck of how ~26 attempts happened to be
+    # ordered across this specific 350-day window? Block-bootstrap the
+    # daily P&L (block_len=10, matching harness.py's existing bootstrap
+    # convention) and re-run simulate_sequential_accounts on each resample.
+    print(f"\n{'='*72}")
+    print("MONTE CARLO -- BLOCK-BOOTSTRAP RESAMPLE OF THE SEQUENTIAL PASS RATE")
+    print(f"{'='*72}")
+    t0 = _time.time()
+    mc = monte_carlo_pass_rate(oos_daily, rules=RULES, starting_balance=RULES.starting_balance,
+                                n_sims=2000, block_len=10, checkpoint=Decimal("1500"), seed=42)
+    print(f"  {mc.n_sims} resamples of the {mc.n_days}-day OOS series "
+          f"(block_len={mc.block_len}) in {_time.time()-t0:.1f}s")
+    print(f"  single realized-path pass rate : {seq.pass_rate:.1%}  ({seq.count('pass')}/{seq.n_accounts})")
+    print(f"  Monte Carlo mean pass rate     : {mc.mean_pass_rate:.1%}")
+    print(f"  Monte Carlo median pass rate   : {mc.median_pass_rate:.1%}")
+    print(f"  Monte Carlo 90% interval       : [{mc.p05:.1%}, {mc.p95:.1%}]")
+    print(f"  P(resampled pass rate > 50%)   : {mc.prob_above_50pct:.1%}")
+    print(f"  avg accounts per resample      : {mc.mean_n_accounts:.1f}")
 
 
 if __name__ == "__main__":
