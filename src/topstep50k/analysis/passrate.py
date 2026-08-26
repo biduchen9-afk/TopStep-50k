@@ -152,6 +152,134 @@ def simulate_combine_window(
     )
 
 
+@dataclass(frozen=True)
+class SequentialAccountResult:
+    """Outcome of ONE account in a sequential (non-overlapping) simulation:
+    trade until pass/breach, then the next account starts the following
+    trading day. Unlike CombineWindowResult, there's no fixed window
+    length -- an account runs as long as it takes to resolve, or until the
+    data runs out (outcome='no_target' then means "still open, unresolved
+    as of the end of this data", not "timed out at some fixed day count").
+    """
+    account_no: int
+    start_day: date
+    end_day: date
+    n_days: int
+    outcome: str  # 'pass' | 'mll_breach' | 'consistency_fail' | 'no_target'
+    final_pnl: Decimal
+    peak_profit: Decimal          # highest cumulative profit reached, ever
+    reached_checkpoint: bool      # peak_profit >= the checkpoint threshold passed in
+
+
+@dataclass(frozen=True)
+class SequentialAccountsSummary:
+    accounts: list[SequentialAccountResult]
+    checkpoint: Decimal
+
+    @property
+    def n_accounts(self) -> int:
+        return len(self.accounts)
+
+    def count(self, outcome: str) -> int:
+        return sum(1 for a in self.accounts if a.outcome == outcome)
+
+    @property
+    def pass_rate(self) -> float:
+        return self.count("pass") / self.n_accounts if self.n_accounts else 0.0
+
+    @property
+    def checkpoint_accounts(self) -> list[SequentialAccountResult]:
+        """Accounts that reached the checkpoint profit at some point."""
+        return [a for a in self.accounts if a.reached_checkpoint]
+
+    @property
+    def checkpoint_pass_rate(self) -> float:
+        """Of the accounts that reached the checkpoint, what fraction went
+        on to actually pass (vs. giving it back to a breach, or still
+        being open/unresolved)?"""
+        cp = self.checkpoint_accounts
+        if not cp:
+            return 0.0
+        return sum(1 for a in cp if a.outcome == "pass") / len(cp)
+
+
+def simulate_sequential_accounts(
+    daily_pnl: dict[date, Decimal],
+    *,
+    rules: TopstepRules,
+    starting_balance: Decimal,
+    checkpoint: Decimal = Decimal("1500"),
+) -> SequentialAccountsSummary:
+    """Simulate opening ONE Combine account at a time against a long
+    daily-PnL series -- never two accounts trading at once. Each account
+    starts the day after the previous one resolved (passed or breached)
+    and runs until IT resolves or the data runs out. This answers "if I
+    kept rebilling/continuing the same account while it's alive, and only
+    started a fresh one after a breach or a pass, how many account
+    attempts would this have been, and how many passed?" -- as opposed to
+    `realized_pass_rate`'s sliding window, which starts a new hypothetical
+    attempt on literally every day regardless of what's already running.
+
+    `checkpoint` (default $1,500, i.e. half the $50K Combine's $3,000
+    target) is tracked per-account: did this account's cumulative profit
+    ever reach that level before its final outcome? `checkpoint_pass_rate`
+    on the returned summary answers "given an account got at least this
+    far ahead at some point, what fraction of the time did it go on to
+    actually pass?" -- separate from a fresh account's raw pass rate.
+
+    Rebilling itself doesn't change any of this: it doesn't reset an
+    account's progress (see docs/rules_sources.md), so a rebill event
+    mid-account is a no-op here -- the SAME account just keeps running.
+    """
+    days_sorted = sorted(daily_pnl.keys())
+    accounts: list[SequentialAccountResult] = []
+    i = 0
+    n = len(days_sorted)
+    account_no = 0
+    while i < n:
+        account_no += 1
+        start_day = days_sorted[i]
+        mll = TrailingMLL(starting_balance, rules.max_loss_limit_distance)
+        eq = starting_balance
+        peak_profit = Decimal(0)
+        cumulative: dict[date, Decimal] = {}
+        outcome: str | None = None
+        j = i
+        while j < n:
+            day = days_sorted[j]
+            pnl = daily_pnl.get(day, Decimal(0))
+            eq += pnl
+            cumulative[day] = pnl
+            profit = eq - starting_balance
+            if profit > peak_profit:
+                peak_profit = profit
+            breach = rules.check_max_loss(eq, mll.anchor)
+            if breach is not None:
+                outcome = "mll_breach"
+                break
+            mll.update_end_of_day(eq)
+            if rules.reached_profit_target(eq):
+                cons = rules.check_consistency(cumulative)
+                outcome = "consistency_fail" if cons is not None else "pass"
+                break
+            j += 1
+        else:
+            j = n - 1  # ran out of data before resolving
+
+        if outcome is None:
+            outcome = "no_target"
+
+        end_day = days_sorted[j]
+        accounts.append(SequentialAccountResult(
+            account_no=account_no, start_day=start_day, end_day=end_day,
+            n_days=j - i + 1, outcome=outcome, final_pnl=eq - starting_balance,
+            peak_profit=peak_profit, reached_checkpoint=peak_profit >= checkpoint,
+        ))
+        i = j + 1  # next account starts the day AFTER this one resolved
+
+    return SequentialAccountsSummary(accounts=accounts, checkpoint=checkpoint)
+
+
 def realized_pass_rate(
     daily_pnl: dict[date, Decimal] | Iterable[tuple[date, Decimal]],
     *,

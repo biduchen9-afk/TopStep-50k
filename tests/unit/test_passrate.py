@@ -19,6 +19,7 @@ import pytest
 from topstep50k.analysis.passrate import (
     realized_pass_rate,
     simulate_combine_window,
+    simulate_sequential_accounts,
 )
 from topstep50k.rules.topstep import combine_50k
 
@@ -162,3 +163,64 @@ def test_post_target_days_excluded_from_consistency():
     assert res.outcome == "pass", (
         f"Got {res.outcome!r} — post-target day must not contaminate consistency"
     )
+
+
+# ---- simulate_sequential_accounts ------------------------------------------
+
+
+def _daily_dict(start_day: date, pnls: list[float]) -> dict[date, Decimal]:
+    return {start_day + timedelta(days=i): Decimal(str(round(v, 2)))
+            for i, v in enumerate(pnls)}
+
+
+def test_sequential_accounts_never_overlap():
+    """A new account starts the day AFTER the previous one resolves --
+    never while a prior account is still 'open'."""
+    rules = combine_50k()
+    # Acct 1: +1000/day x3 -> passes on day 3 (idx 2).
+    # Acct 2 should start day 4 (idx 3): -2100 -> breaches immediately.
+    # Acct 3 starts day 5 (idx 4): drifts flat, never resolves.
+    pnls = [1000, 1000, 1000, -2100] + [10] * 6
+    daily = _daily_dict(date(2025, 1, 1), pnls)
+    summary = simulate_sequential_accounts(daily, rules=rules,
+                                            starting_balance=Decimal("50000"))
+    assert summary.n_accounts == 3
+    a1, a2, a3 = summary.accounts
+    assert a1.outcome == "pass" and a1.end_day == date(2025, 1, 3)
+    assert a2.outcome == "mll_breach"
+    assert a2.start_day == a1.end_day + timedelta(days=1)  # no overlap
+    assert a3.outcome == "no_target"
+    assert a3.start_day == a2.end_day + timedelta(days=1)  # no overlap
+    assert summary.pass_rate == pytest.approx(1 / 3)
+
+
+def test_sequential_accounts_checkpoint_pass_rate():
+    """checkpoint_pass_rate is conditional: of accounts that ever reached
+    the checkpoint profit, what fraction actually went on to pass?"""
+    rules = combine_50k()
+    # Acct 1: climbs to +1800 (above the $1500 checkpoint) then gives it
+    # all back to a breach -- reached the checkpoint but did NOT pass.
+    pnls_1 = [900, 900, -3900]  # peak +1800, then -2100 net after breach check
+    # Acct 2: climbs straight to +3000 -- reached checkpoint AND passed.
+    pnls_2 = [1500, 1500]
+    # Acct 3: never gets anywhere near the checkpoint.
+    pnls_3 = [50] * 5
+    daily = _daily_dict(date(2025, 1, 1), pnls_1 + pnls_2 + pnls_3)
+    summary = simulate_sequential_accounts(daily, rules=rules,
+                                            starting_balance=Decimal("50000"),
+                                            checkpoint=Decimal("1500"))
+    outcomes = [(a.outcome, a.reached_checkpoint) for a in summary.accounts]
+    assert ("mll_breach", True) in outcomes
+    assert ("pass", True) in outcomes
+    assert any(not a.reached_checkpoint for a in summary.accounts)
+    # Of the 2 accounts that reached the checkpoint, only 1 passed.
+    assert summary.checkpoint_pass_rate == pytest.approx(0.5)
+
+
+def test_sequential_accounts_empty_daily_pnl():
+    rules = combine_50k()
+    summary = simulate_sequential_accounts({}, rules=rules,
+                                            starting_balance=Decimal("50000"))
+    assert summary.n_accounts == 0
+    assert summary.pass_rate == 0.0
+    assert summary.checkpoint_pass_rate == 0.0
