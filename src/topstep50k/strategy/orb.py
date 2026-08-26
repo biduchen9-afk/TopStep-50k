@@ -130,12 +130,16 @@ class OpeningRangeBreakout:
     daily_filter: Callable[[date], bool] | None = None
     # Optional volatility-adaptive risk sizing. Called once when a new
     # trading day starts (same causal timing as daily_filter -- only
-    # ever sees prior-day data); the returned float multiplies BOTH
-    # stop_ticks and tp_ticks for fixed_ticks-mode stops/TPs that day,
-    # so the risk:reward RATIO is preserved while the absolute distance
-    # adapts to the current volatility regime. None (default) = no
-    # scaling, i.e. behaves exactly as before.
+    # ever sees prior-day data); the returned float multiplies tp_ticks
+    # (and stop_ticks too, if vol_scale_stop=True) for fixed_ticks-mode
+    # stops/TPs that day, so the target adapts to the current volatility
+    # regime. None (default) = no scaling, i.e. behaves exactly as before.
     vol_scale: Callable[[date], float] | None = None
+    # If True (default), vol_scale also widens/tightens the stop, keeping
+    # the R:R ratio constant. If False, only tp_ticks is scaled and the
+    # stop stays fixed at stop_ticks -- widen the upside on volatile days
+    # without also widening the max loss per trade.
+    vol_scale_stop: bool = True
     _vol_scale_today: float = field(init=False, default=1.0, repr=False)
     _or_widths: list[float] = field(init=False, default_factory=list, repr=False)
     _day_state: _DayState | None = field(init=False, default=None, repr=False)
@@ -268,10 +272,11 @@ class OpeningRangeBreakout:
         # entry fill price.
         st.entry_price = bar.close
         scale = self._vol_scale_today
+        stop_scale = scale if self.vol_scale_stop else 1.0
         if self.stop_mode == "opposite_range":
             st.stop_price = st.or_low if signal > 0 else st.or_high
         else:
-            stop_dist = self.stop_ticks * scale * self.tick_size
+            stop_dist = self.stop_ticks * stop_scale * self.tick_size
             st.stop_price = (
                 st.entry_price - stop_dist
                 if signal > 0
