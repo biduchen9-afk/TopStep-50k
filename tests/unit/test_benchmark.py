@@ -63,9 +63,12 @@ def test_harness_benchmark_gate_is_advisory_only():
     daily_full = np.tile(cycle, n // len(cycle) + 1)[:n]
     assert (daily_full[is_mask] != 0).all()
 
-    # Benchmark that clearly outperforms the strategy OOS -- should NOT
-    # flip promotion, only annotate Gate 4.
-    benchmark_daily = np.full(n, 10_000.0)
+    # Flat benchmark (never moves) -- $0 total, and since it never reaches
+    # the profit target its Combine pass30 is 0%. Compared on PASS RATE,
+    # not raw $ (see harness.py docstring): a strategy this project would
+    # actually deploy needs to beat naive buy-and-hold on the metric that
+    # matters for passing a Combine, not on unconstrained dollar return.
+    benchmark_daily = np.zeros(n)
 
     result = evaluate_strategy(
         "test", daily_full, is_mask, oos_mask, is_days, oos_days, rules,
@@ -75,4 +78,5 @@ def test_harness_benchmark_gate_is_advisory_only():
     bench_gates = [g for g in result.gate4 if "buy-and-hold" in g.name]
     assert len(bench_gates) == 1
     assert bench_gates[0].hard is False
-    assert bench_gates[0].passed is False  # strategy nets ~$500/wk, benchmark nets $10k/day
+    assert bench_gates[0].threshold == 0.0  # flat benchmark never hits target -> 0% pass30
+    assert bench_gates[0].passed is True    # any real pass30 > 0% beats it

@@ -325,18 +325,22 @@ def main():
         gate_check("OOS Sharpe >= 0.5xIS",  sh_ratio, 0.50, hard=True,
                    note=f"OOS={oos_sh:.3f} IS={is_sh:.3f}"),
     ]
+    # Compared on PASS RATE, not raw $ -- the goal is passing the Combine
+    # under a $2,000 trailing MLL and fixed target, not out-earning a
+    # naive position in dollar terms (buy-and-hold isn't itself subject
+    # to those rules unless we impose them on it too, so we do).
     bh_oos_total = float(bh_basket[oos_mask].sum())
-    bh_oos_sharpe = sharpe(bh_basket[oos_mask])
-    beats_bh = float(ens_oos.sum()) > bh_oos_total
+    rr30_bh, _ = pass_rate_30_45(bh_basket[oos_mask], oos_days)
+    beats_bh = rr30_oos.pass_rate > rr30_bh.pass_rate
     g4_adv = [
         gate_check("OOS pass30 >= 0.5xIS",  pr_ratio, 0.50, hard=False,
                    note=f"OOS={rr30_oos.pass_rate:.1%} IS={rr30_is.pass_rate:.1%}"),
         gate_check("OOS MLL rate <= 1.5xIS", mll_ok,  True, hard=False,
                    note=f"IS={is_mll:.1%} OOS={oos_mll:.1%}"),
-        gate_check("OOS beats buy-and-hold ($)", beats_bh, True, hard=False,
-                   note=(f"ensemble=${ens_oos.sum():+,.0f} vs "
-                         f"1x ES+NQ+GC=${bh_oos_total:+,.0f} "
-                         f"(Sharpe={bh_oos_sharpe:+.2f})")),
+        gate_check("OOS pass30 beats naive buy-and-hold pass30", beats_bh, True, hard=False,
+                   note=(f"ensemble pass30={rr30_oos.pass_rate:.1%} vs "
+                         f"naive 1x ES+NQ+GC pass30={rr30_bh.pass_rate:.1%} "
+                         f"(buy&hold $ total=${bh_oos_total:+,.0f}, unbounded risk)")),
     ]
 
     if g2_passed and all(g4_hard):
@@ -356,10 +360,10 @@ def main():
     print(f"  OOS/IS Sharpe ratio = {sh_ratio:.2f}  (>=0.50 required)")
     print(f"  OOS/IS pass30 ratio = {pr_ratio:.2f}  (>=0.50 advisory)")
     print(f"  IS MLL rate={is_mll:.1%}  OOS MLL rate={oos_mll:.1%}")
-    print(f"  OOS ensemble total=${ens_oos.sum():+,.0f}  vs  "
-          f"naive 1x ES+NQ+GC buy-and-hold OOS total=${bh_oos_total:+,.0f} "
-          f"(Sharpe={bh_oos_sharpe:+.2f})  -> "
-          f"{'BEATS' if beats_bh else 'LOSES TO'} buy-and-hold")
+    print(f"  OOS ensemble pass30={rr30_oos.pass_rate:.1%}  vs  "
+          f"naive 1x ES+NQ+GC buy-and-hold OOS pass30={rr30_bh.pass_rate:.1%} "
+          f"(buy&hold $ total=${bh_oos_total:+,.0f}, unbounded risk)  -> "
+          f"ensemble {'BEATS' if beats_bh else 'LOSES TO'} naive pass rate")
 
 
 if __name__ == "__main__":

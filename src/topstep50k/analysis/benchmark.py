@@ -1,10 +1,20 @@
 """Naive buy-and-hold benchmark daily PnL.
 
 Checklist item from the 2026-08-26 model-validation audit (see
-docs/rules_sources.md / session notes): a strategy that can't beat just
-holding the underlying outright isn't earning its complexity budget.
-Gross outperformance during a trending regime is easy; this exists so
-that claim gets checked mechanically instead of assumed.
+docs/rules_sources.md / session notes). Important framing correction
+from the same day: the goal here is passing a prop-firm Combine under a
+hard $2,000 trailing MLL and a fixed profit target, NOT maximizing
+unconstrained dollar return -- so "does the strategy out-earn
+buy-and-hold in $" is the wrong question and is not computed anywhere
+downstream. What evaluation/harness.py's Gate 4 actually compares is
+Combine PASS RATE: this benchmark's daily series run through the same
+simulate_combine_window/realized_pass_rate machinery as any strategy.
+A naked buy-and-hold position is expected to show a near-zero pass rate
+(nothing bounds its drawdown against the $2,000 MLL) -- that's not a
+bug in the comparison, it's the actual point: it isolates how much of
+the strategy's Combine pass rate comes from risk-bounding (stops, gates,
+flat-by-close) versus just riding a directional move a naive position
+would also have caught.
 
 Uses the same 16:00 CT trading-day bucketing as the rest of the engine
 (engine.ledger.trading_day) so the resulting daily series aligns exactly

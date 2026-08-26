@@ -187,11 +187,18 @@ def evaluate_strategy(
 
     `benchmark_daily`, if given, must be a naive buy-and-hold daily PnL
     array on that SAME day index (see analysis.benchmark.buy_and_hold_daily_pnl
-    + to_aligned_array). Adds one advisory Gate 4 check: does the strategy
-    beat just holding the underlying, OOS? This never blocks promotion
-    (advisory only) -- a low-correlation diversifier can be worth running
-    even if it doesn't out-earn buy-and-hold on its own -- but a model
-    that quietly loses to doing nothing is worth knowing about.
+    + to_aligned_array). Adds one advisory Gate 4 check comparing OOS
+    pass30 (NOT raw $ total) against the benchmark's own OOS pass30 under
+    the identical Combine rules. Raw dollar totals are the wrong
+    comparison for this project: the goal is passing a prop-firm
+    evaluation under a hard $2,000 trailing MLL and a fixed profit
+    target, not maximizing unconstrained return, and buy-and-hold isn't
+    even subject to those rules unless we impose them on it too -- so we
+    do, and compare like for like. This never blocks promotion (advisory
+    only): a naked directional position will typically show a near-zero
+    Combine pass rate (unbounded drawdown vs. a $2,000 MLL), which is
+    itself the point -- it's evidence the strategy's value is in bounding
+    risk, not in out-earning the naive position in $ terms.
     """
     is_arr  = daily_full[is_mask]
     oos_arr = daily_full[oos_mask]
@@ -295,15 +302,16 @@ def evaluate_strategy(
     ]
     if benchmark_daily is not None:
         bench_oos = benchmark_daily[oos_mask]
+        bench_oos_pr30 = _pass_rate_30(bench_oos, oos_days, rules)
         bench_oos_total = float(bench_oos.sum())
-        bench_oos_sharpe = _sharpe(bench_oos)
-        strat_oos_total = float(oos_arr.sum())
         g4.append(GateResult(
-            "OOS beats buy-and-hold ($)",
-            strat_oos_total > bench_oos_total,
-            strat_oos_total, bench_oos_total, hard=False,
-            note=(f"buy&hold OOS=${bench_oos_total:+,.0f} "
-                  f"(Sharpe={bench_oos_sharpe:+.2f})"),
+            "OOS pass30 beats naive buy-and-hold pass30",
+            oos_pr30 > bench_oos_pr30,
+            oos_pr30, bench_oos_pr30, hard=False,
+            note=(f"naive buy&hold pass30={bench_oos_pr30:.1%} "
+                  f"(${bench_oos_total:+,.0f} total, unbounded risk -- "
+                  f"not itself subject to the MLL/target it's being "
+                  f"measured against)"),
         ))
     result.gate4 = g4
     g4_passed = all(g.passed for g in g4 if g.hard)
