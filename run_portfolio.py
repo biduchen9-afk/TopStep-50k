@@ -8,14 +8,19 @@ This is the deployable 9-stream OOS-promoted ensemble in one file. Two modes:
     python run_portfolio.py --report          # rebuild HTML monthly report
 
 No new strategies, no parameter tuning. The IS pass-rate-aware weights are
-frozen from the IS evaluation that produced OOS Sharpe +1.44, pass30 37.2%.
+frozen from the IS evaluation that produced OOS Sharpe +1.42, pass30 27.7%,
+pass45 40.5% (see src/topstep50k/portfolio/live_portfolio.py docstring for
+the full numbers and the two engine fixes this result depends on).
+
+Data: es/nq/gc_databento.txt from the GitHub Release "Data list" (v1.0.0)
+-- download into data/raw/ before running (gitignored, not committed).
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -25,17 +30,18 @@ if str(ROOT / "src") not in sys.path:
 
 EASTERN = ZoneInfo("America/New_York")
 DATA_DIR = ROOT / "data" / "raw"
+LOOKBACK_DAYS = 200  # comfortably covers the longest gate warmup (~80 trading days)
 
 ASSETS_DATA = {
-    "ES": DATA_DIR / "es_cleaned.txt",
-    "NQ": DATA_DIR / "nq_cleaned.txt",
-    "GC": DATA_DIR / "gc_cleaned.txt",
+    "ES": DATA_DIR / "es_databento.txt",
+    "NQ": DATA_DIR / "nq_databento.txt",
+    "GC": DATA_DIR / "gc_databento.txt",
 }
 
 
 def cmd_plan(args):
     """Print today's (or a specific date's) actionable trading plan."""
-    from topstep50k.data.loaders import load_bars_csv
+    from topstep50k.data.loaders import load_bars_csv_tail
     from topstep50k.portfolio.live_portfolio import IS_WEIGHTS, build_daily_plan
 
     if args.plan:
@@ -47,13 +53,15 @@ def cmd_plan(args):
     else:
         for_date = datetime.now(tz=EASTERN).date()
 
-    print(f"Loading bars for {for_date}...")
+    cutoff = datetime.combine(for_date - timedelta(days=LOOKBACK_DAYS), datetime.min.time(),
+                               tzinfo=EASTERN)
+    print(f"Loading bars for {for_date} (>= {cutoff.date()})...")
     bars_by_asset = {}
     for asset, path in ASSETS_DATA.items():
         if not path.exists():
             print(f"  WARN: {path.name} not found, skipping {asset}")
             continue
-        bars_by_asset[asset] = list(load_bars_csv(path))
+        bars_by_asset[asset] = [b for b in load_bars_csv_tail(path) if b.ts >= cutoff]
         print(f"  {asset}: {len(bars_by_asset[asset]):,} bars")
 
     plan = build_daily_plan(bars_by_asset, for_date)
@@ -74,7 +82,7 @@ def cmd_backtest(args):
     import subprocess
     print("Running full ensemble OOS evaluation (this takes ~3-5 minutes)...")
     result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "evaluate_ensemble_oos.py")],
+        [sys.executable, str(ROOT / "scripts" / "evaluate_ensemble_databento_recent_evgate.py")],
         cwd=str(ROOT),
     )
     sys.exit(result.returncode)
@@ -85,11 +93,11 @@ def cmd_report(args):
     import subprocess
     print("Regenerating monthly HTML report...")
     result = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "generate_monthly_report.py")],
+        [sys.executable, str(ROOT / "scripts" / "generate_monthly_report_databento.py")],
         cwd=str(ROOT),
     )
     if result.returncode == 0:
-        html_path = ROOT / "results" / "ensemble_oos_monthly.html"
+        html_path = ROOT / "results" / "ensemble_databento_monthly.html"
         print(f"\nReport: {html_path}")
     sys.exit(result.returncode)
 

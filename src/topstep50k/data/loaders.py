@@ -147,6 +147,43 @@ def load_bars_csv(path: Path) -> Iterator[Bar]:
                 yield bar
 
 
+def load_bars_csv_tail(path: Path, tail_bytes: int = 40_000_000) -> Iterator[Bar]:
+    """Fast path for loading just the recent end of a large, chronologically-
+    sorted bar file (e.g. a multi-year Databento export).
+
+    `load_bars_csv` streams from byte 0, so reading only "the last 200
+    days" of a 16-year, ~420MB file still means parsing the entire file
+    -- it only skips YIELDING the old rows, not reading them. This seeks
+    to `max(0, filesize - tail_bytes)` first and parses from there, which
+    is what a daily pre-market signal script actually wants. Default
+    tail_bytes (40MB) comfortably covers >200 calendar days of 1-min bars
+    for ES/NQ/GC (~7MB/month observed on the Databento files).
+
+    The schema is still sniffed from the FILE'S OWN HEAD (first ~8 lines),
+    not the tail, since a mid-file seek can land anywhere relative to a
+    header row.
+    """
+    path = Path(path)
+    schema, splitter, row_parser = detect_schema(path)
+    has_header = "/header=True" in schema
+    file_size = path.stat().st_size
+    seek_to = max(0, file_size - tail_bytes)
+
+    with path.open("rb") as f:
+        f.seek(seek_to)
+        if seek_to > 0:
+            f.readline()  # discard the partial line we landed in the middle of
+        elif has_header:
+            f.readline()  # skip the real header when we didn't seek at all
+        for raw_line in f:
+            line = raw_line.decode("utf-8", errors="replace")
+            if not line.strip():
+                continue
+            bar = row_parser(splitter(line))
+            if bar is not None:
+                yield bar
+
+
 def load_bars_df(path: Path) -> pd.DataFrame:
     """Eager pandas DataFrame loader for ad-hoc analysis. Indexed by ts."""
     path = Path(path)
