@@ -41,15 +41,56 @@ def test_passes_when_target_hit_with_consistency():
     assert res.days_to_outcome == 5
 
 
-def test_consistency_fail_when_one_day_dominates():
+def test_consistency_pending_when_window_runs_out_still_dominated():
+    """A consistency violation is NOT a Combine failure (per Topstep's own
+    guidance: the pass is held, not denied, until later days dilute the
+    best day back under 50%). 'consistency_fail' here means the WINDOW
+    ran out while still pending -- not that the account was disqualified."""
     rules = combine_50k()
-    # +3000 on day 1, +100 on subsequent days -> best/total > 50%
+    # +3000 on day 1, +100/day after -> best/total stays > 50% for the
+    # whole 6-day window (would need 30 more +100 days to dilute to 50%).
     pnls = [3000] + [100] * 5
     res = simulate_combine_window(
         _daily(date(2024, 1, 2), pnls),
         rules=rules, starting_balance=Decimal("50000"),
     )
     assert res.outcome == "consistency_fail"
+
+
+def test_consistency_resolves_on_a_later_day_within_the_window():
+    """The key corrected behavior: hitting target with a dominant day does
+    NOT stop the clock. If a later day dilutes the best-day share back to
+    <=50% before the window ends, that's a genuine pass -- not a fail."""
+    rules = combine_50k()
+    # Day 1: +3000 -> target hit, best/total = 3000/3000 = 100% (blocked).
+    # Day 2: +3000 more -> total 6000, best/total = 3000/6000 = 50% exactly
+    # (<=50% passes -- the rule is "best day <= 50%", not "< 50%").
+    pnls = [3000, 3000]
+    res = simulate_combine_window(
+        _daily(date(2024, 1, 2), pnls),
+        rules=rules, starting_balance=Decimal("50000"),
+    )
+    assert res.outcome == "pass", (
+        f"Got {res.outcome!r} — a later day diluting the best-day share "
+        f"under 50% must resolve into a pass, not stay blocked"
+    )
+    assert res.days_to_outcome == 2
+    assert res.final_pnl == Decimal("6000")
+
+
+def test_mll_breach_still_applies_after_target_reached_but_consistency_pending():
+    """MLL risk does not go away just because the raw target was nominally
+    hit -- if the account gives it back to a breach while still pending
+    consistency, that's a real mll_breach, not a locked-in pass."""
+    rules = combine_50k()
+    # Day 1: +3000 -> target hit, but best/total=100% (blocked, keep going).
+    # Day 2: a big loss that breaches the (by-now-ratcheted) MLL line.
+    pnls = [3000, -5000]
+    res = simulate_combine_window(
+        _daily(date(2024, 1, 2), pnls),
+        rules=rules, starting_balance=Decimal("50000"),
+    )
+    assert res.outcome == "mll_breach"
 
 
 def test_mll_breach_on_first_red_run():
@@ -215,6 +256,30 @@ def test_sequential_accounts_checkpoint_pass_rate():
     assert any(not a.reached_checkpoint for a in summary.accounts)
     # Of the 2 accounts that reached the checkpoint, only 1 passed.
     assert summary.checkpoint_pass_rate == pytest.approx(0.5)
+
+
+def test_sequential_accounts_consistency_pending_then_resolves():
+    """Same corrected behavior as simulate_combine_window: a consistency
+    violation doesn't end the account -- it keeps trading (still exposed
+    to MLL) until a later day dilutes the best-day share, or the data
+    runs out while still pending (labeled 'consistency_fail', not a real
+    failure)."""
+    rules = combine_50k()
+    # Acct 1: day 1 hits target at 100% best-day share (blocked); day 2
+    # adds another +3000, diluting to exactly 50% -> resolves to pass.
+    pnls_1 = [3000, 3000]
+    # Acct 2 starts the day after Acct 1 resolves: hits target at 100%
+    # share, then a loss breaches MLL while still pending -- mll_breach,
+    # not a locked-in pass.
+    pnls_2 = [3000, -5000]
+    daily = _daily_dict(date(2025, 1, 1), pnls_1 + pnls_2)
+    summary = simulate_sequential_accounts(daily, rules=rules,
+                                            starting_balance=Decimal("50000"))
+    assert summary.n_accounts == 2
+    a1, a2 = summary.accounts
+    assert a1.outcome == "pass" and a1.n_days == 2
+    assert a2.outcome == "mll_breach"
+    assert a2.start_day == a1.end_day + timedelta(days=1)  # still non-overlapping
 
 
 def test_sequential_accounts_empty_daily_pnl():

@@ -91,9 +91,27 @@ def simulate_combine_window(
 ) -> CombineWindowResult:
     """Run one Combine cycle over an ordered daily-PnL series.
 
-    Stops on the first MLL breach. After all days are consumed, applies
-    the consistency check. A "pass" requires reaching the profit target
-    on or before the last day AND passing consistency.
+    Stops on the first MLL breach -- that's a genuine, immediate failure.
+    A consistency violation is NOT a failure: per Topstep's own guidance
+    ("Consistency at Topstep" help article; corroborated by third-party
+    2026 breakdowns -- see docs/rules_sources.md), hitting the profit
+    target with one day representing more than 50% of total profit does
+    not fail the Combine. It just means the pass is held: the effective
+    target rises (to 2x the current best day) until later days dilute the
+    best-day share back under 50%. So this does NOT stop the day loop the
+    moment the raw target is first crossed -- it keeps evaluating day by
+    day (still fully subject to MLL risk, which does not go away just
+    because you nominally hit $3,000) until EITHER an MLL breach occurs,
+    OR a day's end finds target reached AND consistency satisfied
+    simultaneously (a real pass), OR the window runs out first.
+
+    Outcome 'consistency_fail' (legacy name, kept for backward
+    compatibility with existing outcome-key consumers) means: the window
+    ended with the profit target reached at some point, but the running
+    best-day share never resolved under 50% before the window ran out --
+    NOT that the account was disqualified. A longer window very plausibly
+    resolves it into a clean pass; this is a "ran out of window", not a
+    "failed the Combine".
 
     `daily_pnl` is a sequence of (date, decimal_pnl) tuples, ascending.
     """
@@ -107,7 +125,7 @@ def simulate_combine_window(
     mll = TrailingMLL(starting_balance, rules.max_loss_limit_distance)
     eq = starting_balance
     cumulative: dict[date, Decimal] = {}
-    passed_target_on: int | None = None
+    ever_reached_target = False
 
     for i, (day, pnl) in enumerate(days_sorted):
         eq = eq + pnl
@@ -123,31 +141,23 @@ def simulate_combine_window(
                 days_to_outcome=i + 1, breach_day=day,
             )
         mll.update_end_of_day(eq)
-        if passed_target_on is None and rules.reached_profit_target(eq):
-            passed_target_on = i
-            break  # Combine ends the moment the target is hit; post-target
-                   # days must not contaminate the MLL or consistency check.
+        if rules.reached_profit_target(eq):
+            ever_reached_target = True
+            cons = rules.check_consistency(cumulative)
+            if cons is None:
+                return CombineWindowResult(
+                    start_day=start_day, end_day=end_day, n_days=n_days,
+                    outcome="pass", final_pnl=eq - starting_balance,
+                    days_to_outcome=i + 1, breach_day=None,
+                )
+            # Target reached but one day is still >50% of total profit --
+            # not a failure, keep trading (loop continues; still subject
+            # to MLL breach on subsequent days).
 
-    if passed_target_on is not None:
-        cons = rules.check_consistency(cumulative)
-        if cons is not None:
-            return CombineWindowResult(
-                start_day=start_day, end_day=end_day, n_days=n_days,
-                outcome="consistency_fail",
-                final_pnl=eq - starting_balance,
-                days_to_outcome=passed_target_on + 1,
-                breach_day=None,
-            )
-        return CombineWindowResult(
-            start_day=start_day, end_day=end_day, n_days=n_days,
-            outcome="pass", final_pnl=eq - starting_balance,
-            days_to_outcome=passed_target_on + 1,
-            breach_day=None,
-        )
-
+    outcome = "consistency_fail" if ever_reached_target else "no_target"
     return CombineWindowResult(
         start_day=start_day, end_day=end_day, n_days=n_days,
-        outcome="no_target", final_pnl=eq - starting_balance,
+        outcome=outcome, final_pnl=eq - starting_balance,
         days_to_outcome=-1, breach_day=None,
     )
 
@@ -230,6 +240,14 @@ def simulate_sequential_accounts(
     Rebilling itself doesn't change any of this: it doesn't reset an
     account's progress (see docs/rules_sources.md), so a rebill event
     mid-account is a no-op here -- the SAME account just keeps running.
+
+    A consistency violation does NOT end the account (see the equivalent
+    note on `simulate_combine_window` -- same correction applies here):
+    hitting the target with one day over 50% of total profit just means
+    the account keeps trading, still fully exposed to MLL risk, until a
+    later day dilutes the best-day share back under 50%. Outcome
+    'consistency_fail' here means the account ran out of OOS/backtest
+    data while in that pending state -- not that it was disqualified.
     """
     days_sorted = sorted(daily_pnl.keys())
     accounts: list[SequentialAccountResult] = []
@@ -244,6 +262,7 @@ def simulate_sequential_accounts(
         peak_profit = Decimal(0)
         cumulative: dict[date, Decimal] = {}
         outcome: str | None = None
+        ever_reached_target = False
         j = i
         while j < n:
             day = days_sorted[j]
@@ -259,15 +278,19 @@ def simulate_sequential_accounts(
                 break
             mll.update_end_of_day(eq)
             if rules.reached_profit_target(eq):
+                ever_reached_target = True
                 cons = rules.check_consistency(cumulative)
-                outcome = "consistency_fail" if cons is not None else "pass"
-                break
+                if cons is None:
+                    outcome = "pass"
+                    break
+                # Not yet consistency-compliant -- keep trading this SAME
+                # account (not a failure); fall through to the next day.
             j += 1
         else:
             j = n - 1  # ran out of data before resolving
 
         if outcome is None:
-            outcome = "no_target"
+            outcome = "consistency_fail" if ever_reached_target else "no_target"
 
         end_day = days_sorted[j]
         accounts.append(SequentialAccountResult(

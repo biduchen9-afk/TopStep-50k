@@ -28,7 +28,7 @@ the corresponding constants in `topstep.py` and the test fixtures in
 | MLL trail mechanic | **End-of-day**, ratchets on max EOD balance, locks at starting balance | topstep.com blog explicitly says "End-of-Day Drawdown" |
 | Daily Loss Limit | **Not enforced on the Combine** | See "DLL on the Combine" below |
 | Max contracts | 5 standard or 50 micros (account-wide) | 10:1 micro:standard ratio; mixed positions allowed |
-| Consistency rule | Best winning day <= 50% of total cycle PnL | Evaluated at end-of-combine only |
+| Consistency rule | Best winning day <= 50% of total cycle PnL | A violation HOLDS the pass, doesn't fail it -- see "Consistency mechanic" below |
 | Minimum trading days | None on the Combine | XFA / Funded payout has different rules |
 
 ## MLL mechanic — clarification
@@ -45,6 +45,36 @@ This matches the `TrailingMLL` state machine in `topstep.py`. Some
 third-party guides confuse the Combine MLL with intraday-trailing
 mechanics used by other prop firms; we follow the topstep.com primary
 source.
+
+## Consistency mechanic — clarification (corrected 2026-08-26)
+
+**A consistency violation does NOT fail the Combine.** This project's
+simulator originally treated hitting the profit target with one day
+over 50% of total profit as a terminal failure (`consistency_fail`
+ending the attempt right there) -- that was wrong, and it fed every
+pass30/pass45 number computed before this date.
+
+Per Topstep's own guidance (corroborated by several independent 2026
+third-party breakdowns of the same help-center article): "Topstep does
+not fail you when you violate consistency. Instead, your effective
+profit target increases so that your best day represents less than 50%
+of the new total. You must then earn additional profits to bring the
+ratio into compliance... the remaining profit must be earned on a
+separate trading day, after the market close of the session in which
+your best day was set." In other words: the pass is *held*, not
+*denied* -- you keep trading (still fully exposed to MLL risk, which
+does not pause just because you nominally hit $3,000) until a later
+day's profit dilutes the best-day share back to <=50%.
+
+`simulate_combine_window` and `simulate_sequential_accounts`
+(`analysis/passrate.py`) now model this correctly: reaching the target
+does not stop the day-by-day loop unless consistency is ALSO satisfied
+that same day. The `consistency_fail` outcome label is kept (for
+backward compatibility with existing dict/report consumers) but its
+meaning changed: it now means "the window/account ran out of time while
+still pending dilution" -- not "disqualified". A longer window, or
+continuing the same account past a fixed 30/45-day observation window,
+would very plausibly resolve many of these into real passes.
 
 ## DLL on the Combine
 
