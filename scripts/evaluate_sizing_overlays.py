@@ -1,17 +1,30 @@
-"""Evaluate position-sizing overlays against the real ORB+MeanRev OOS
-daily P&L series (v10 -- the current best real, legal result).
+"""Evaluate position-sizing overlays on the real ORB+MeanRev edge
+(v10 -- the current best real, legal result), selected on IS and
+validated ONCE on OOS -- same one-touch discipline this project
+applies to strategy selection.
+
+CORRECTION (same run, same day): the first version of this script
+picked a "winner" by comparing all 5 policies' OOS numbers directly --
+that is exactly the OOS-leakage this project has otherwise been
+disciplined about avoiding for strategy choice, and choosing a sizing
+POLICY is no different from choosing a STRATEGY in that regard. Fixed
+by selecting the policy using IS Monte Carlo mean pass rate only, then
+touching OOS exactly once with baseline (reference) + the ONE selected
+policy. Also note: the target-proximity policies collapse the number
+of sequential accounts sharply (halving size after a checkpoint also
+halves daily P&L swings, which slows BOTH the path to pass AND the
+path to an MLL breach, so accounts run longer and far fewer open in a
+fixed window) -- their single-path sequential pass rate is not a
+trustworthy number on its own even before the OOS-leakage issue; the
+Monte Carlo distribution is what actually matters here.
 
 Not alpha search: same underlying edge, different bet-sizing policy
 against the Combine's discrete pass/fail risk structure. Compares:
   baseline               -- qty=1 throughout (v10 as already reported)
-  target_proximity_50pct -- half size once profit >= $1,500
-  target_proximity_75pct -- half size once profit >= $2,250
+  target_proximity @ $1500 -- half size once profit >= $1,500
+  target_proximity @ $2250 -- half size once profit >= $2,250
   drawdown_responsive    -- half size the day after a loss
   combined                -- min() of the two rules above
-
-Each policy's sequential pass rate AND Monte Carlo distribution are
-reported so a policy only "wins" if it improves the honest, resampled
-number -- not just the single realized path.
 
 Run with: python scripts/evaluate_sizing_overlays.py
 """
@@ -162,9 +175,12 @@ def main():
             out += (w / z) * arrays_dict[k]
         return out
 
+    ens_is  = ensemble(is_arrays,  weights)
     ens_oos = ensemble(oos_arrays, weights)
+    is_daily  = {d: Decimal(str(round(float(v), 2))) for d, v in zip(is_days, ens_is)}
     oos_daily = {d: Decimal(str(round(float(v), 2))) for d, v in zip(oos_days, ens_oos)}
-    print(f"\nOOS: {oos_days[0]} -> {oos_days[-1]} ({len(oos_days)} d), "
+    print(f"\nIS : {is_days[0]} -> {is_days[-1]} ({len(is_days)} d)")
+    print(f"OOS: {oos_days[0]} -> {oos_days[-1]} ({len(oos_days)} d), "
           f"streams+weights match v10 exactly. Setup: {_time.time()-t0:.0f}s")
 
     policies = {
@@ -178,8 +194,35 @@ def main():
         ),
     }
 
-    print(f"\n{'='*78}\nRESULTS\n{'='*78}")
+    # ── SELECTION on IS only -- never pick a sizing policy using OOS numbers,
+    # same one-touch discipline this whole project applies to strategy choice.
+    print(f"\n{'='*78}\nIS SELECTION (choose the policy here, OOS untouched until after)\n{'='*78}")
+    is_results = {}
     for name, sizing_fn in policies.items():
+        if sizing_fn is full_size:
+            seq = simulate_sequential_accounts(is_daily, rules=RULES,
+                                                starting_balance=RULES.starting_balance,
+                                                checkpoint=Decimal("1500"))
+        else:
+            seq = simulate_sequential_accounts_sized(
+                is_daily, rules=RULES, starting_balance=RULES.starting_balance,
+                sizing_fn=sizing_fn, checkpoint=Decimal("1500"))
+        mc = monte_carlo_pass_rate(is_daily, rules=RULES, starting_balance=RULES.starting_balance,
+                                    n_sims=2000, block_len=10, checkpoint=Decimal("1500"),
+                                    seed=42, sizing_fn=sizing_fn)
+        is_results[name] = mc.mean_pass_rate
+        print(f"  {name:<38} IS: {seq.n_accounts:>3} accts, {seq.count('pass'):>2} pass "
+              f"({seq.pass_rate:.1%})  MC mean={mc.mean_pass_rate:.1%}  P(>50%)={mc.prob_above_50pct:.1%}")
+
+    winner_name = max(is_results, key=is_results.get)
+    winner_fn = policies[winner_name]
+    print(f"\nSELECTED (best IS Monte Carlo mean pass rate): {winner_name}")
+
+    # ── ONE-TOUCH OOS: baseline (for reference, always shown) + the ONE
+    # policy selected above. No other policy's OOS number is used or reported
+    # as a candidate result -- that would be exactly the leakage being avoided.
+    print(f"\n{'='*78}\nONE-TOUCH OOS -- baseline (reference) + selected policy only\n{'='*78}")
+    for name, sizing_fn in [("baseline (qty=1 always)", full_size), (winner_name, winner_fn)]:
         t1 = _time.time()
         if sizing_fn is full_size:
             seq = simulate_sequential_accounts(oos_daily, rules=RULES,
