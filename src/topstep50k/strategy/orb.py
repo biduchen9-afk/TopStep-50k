@@ -128,6 +128,15 @@ class OpeningRangeBreakout:
     # if it returns False the strategy stands flat for the whole day.
     # Argument is the trading date in US/Eastern.
     daily_filter: Callable[[date], bool] | None = None
+    # Optional volatility-adaptive risk sizing. Called once when a new
+    # trading day starts (same causal timing as daily_filter -- only
+    # ever sees prior-day data); the returned float multiplies BOTH
+    # stop_ticks and tp_ticks for fixed_ticks-mode stops/TPs that day,
+    # so the risk:reward RATIO is preserved while the absolute distance
+    # adapts to the current volatility regime. None (default) = no
+    # scaling, i.e. behaves exactly as before.
+    vol_scale: Callable[[date], float] | None = None
+    _vol_scale_today: float = field(init=False, default=1.0, repr=False)
     _or_widths: list[float] = field(init=False, default_factory=list, repr=False)
     _day_state: _DayState | None = field(init=False, default=None, repr=False)
     _gated_today: bool = field(init=False, default=False, repr=False)
@@ -187,12 +196,14 @@ class OpeningRangeBreakout:
         """
         if self._need_new_day(bar.ts):
             self._day_state = self._build_day_state(bar.ts)
+            day_local = bar.ts.astimezone(EASTERN).date()
             # Daily gate evaluated once at the start of a new trading day.
             if self.daily_filter is not None:
-                day_local = bar.ts.astimezone(EASTERN).date()
                 self._gated_today = not self.daily_filter(day_local)
             else:
                 self._gated_today = False
+            # Volatility-adaptive risk sizing, same causal timing as the gate.
+            self._vol_scale_today = self.vol_scale(day_local) if self.vol_scale is not None else 1.0
         if self._gated_today:
             return None
 
@@ -256,19 +267,22 @@ class OpeningRangeBreakout:
         # reasonable approximation; the audit log preserves the real
         # entry fill price.
         st.entry_price = bar.close
+        scale = self._vol_scale_today
         if self.stop_mode == "opposite_range":
             st.stop_price = st.or_low if signal > 0 else st.or_high
         else:
+            stop_dist = self.stop_ticks * scale * self.tick_size
             st.stop_price = (
-                st.entry_price - self.stop_ticks * self.tick_size
+                st.entry_price - stop_dist
                 if signal > 0
-                else st.entry_price + self.stop_ticks * self.tick_size
+                else st.entry_price + stop_dist
             )
         if self.tp_ticks is not None:
+            tp_dist = self.tp_ticks * scale * self.tick_size
             st.tp_price = (
-                st.entry_price + self.tp_ticks * self.tick_size
+                st.entry_price + tp_dist
                 if signal > 0
-                else st.entry_price - self.tp_ticks * self.tick_size
+                else st.entry_price - tp_dist
             )
         elif self.tp_multiple is not None and st.or_width:
             st.tp_price = (

@@ -178,6 +178,44 @@ def orb_expansion_gate(stats: dict[date, DailySessionStats]
     return gate
 
 
+def orb_vol_scale_factor(
+    stats: dict[date, DailySessionStats],
+    *, floor: float = 0.5, cap: float = 2.0,
+) -> Callable[[date], float]:
+    """Continuous risk-sizing companion to `orb_expansion_gate`, reusing
+    the SAME rv5_prior/rv20_prior signal rather than introducing a new
+    fitted feature. Where the gate collapses that ratio to a binary
+    on/off at 0.8, this returns the ratio itself (clamped to
+    [floor, cap]) so a strategy's stop/TP distance can scale
+    continuously with the current volatility regime: wider on days
+    following elevated short-term vol, tighter on days following
+    compressed vol.
+
+    Returns 1.0 (neutral / no adjustment) until both series are warm or
+    on any day the gate itself would also return False for lack of
+    data -- deliberately conservative so a caller who forgets to also
+    apply the gate doesn't get an undefined multiplier.
+    """
+    rv5 = rolling_vol(stats, 5)
+    rv20 = rolling_vol(stats, 20)
+    days = sorted(stats.keys())
+    prior_of = {d: days[i - 1] if i > 0 else None
+                for i, d in enumerate(days)}
+
+    def scale(d: date) -> float:
+        prior = prior_of.get(d)
+        if prior is None:
+            return 1.0
+        v5 = rv5.get(prior, 0.0)
+        v20 = rv20.get(prior, 0.0)
+        if v5 <= 0 or v20 <= 0:
+            return 1.0
+        ratio = v5 / v20
+        return max(floor, min(cap, ratio))
+
+    return scale
+
+
 def meanrev_low_vol_gate(stats: dict[date, DailySessionStats],
                           *, median_window: int = 60
                           ) -> Callable[[date], bool]:

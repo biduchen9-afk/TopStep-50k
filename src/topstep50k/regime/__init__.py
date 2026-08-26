@@ -9,6 +9,7 @@ from topstep50k.regime.conditioners import (
     DailySessionStats,
     meanrev_low_vol_gate,
     orb_expansion_gate,
+    orb_vol_scale_factor,
     overnight_drift_post_selloff_gate,
     per_day_session_stats,
     rolling_vol,
@@ -27,6 +28,6 @@ __all__ = [
     "HMMRegimeFilter", "HMMRegimeResult", "RegimeAssignment", "fit_hmm",
     "DailySessionStats", "per_day_session_stats",
     "rolling_vol", "trailing_median",
-    "orb_expansion_gate", "meanrev_low_vol_gate",
+    "orb_expansion_gate", "orb_vol_scale_factor", "meanrev_low_vol_gate",
     "overnight_drift_post_selloff_gate",
 ]
