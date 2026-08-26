@@ -39,6 +39,7 @@ from decimal import Decimal
 import numpy as np
 
 from topstep50k.analysis.passrate import simulate_sequential_accounts
+from topstep50k.analysis.sizing import SizingFn, full_size, simulate_sequential_accounts_sized
 from topstep50k.rules.topstep import TopstepRules
 
 
@@ -65,10 +66,15 @@ def monte_carlo_pass_rate(
     block_len: int = 10,
     checkpoint: Decimal = Decimal("1500"),
     seed: int = 42,
+    sizing_fn: SizingFn = full_size,
 ) -> MonteCarloPassRateResult:
     """Resample `daily_pnl` n_sims times (stationary block bootstrap,
     wrap-around at the series boundary) and run each resample through
-    simulate_sequential_accounts. Returns the distribution of resulting
+    simulate_sequential_accounts (or, if `sizing_fn` is given, the
+    sizing-aware simulate_sequential_accounts_sized -- see
+    analysis.sizing for why you'd want that: evaluating a position-
+    sizing OVERLAY's effect on the pass-rate distribution, not just
+    the single realized path). Returns the distribution of resulting
     pass rates, not just their mean -- see module docstring for why the
     spread matters as much as the center here.
 
@@ -99,10 +105,16 @@ def monte_carlo_pass_rate(
         resampled = np.concatenate(blocks)[:n]
 
         synth_daily = {d: Decimal(str(round(float(v), 2))) for d, v in zip(days, resampled)}
-        summary = simulate_sequential_accounts(
-            synth_daily, rules=rules, starting_balance=starting_balance,
-            checkpoint=checkpoint,
-        )
+        if sizing_fn is full_size:
+            summary = simulate_sequential_accounts(
+                synth_daily, rules=rules, starting_balance=starting_balance,
+                checkpoint=checkpoint,
+            )
+        else:
+            summary = simulate_sequential_accounts_sized(
+                synth_daily, rules=rules, starting_balance=starting_balance,
+                sizing_fn=sizing_fn, checkpoint=checkpoint,
+            )
         pass_rates[i] = summary.pass_rate
         n_accounts[i] = summary.n_accounts
 
