@@ -1,33 +1,51 @@
-"""Live daily-signal portfolio for the 9-stream regime-gated ensemble.
+"""Live daily-signal portfolio for the 6-stream regime-gated ensemble.
 
-*** DO NOT TRADE THIS CONFIG AS-IS (flagged 2026-08-26) ***
-IS_WEIGHTS below allocates ~43% of ensemble weight to OD (OvernightDrift)
-streams (GC/OD, NQ/OD, ES/OD). TopStep does NOT allow overnight or
-weekend holding at ANY account stage -- Combine, XFA, or Live Funded --
-confirmed current per a July 1, 2026 rules update (see
-docs/rules_sources.md). This file has not yet been rebuilt without OD;
-the OD-free replacement (evaluate_ensemble_databento_v10_no_overnight.py)
-FAILED Gate 2/3 (t-stat 1.32 < 1.5) and is not a viable substitute
-either -- ORB+MeanRev alone don't clear the promotion bar on this
-asset set. Do not run generate_daily_signals.py / run_portfolio.py
-against real money until this is resolved with a rule-compliant,
-gate-passing strategy set.
+*** READ BEFORE TRADING THIS (updated 2026-08-26) ***
+OD (OvernightDrift) is PERMANENTLY REMOVED: TopStep does not allow
+overnight or weekend holding at ANY account stage -- Combine, XFA, or
+Live Funded -- confirmed current per a July 1, 2026 rules update (see
+docs/rules_sources.md).
+
+This ensemble (ORB + MeanRev x ES/NQ/GC, no OD) is the best-available
+result of an extensive session-long search for a legal third leg to
+replace OD's contribution -- eleven distinct strategy/gate combinations
+were tried (GapFill, VolumeProfileMeanReversion incl. a real stop-sign
+bugfix, VwapStdFractal, IntradayMomentum + a take-profit variant raw
+and volatility-gated, ThreeDayReversal low-vol-gated, an ORB variant
+that holds to close instead of a fixed target, PowerHourContinuation
+-- a new end-of-session strategy purpose-built to be time-disjoint from
+everything else) and NONE added genuine, non-redundant, OOS-surviving
+edge; several looked promising in-sample and were confirmed via DSR
+deflation and/or direct OOS computation to be overfit. See
+docs/rules_sources.md and the evaluate_*_databento*.py / screen_*.py
+scripts for the individual writeups.
+
+HONEST CAVEAT: this ensemble does NOT cleanly clear its own Gate 2/3
+promotion checklist either -- t-stat=1.32 vs the 1.5 hard threshold
+required (evaluate_ensemble_databento_v10_no_overnight.py). Every
+other check passes (EV, profit factor, Sharpe, IS/OOS pass30 ratio,
+OOS Sharpe ratio all OK) and OOS actually performs in line with IS
+(Sharpe 0.74 both), so this reads as "not yet enough data to be
+statistically certain" rather than "no edge" -- but it is a real,
+acknowledged gap, not a clean pass. Sequential (non-overlapping)
+account simulation on the OOS period: 34 accounts, 10 pass = 29.4%
+unconditional pass rate; Monte Carlo block-bootstrap (2000 resamples):
+mean 32.4%, 90% interval [20.0%, 46.7%], P(true rate > 50%) = 2.2%.
+Expected cost to pass one $50K Combine at this pass rate (TopStep
+Standard Path, $49/mo rebill + $149 one-time activation): roughly
+$254-$394, central estimate ~$300.
 
 Run `scripts/generate_daily_signals.py` before 9:30 ET with data through
 yesterday's close to get today's trading plan.
 
-All gate logic and weights are frozen from the OOS-promoted IS evaluation
-run on the corrected Databento dataset (see scripts/
-evaluate_ensemble_databento_recent_evgate.py -- this file's IS_WEIGHTS
-must match that script's printed weights exactly):
+Weights are frozen from evaluate_ensemble_databento_v10_no_overnight.py
+on the corrected Databento dataset (this file's IS_WEIGHTS must match
+that script's printed weights exactly):
   Data       : es/nq/gc_databento.txt (GitHub Release "Data list" v1.0.0)
   IS period  : 2021-12-31 to 2025-02-25 (815d, 70%)
   OOS period : 2025-02-26 to 2026-07-03 (350d, 30%, one-touch)
-  IS  result : pass30=29.8%, Sharpe=+0.96
-  OOS result : pass30=47.7%, pass45=53.6%, Sharpe=+2.07, EV=+$142/day — OOS_PROMOTED
-  Sequential accounts (OOS, non-overlapping, one at a time): 26 accounts,
-    13 pass = 50.0% unconditional pass rate; 19/26 ever reached $1,500+
-    profit, of which 68.4% went on to actually pass.
+  IS  result : pass30=35.1%, Sharpe=+0.74 (t-stat=1.32, below 1.5 threshold)
+  OOS result : pass30=28.7%, pass45=28.8%, Sharpe=+0.74, EV=+$62/day
 
 No new parameters, no re-fitting. Gates are literature-grounded rules with
 zero free parameters tuned to our data (see regime/conditioners.py).
@@ -62,19 +80,16 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Frozen IS pass-rate-aware weights (do not change without re-evaluation)
 # Derived from IS evaluation in
-# scripts/evaluate_ensemble_databento_recent_evgate.py -- EV-gated: any
+# scripts/evaluate_ensemble_databento_v10_no_overnight.py -- EV-gated: any
 # stream with IS EV <= 0 gets zero weight (GC/MeanRev here).
 # ---------------------------------------------------------------------------
 
 IS_WEIGHTS: dict[tuple[str, str], float] = {
-    ("ES", "ORB"):     0.204,
-    ("NQ", "ORB"):     0.190,
-    ("GC", "OD"):      0.171,
-    ("NQ", "OD"):      0.154,
-    ("GC", "ORB"):     0.141,
-    ("ES", "OD"):      0.103,
-    ("ES", "MeanRev"): 0.028,
-    ("NQ", "MeanRev"): 0.008,
+    ("ES", "ORB"):     0.357,
+    ("NQ", "ORB"):     0.333,
+    ("GC", "ORB"):     0.247,
+    ("ES", "MeanRev"): 0.049,
+    ("NQ", "MeanRev"): 0.015,
     ("GC", "MeanRev"): 0.000,
 }
 
@@ -95,16 +110,9 @@ MR_PARAMS = dict(
     stop_ticks=15,
     time_stop_minutes=45,
 )
-OD_PARAMS = dict(
-    qty=1,
-    entry_offset_minutes=5,
-    exit_offset_minutes=5,
-)
 
 _ORB_EXIT_TIME = time(15, 45)
 _MR_EXIT_TIME  = time(15, 45)
-_OD_ENTRY_TIME = time(9, 35)
-_OD_EXIT_TIME  = time(9, 55)
 
 
 @dataclass(frozen=True)
@@ -177,12 +185,7 @@ class DailyPlan:
 
 def _print_execution_note(s: StreamStatus) -> None:
     prefix = f"  {s.asset}/{s.strategy}"
-    if s.strategy == "OD":
-        print(f"{prefix}:")
-        print(f"    BUY 1 contract at {_OD_ENTRY_TIME} ET open")
-        print(f"    EXIT at {_OD_EXIT_TIME} ET (hard flat)")
-        print(f"    No stop — intraday carry only, exit is time-based")
-    elif s.strategy == "ORB":
+    if s.strategy == "ORB":
         print(f"{prefix}:")
         print(f"    WATCH 09:30–10:00 ET to establish the opening range")
         print(f"    At 10:00 ET, trade in the direction of the 30-min return:")
@@ -218,7 +221,7 @@ def build_daily_plan(
     Returns
     -------
     DailyPlan with gate status, weights, and execution notes for each
-    of the 9 strategy-asset streams.
+    of the 6 strategy-asset streams.
     """
     from topstep50k.regime.conditioners import (
         per_day_session_stats,
@@ -289,22 +292,6 @@ def build_daily_plan(
             active=mr_active, gate_name="low_vol_gate",
             gate_detail=mr_detail,
             weight=IS_WEIGHTS.get((asset, "MeanRev"), 0.0),
-        ))
-
-        # -- OD gate: prior RTH return < 0 --
-        if prior_day is not None and prior_day in stats:
-            rth_r = stats[prior_day].rth_return
-            od_active = rth_r < 0.0
-            cmp = "<" if od_active else "≥"
-            od_detail = f"prior RTH = {rth_r*100:+.2f}% {cmp} 0%"
-        else:
-            od_active = False
-            od_detail = "insufficient history"
-        streams.append(StreamStatus(
-            asset=asset, strategy="OD",
-            active=od_active, gate_name="post_selloff_gate",
-            gate_detail=od_detail,
-            weight=IS_WEIGHTS.get((asset, "OD"), 0.0),
         ))
 
     return DailyPlan(for_date=for_date, streams=streams)
