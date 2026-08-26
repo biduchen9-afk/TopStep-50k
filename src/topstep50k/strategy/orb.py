@@ -134,14 +134,21 @@ class OpeningRangeBreakout:
 
     def _build_day_state(self, bar_ts: datetime) -> _DayState:
         """For the trading day bar_ts belongs to (in Eastern), compute
-        session_open / session_close / or_end / flat_by, all in UTC."""
+        session_open / session_close / or_end / flat_by, all in UTC.
+
+        Supports sessions that cross midnight (session_close_local <=
+        session_open_local, e.g. an Asia/Tokyo window 19:00-04:00 ET):
+        the close is then anchored to the NEXT Eastern calendar day.
+        """
         eastern = bar_ts.astimezone(EASTERN)
         session_date = eastern.date()
+        overnight = self.session_close_local <= self.session_open_local
         session_open_local = datetime.combine(
             session_date, self.session_open_local, tzinfo=EASTERN,
         )
+        close_date = session_date + timedelta(days=1) if overnight else session_date
         session_close_local = datetime.combine(
-            session_date, self.session_close_local, tzinfo=EASTERN,
+            close_date, self.session_close_local, tzinfo=EASTERN,
         )
         or_end_local = session_open_local + timedelta(minutes=self.or_minutes)
         flat_by_local = session_close_local - timedelta(
@@ -157,10 +164,20 @@ class OpeningRangeBreakout:
     def _need_new_day(self, bar_ts: datetime) -> bool:
         if self._day_state is None:
             return True
-        # New trading day in Eastern time
+        # Still inside (or not yet past) the currently-tracked session?
+        # No rebuild needed -- this is what lets an overnight-spanning
+        # session (e.g. Asia 19:00-04:00 ET) survive the Eastern calendar
+        # date rolling over in the middle of it, instead of being cut off
+        # at midnight.
+        if bar_ts < self._day_state.session_close_utc:
+            return False
+        # Past the tracked session's close: only rebuild once the Eastern
+        # date has actually advanced past the session's own open date, so
+        # we rebuild once per session cycle rather than on every bar
+        # during the dead zone between sessions.
         cur_local_date = bar_ts.astimezone(EASTERN).date()
-        prev_local_date = self._day_state.session_open_utc.astimezone(EASTERN).date()
-        return cur_local_date != prev_local_date
+        prev_open_date = self._day_state.session_open_utc.astimezone(EASTERN).date()
+        return cur_local_date != prev_open_date
 
     def on_bar(self, bar: Bar, ctx: StrategyContext) -> TargetPosition | None:
         """Return the desired target position after observing `bar`.
