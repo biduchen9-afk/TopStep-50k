@@ -1,5 +1,18 @@
 """Live daily-signal portfolio for the 9-stream regime-gated ensemble.
 
+*** DO NOT TRADE THIS CONFIG AS-IS (flagged 2026-08-26) ***
+IS_WEIGHTS below allocates ~43% of ensemble weight to OD (OvernightDrift)
+streams (GC/OD, NQ/OD, ES/OD). TopStep does NOT allow overnight or
+weekend holding at ANY account stage -- Combine, XFA, or Live Funded --
+confirmed current per a July 1, 2026 rules update (see
+docs/rules_sources.md). This file has not yet been rebuilt without OD;
+the OD-free replacement (evaluate_ensemble_databento_v10_no_overnight.py)
+FAILED Gate 2/3 (t-stat 1.32 < 1.5) and is not a viable substitute
+either -- ORB+MeanRev alone don't clear the promotion bar on this
+asset set. Do not run generate_daily_signals.py / run_portfolio.py
+against real money until this is resolved with a rule-compliant,
+gate-passing strategy set.
+
 Run `scripts/generate_daily_signals.py` before 9:30 ET with data through
 yesterday's close to get today's trading plan.
 
