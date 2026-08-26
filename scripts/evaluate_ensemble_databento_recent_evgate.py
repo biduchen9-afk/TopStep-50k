@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from topstep50k.analysis.benchmark import buy_and_hold_daily_pnl, to_aligned_array
 from topstep50k.analysis.passrate import realized_pass_rate, simulate_combine_window
 from topstep50k.audit import InMemoryAuditLog
 from topstep50k.data.loaders import load_bars_csv
@@ -153,6 +154,7 @@ def main():
 
     all_bars = {}
     gates = {}
+    bh_daily = {}  # per-asset buy-and-hold daily $ PnL, 1 contract, for the Gate 4 benchmark
     for ak in ASSETS:
         print(f"\nLoading {ak} bars...", flush=True)
         t0 = _time.time()
@@ -160,6 +162,7 @@ def main():
         print(f"  {len(bars):,} bars (>= {RECENT_START.date()}) in {_time.time() - t0:.1f}s",
               flush=True)
         all_bars[ak] = bars
+        bh_daily[ak] = buy_and_hold_daily_pnl(bars, ASSETS[ak]["instrument"].point_value, qty=1)
         stats = per_day_session_stats(bars)
         gates[ak] = {
             "orb": orb_expansion_gate(stats),
@@ -190,6 +193,11 @@ def main():
 
     union_days = sorted(set().union(*[set(s.keys()) for s in streams.values()]))
     is_mask, oos_mask, is_days, oos_days = is_oos_split(union_days, {})
+
+    # Naive baseline: 1 contract each of ES+NQ+GC held long throughout,
+    # no strategy logic at all -- "does the model beat doing nothing
+    # clever" (Gate 4 advisory check below).
+    bh_basket = sum(to_aligned_array(bh_daily[ak], union_days) for ak in ASSETS)
     print(f"\nIS : {is_days[0]} -> {is_days[-1]} ({len(is_days)} d)")
     print(f"OOS: {oos_days[0]} -> {oos_days[-1]} ({len(oos_days)} d)")
 
@@ -317,11 +325,18 @@ def main():
         gate_check("OOS Sharpe >= 0.5xIS",  sh_ratio, 0.50, hard=True,
                    note=f"OOS={oos_sh:.3f} IS={is_sh:.3f}"),
     ]
+    bh_oos_total = float(bh_basket[oos_mask].sum())
+    bh_oos_sharpe = sharpe(bh_basket[oos_mask])
+    beats_bh = float(ens_oos.sum()) > bh_oos_total
     g4_adv = [
         gate_check("OOS pass30 >= 0.5xIS",  pr_ratio, 0.50, hard=False,
                    note=f"OOS={rr30_oos.pass_rate:.1%} IS={rr30_is.pass_rate:.1%}"),
         gate_check("OOS MLL rate <= 1.5xIS", mll_ok,  True, hard=False,
                    note=f"IS={is_mll:.1%} OOS={oos_mll:.1%}"),
+        gate_check("OOS beats buy-and-hold ($)", beats_bh, True, hard=False,
+                   note=(f"ensemble=${ens_oos.sum():+,.0f} vs "
+                         f"1x ES+NQ+GC=${bh_oos_total:+,.0f} "
+                         f"(Sharpe={bh_oos_sharpe:+.2f})")),
     ]
 
     if g2_passed and all(g4_hard):
@@ -341,6 +356,10 @@ def main():
     print(f"  OOS/IS Sharpe ratio = {sh_ratio:.2f}  (>=0.50 required)")
     print(f"  OOS/IS pass30 ratio = {pr_ratio:.2f}  (>=0.50 advisory)")
     print(f"  IS MLL rate={is_mll:.1%}  OOS MLL rate={oos_mll:.1%}")
+    print(f"  OOS ensemble total=${ens_oos.sum():+,.0f}  vs  "
+          f"naive 1x ES+NQ+GC buy-and-hold OOS total=${bh_oos_total:+,.0f} "
+          f"(Sharpe={bh_oos_sharpe:+.2f})  -> "
+          f"{'BEATS' if beats_bh else 'LOSES TO'} buy-and-hold")
 
 
 if __name__ == "__main__":

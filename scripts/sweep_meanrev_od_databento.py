@@ -41,6 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from topstep50k.analysis.dsr import deflated_sharpe
 from topstep50k.analysis.passrate import realized_pass_rate
 from topstep50k.analysis.stats import performance
 from topstep50k.audit import InMemoryAuditLog
@@ -139,6 +140,7 @@ def _row_from_result(result, params):
         "params": params, "sharpe": perf.sharpe_annual, "pf": perf.profit_factor,
         "ev_day": float(perf.total_pnl) / len(daily), "trades_per_yr": trades_per_yr,
         "win_rate": perf.win_rate, "pass30": rr30.pass_rate, "pass45": pass45,
+        "is_returns": arr,  # kept for DSR on the eventual #1 finalist -- small (IS-only)
     }
 
 
@@ -183,11 +185,25 @@ def sweep_asset(asset_key: str) -> dict:
              and r["trades_per_yr"] >= 20 and r["sharpe"] >= 0.3]
     od_ok.sort(key=lambda r: r["pass30"], reverse=True)
 
+    mr_finalists = (mr_ok or mr_rows)[:N_FINALISTS]
+    od_finalists = (od_ok or od_rows)[:N_FINALISTS]
+
+    # DSR on the #1 finalist: how much should its IS Sharpe be deflated
+    # for having been picked as the best of len(mr_rows)/len(od_rows)
+    # grid combos actually searched for this asset? (Bailey et al.)
+    mr_dsr = od_dsr = None
+    if mr_finalists:
+        mr_dsr = deflated_sharpe(mr_finalists[0]["is_returns"].tolist(),
+                                  all_trial_sharpes_annual=[r["sharpe"] for r in mr_rows])
+    if od_finalists:
+        od_dsr = deflated_sharpe(od_finalists[0]["is_returns"].tolist(),
+                                  all_trial_sharpes_annual=[r["sharpe"] for r in od_rows])
+
     return {
         "asset": asset_key, "load_s": load_s, "n_bars": n_bars_full,
         "n_bars_is": len(bars_is), "is_cutoff": cutoff,
-        "mr_rows": mr_rows, "mr_finalists": (mr_ok or mr_rows)[:N_FINALISTS],
-        "od_rows": od_rows, "od_finalists": (od_ok or od_rows)[:N_FINALISTS],
+        "mr_rows": mr_rows, "mr_finalists": mr_finalists, "mr_dsr": mr_dsr,
+        "od_rows": od_rows, "od_finalists": od_finalists, "od_dsr": od_dsr,
         "sweep_s": _time.time() - t0 - load_s,
     }
 
@@ -226,13 +242,25 @@ def main():
 
     print(f"\nPhase 1 wall time: {_time.time()-t0:.0f}s\n")
 
+    print("DSR (on the #1 finalist only) = P(true IS Sharpe > 0) after deflating\n"
+          "for how many grid combos were searched for this asset/strategy\n"
+          "(Bailey et al. Deflated Sharpe Ratio). Low DSR despite a good raw\n"
+          "Sharpe means 'best of N' noise, not necessarily real edge.\n")
     for ak in ASSETS:
         s = screens[ak]
         print(f"{'='*78}\n{ak}\n{'='*78}")
         print_top("MeanRev -- top by IS pass30", s["mr_rows"],
                    ["lookback", "sigma_mult", "stop_ticks", "time_stop_minutes"])
+        if s["mr_dsr"] is not None:
+            d = s["mr_dsr"]
+            print(f"  -> #1 finalist DSR={d.dsr:.1%}  (n_trials={d.n_trials}, "
+                  f"IS Sharpe={d.sharpe:+.2f}, E[max Sharpe|noise]={d.expected_max_sharpe:+.2f})")
         print_top("OD -- top by IS pass30", s["od_rows"],
                    ["entry_offset_minutes", "exit_offset_minutes"])
+        if s["od_dsr"] is not None:
+            d = s["od_dsr"]
+            print(f"  -> #1 finalist DSR={d.dsr:.1%}  (n_trials={d.n_trials}, "
+                  f"IS Sharpe={d.sharpe:+.2f}, E[max Sharpe|noise]={d.expected_max_sharpe:+.2f})")
 
     print(f"\n{'='*78}\nCURRENT (pre-committed) PARAMS FOR COMPARISON\n{'='*78}")
     print("  MeanRev: lookback=60 sigma_mult=2.0 stop_ticks=15 time_stop_minutes=45")

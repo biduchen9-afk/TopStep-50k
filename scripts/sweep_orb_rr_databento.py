@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from topstep50k.analysis.dsr import deflated_sharpe
 from topstep50k.analysis.passrate import realized_pass_rate
 from topstep50k.analysis.stats import performance
 from topstep50k.audit import InMemoryAuditLog
@@ -167,7 +168,7 @@ def sweep_asset(asset_key: str) -> dict:
     }
 
 
-def phase2_verdict(asset_key: str, params: dict) -> object:
+def phase2_verdict(asset_key: str, params: dict, all_trial_sharpes: list[float]) -> tuple:
     cfg = ASSETS[asset_key]
     bars = load_recent_bars(cfg["data_path"])
     stats = per_day_session_stats(bars)
@@ -181,6 +182,8 @@ def phase2_verdict(asset_key: str, params: dict) -> object:
     label = (f"{asset_key}/ORB(gated,RR) or={params['or_min']} "
              f"stop={params['stop_ticks']}t tp={params['tp_ticks']}t")
     verdict = evaluate_strategy(label, daily_full, is_mask, oos_mask, is_days, oos_days, RULES)
+    dsr = deflated_sharpe(daily_full[is_mask].tolist(),
+                           all_trial_sharpes_annual=all_trial_sharpes)
 
     # Longer-window pass-rate scaling test on the FULL daily series.
     windows = {}
@@ -190,7 +193,7 @@ def phase2_verdict(asset_key: str, params: dict) -> object:
                                      starting_balance=RULES.starting_balance,
                                      window_days=w, stride_days=1)
             windows[w] = rr.pass_rate
-    return verdict, windows
+    return verdict, windows, dsr
 
 
 def main():
@@ -231,35 +234,42 @@ def main():
         print()
 
     print(f"{'='*78}\nPHASE 2 -- FULL 6-GATE CHECKLIST + WINDOW-SCALING TEST\n{'='*78}\n")
+    print("DSR = P(true IS Sharpe > 0) after deflating for how many grid combos\n"
+          "were searched for this asset (Bailey et al. Deflated Sharpe Ratio).\n")
     verdicts = []
     for ak in ASSETS:
+        all_sharpes = [r["sharpe"] for r in screens[ak]["rows"]]
         for r in screens[ak]["finalists"]:
             t1 = _time.time()
-            result, windows = phase2_verdict(ak, r["params"])
+            result, windows, dsr = phase2_verdict(ak, r["params"], all_sharpes)
             win_s = "  ".join(f"pass{w}={p:.1%}" for w, p in windows.items())
             print(f"  [{_time.time()-t1:.0f}s] {result.label:<48} -> "
                   f"{result.promoted.upper():<14} IS-pass30={result.is_pass30:.1%} "
                   f"OOS-pass30={result.oos_pass30:.1%}", flush=True)
             print(f"           full-series window scaling: {win_s}", flush=True)
-            verdicts.append((ak, r["params"], result, windows))
+            print(f"           DSR={dsr.dsr:.1%}  (n_trials={dsr.n_trials}, "
+                  f"E[max Sharpe|noise]={dsr.expected_max_sharpe:+.2f})", flush=True)
+            verdicts.append((ak, r["params"], result, windows, dsr))
 
     print(f"\n{'='*78}\nSUMMARY -- SURVIVORS (OOS_PROMOTED)\n{'='*78}")
-    survivors = [(ak, p, res, w) for ak, p, res, w in verdicts if res.promoted == "oos_promoted"]
+    survivors = [(ak, p, res, w, dsr) for ak, p, res, w, dsr in verdicts if res.promoted == "oos_promoted"]
     if not survivors:
         print("  NONE of the finalists reached OOS_PROMOTED.")
         ranked = sorted(verdicts, key=lambda x: (x[2].promoted, x[2].oos_pass30), reverse=True)
-        for ak, p, res, w in ranked[:10]:
+        for ak, p, res, w, dsr in ranked[:10]:
             win_s = "  ".join(f"pass{k}={v:.1%}" for k, v in w.items())
             print(f"  {res.label:<48} {res.promoted:<12} IS-pass30={res.is_pass30:.1%} "
-                  f"OOS-pass30={res.oos_pass30:.1%} OOS-Sharpe={res.oos_sharpe:+.2f}")
+                  f"OOS-pass30={res.oos_pass30:.1%} OOS-Sharpe={res.oos_sharpe:+.2f} "
+                  f"DSR={dsr.dsr:.1%}")
             print(f"    {win_s}")
     else:
         survivors.sort(key=lambda x: x[2].oos_pass30, reverse=True)
-        for ak, p, res, w in survivors:
+        for ak, p, res, w, dsr in survivors:
             win_s = "  ".join(f"pass{k}={v:.1%}" for k, v in w.items())
             print(f"  {res.label}")
             print(f"    IS-pass30={res.is_pass30:.1%}  OOS-pass30={res.oos_pass30:.1%}  "
-                  f"OOS-Sharpe={res.oos_sharpe:+.2f}")
+                  f"OOS-Sharpe={res.oos_sharpe:+.2f}  DSR={dsr.dsr:.1%} "
+                  f"(n_trials={dsr.n_trials})")
             print(f"    {win_s}")
             res.print_report()
 

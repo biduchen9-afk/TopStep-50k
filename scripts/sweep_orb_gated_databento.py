@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from topstep50k.analysis.dsr import deflated_sharpe
 from topstep50k.analysis.passrate import realized_pass_rate
 from topstep50k.analysis.stats import performance
 from topstep50k.audit import InMemoryAuditLog
@@ -157,7 +158,7 @@ def sweep_asset(asset_key: str) -> dict:
     }
 
 
-def phase2_verdict(asset_key: str, params: dict) -> object:
+def phase2_verdict(asset_key: str, params: dict, all_trial_sharpes: list[float]) -> tuple:
     cfg = ASSETS[asset_key]
     bars = list(load_bars_csv(cfg["data_path"]))
     stats = per_day_session_stats(bars)
@@ -170,7 +171,10 @@ def phase2_verdict(asset_key: str, params: dict) -> object:
     daily_full = _to_series(result.daily_pnl, days)
     label = (f"{asset_key}/ORB(gated) or={params['or_min']} tp={params['tp']:.1f} "
              f"dir={params['direction']}")
-    return evaluate_strategy(label, daily_full, is_mask, oos_mask, is_days, oos_days, RULES)
+    verdict = evaluate_strategy(label, daily_full, is_mask, oos_mask, is_days, oos_days, RULES)
+    dsr = deflated_sharpe(daily_full[is_mask].tolist(),
+                           all_trial_sharpes_annual=all_trial_sharpes)
+    return verdict, dsr
 
 
 def main():
@@ -209,31 +213,38 @@ def main():
         print()
 
     print(f"{'='*78}\nPHASE 2 -- FULL 6-GATE CHECKLIST (IS+OOS, ONE-TOUCH) ON FINALISTS\n{'='*78}\n")
+    print("DSR = P(true IS Sharpe > 0) after deflating for how many grid combos\n"
+          "were searched for this asset (Bailey et al. Deflated Sharpe Ratio).\n")
     verdicts = []
     for ak in ASSETS:
+        all_sharpes = [r["sharpe"] for r in screens[ak]["rows"]]
         for r in screens[ak]["finalists"]:
             t1 = _time.time()
-            result = phase2_verdict(ak, r["params"])
+            result, dsr = phase2_verdict(ak, r["params"], all_sharpes)
             print(f"  [{_time.time()-t1:.0f}s] {result.label:<50} -> "
                   f"{result.promoted.upper():<14} IS-pass30={result.is_pass30:.1%} "
                   f"OOS-pass30={result.oos_pass30:.1%} OOS-Sharpe={result.oos_sharpe:+.2f}",
                   flush=True)
-            verdicts.append((ak, r["params"], result))
+            print(f"           DSR={dsr.dsr:.1%}  (n_trials={dsr.n_trials}, "
+                  f"E[max Sharpe|noise]={dsr.expected_max_sharpe:+.2f})", flush=True)
+            verdicts.append((ak, r["params"], result, dsr))
 
     print(f"\n{'='*78}\nSUMMARY -- SURVIVORS (OOS_PROMOTED)\n{'='*78}")
-    survivors = [(ak, p, res) for ak, p, res in verdicts if res.promoted == "oos_promoted"]
+    survivors = [(ak, p, res, dsr) for ak, p, res, dsr in verdicts if res.promoted == "oos_promoted"]
     if not survivors:
         print("  NONE of the finalists reached OOS_PROMOTED.")
         ranked = sorted(verdicts, key=lambda x: (x[2].promoted, x[2].oos_pass30), reverse=True)
-        for ak, p, res in ranked[:9]:
+        for ak, p, res, dsr in ranked[:9]:
             print(f"  {res.label:<50} {res.promoted:<12} IS-pass30={res.is_pass30:.1%} "
-                  f"OOS-pass30={res.oos_pass30:.1%} OOS-Sharpe={res.oos_sharpe:+.2f}")
+                  f"OOS-pass30={res.oos_pass30:.1%} OOS-Sharpe={res.oos_sharpe:+.2f} "
+                  f"DSR={dsr.dsr:.1%}")
     else:
         survivors.sort(key=lambda x: x[2].oos_pass30, reverse=True)
-        for ak, p, res in survivors:
+        for ak, p, res, dsr in survivors:
             print(f"  {res.label}")
             print(f"    IS-pass30={res.is_pass30:.1%}  OOS-pass30={res.oos_pass30:.1%}  "
-                  f"OOS-Sharpe={res.oos_sharpe:+.2f}")
+                  f"OOS-Sharpe={res.oos_sharpe:+.2f}  DSR={dsr.dsr:.1%} "
+                  f"(n_trials={dsr.n_trials})")
             res.print_report()
 
     print(f"\nTotal wall time: {_time.time()-t0:.0f}s")

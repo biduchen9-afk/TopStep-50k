@@ -177,12 +177,21 @@ def evaluate_strategy(
     best_existing_is_pass30: float = 0.0,
     existing_is_arrays: dict[str, np.ndarray] | None = None,
     run_oos: bool = True,
+    benchmark_daily: np.ndarray | None = None,
 ) -> ChecklistResult:
     """Run the full 6-gate checklist. Gate 4 (OOS) is optional (run_oos=True
     by default; set False if you want IS-only screening first).
 
     `daily_full` must be aligned to the same union day index used to
     produce is_mask / oos_mask.
+
+    `benchmark_daily`, if given, must be a naive buy-and-hold daily PnL
+    array on that SAME day index (see analysis.benchmark.buy_and_hold_daily_pnl
+    + to_aligned_array). Adds one advisory Gate 4 check: does the strategy
+    beat just holding the underlying, OOS? This never blocks promotion
+    (advisory only) -- a low-correlation diversifier can be worth running
+    even if it doesn't out-earn buy-and-hold on its own -- but a model
+    that quietly loses to doing nothing is worth knowing about.
     """
     is_arr  = daily_full[is_mask]
     oos_arr = daily_full[oos_mask]
@@ -284,6 +293,18 @@ def evaluate_strategy(
                    is_mll_rate * 1.5, hard=False,
                    note=f"IS={is_mll_rate:.1%} OOS={oos_mll_rate:.1%}"),
     ]
+    if benchmark_daily is not None:
+        bench_oos = benchmark_daily[oos_mask]
+        bench_oos_total = float(bench_oos.sum())
+        bench_oos_sharpe = _sharpe(bench_oos)
+        strat_oos_total = float(oos_arr.sum())
+        g4.append(GateResult(
+            "OOS beats buy-and-hold ($)",
+            strat_oos_total > bench_oos_total,
+            strat_oos_total, bench_oos_total, hard=False,
+            note=(f"buy&hold OOS=${bench_oos_total:+,.0f} "
+                  f"(Sharpe={bench_oos_sharpe:+.2f})"),
+        ))
     result.gate4 = g4
     g4_passed = all(g.passed for g in g4 if g.hard)
     if not g4_passed:
