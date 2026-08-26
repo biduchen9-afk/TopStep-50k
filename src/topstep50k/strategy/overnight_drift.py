@@ -47,6 +47,7 @@ class _ODState:
     cur_entry_utc: datetime | None = None       # 15:55 ET prev day
     cur_exit_utc: datetime | None = None        # 09:35 ET this day
     entry_filter_rejected: bool = False         # True once filter says no for this cycle
+    exit_done_today: bool = False               # True once today's exit has fired
 
 
 @dataclass
@@ -85,6 +86,7 @@ class OvernightDrift:
             return
         self._state.last_seen_date = d
         self._state.entry_filter_rejected = False
+        self._state.exit_done_today = False
         tz = bar_ts.tzinfo
         so_local = datetime.combine(d, self.session_open_local, tzinfo=EASTERN)
         sc_local = datetime.combine(d, self.session_close_local, tzinfo=EASTERN)
@@ -103,12 +105,26 @@ class OvernightDrift:
 
         cur_qty = ctx.position(self.symbol)
 
-        # Exit window: shortly after today's RTH open, if we're long, flatten.
-        if s.cur_session_open_utc is not None and s.cur_exit_utc is not None:
-            if (s.cur_session_open_utc <= bar.ts < s.cur_exit_utc
-                    and cur_qty != 0 and s.target_qty != 0):
-                s.target_qty = 0
-                return TargetPosition(symbol=self.symbol, qty=0, tag="od_exit")
+        # Exit window: from today's exit trigger up to (but not including)
+        # today's OWN entry trigger a few hours later. Using today's entry
+        # time as the upper bound -- instead of a fixed few-minute window
+        # after cur_exit_utc -- fixes a real bug: the old window was
+        # `[open, open + exit_offset)`, which is an EMPTY interval
+        # whenever exit_offset_minutes=0 (open == exit), so the exit
+        # never fired at all and the position rode forever. Bounding by
+        # cur_entry_utc instead is never empty (entry is always well
+        # after open) at ANY exit_offset, including zero, and it still
+        # excludes the afternoon (a position opened for TONIGHT's cycle
+        # must not be immediately flattened by THIS MORNING's
+        # already-passed exit trigger -- that was the failure mode of a
+        # naive unbounded `bar.ts >= cur_exit_utc` check). exit_done_today
+        # is a defensive belt-and-suspenders against firing twice.
+        if (s.cur_exit_utc is not None and s.cur_entry_utc is not None
+                and s.cur_exit_utc <= bar.ts < s.cur_entry_utc
+                and not s.exit_done_today and cur_qty != 0 and s.target_qty != 0):
+            s.target_qty = 0
+            s.exit_done_today = True
+            return TargetPosition(symbol=self.symbol, qty=0, tag="od_exit")
 
         # Entry window: at-or-after today's entry trigger, if flat, go long.
         if s.cur_entry_utc is not None and bar.ts >= s.cur_entry_utc:

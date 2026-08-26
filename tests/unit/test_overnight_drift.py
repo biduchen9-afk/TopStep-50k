@@ -111,3 +111,42 @@ def test_qty_minus_one_goes_short():
     sides = [f.payload["side"] for f in fills]
     assert sides and sides[0] == "sell"  # short entry
     assert "buy" in sides  # cover exit
+
+
+def test_exit_offset_zero_still_exits_at_open():
+    # Regression test: exit_offset_minutes=0 used to make the exit
+    # window `[session_open, session_open + 0)` -- an EMPTY interval --
+    # so the position never flattened at all and rode forever. It must
+    # exit at exactly session_open (offset 0) instead.
+    bars = _two_day_bars()
+    strat = OvernightDrift(symbol="ES", entry_offset_minutes=5,
+                            exit_offset_minutes=0)
+    result = _run(strat, bars, start_ts=_utc(2024, 6, 3, 13, 30))
+    fills = result.audit.of_kind("fill")
+    sides = [f.payload["side"] for f in fills]
+    assert sides == ["buy", "sell", "buy"], (
+        f"exit_offset_minutes=0 must still produce a full overnight "
+        f"cycle plus re-entry, got {sides}"
+    )
+    exit_fill = fills[1]
+    assert exit_fill.payload["side"] == "sell"
+    assert exit_fill.ts == _utc(2024, 6, 4, 13, 30)  # exactly at RTH open
+
+
+def test_exit_does_not_flap_on_the_afternoon_reentry():
+    # Regression test for a bug introduced while fixing the above: an
+    # unbounded `bar.ts >= cur_exit_utc` check (no upper bound at all)
+    # stays true for the rest of the day once the morning's exit trigger
+    # passes, so the SAME afternoon's fresh entry (for the next overnight
+    # cycle) would get immediately flattened again on its very next bar.
+    # Exactly 3 fills total (buy/sell/buy) -- no extra flap on day 1.
+    bars = _two_day_bars()
+    for exit_offset in (0, 5, 15):
+        strat = OvernightDrift(symbol="ES", entry_offset_minutes=5,
+                                exit_offset_minutes=exit_offset)
+        result = _run(strat, bars, start_ts=_utc(2024, 6, 3, 13, 30))
+        fills = result.audit.of_kind("fill")
+        sides = [f.payload["side"] for f in fills]
+        assert sides == ["buy", "sell", "buy"], (
+            f"exit_offset_minutes={exit_offset}: expected no flap, got {sides}"
+        )
