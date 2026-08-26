@@ -140,6 +140,47 @@ def test_target_is_frozen_vwap_at_signal():
     assert len(fills) >= 2
 
 
+def test_stop_is_always_on_the_correct_side_of_entry():
+    """Regression test: the stop used to be measured from VWAP
+    (vwap -/+ stop_sigma_mult*std), which silently crosses to the WRONG
+    side of the entry price whenever
+    std < entry_threshold_points / (stop_sigma_mult - 1) -- with the
+    defaults (threshold=2.0, mult=2.0) that's std < 2.0 points, common
+    in a tight/low-vol running session std. A stop ABOVE a long's own
+    entry (or below a short's) triggers on essentially the very next
+    bar. Build a TIGHT opening range (small std) so the bug would have
+    fired, then dip just past the entry threshold and hold flat there
+    for several bars: with the bug, that's an instant stop-out; fixed,
+    the trade must survive since price never actually reaches the
+    (correctly, further-away) stop.
+    """
+    # 60 bars in a very tight range (0.05 pt) -> small running std.
+    tight = [18000.0 + (0.05 if i % 2 == 0 else 0.0) for i in range(60)]
+    # Dip well past the 2.0-point entry threshold and HOLD there flat
+    # (no further decline) for the rest of the session. Verified via a
+    # standalone repro that this exact scenario put the OLD (buggy)
+    # vwap-relative stop ABOVE the entry price (17993.9 > entry 17990.0).
+    dip = [17990.0] * 330
+    prices = tight + dip
+    bars = _june_3_2024_minute_bars(prices)
+    strat = VolumeProfileMeanReversion(symbol="NQ", min_warm_5min_bars=6,
+                                        entry_threshold_points=2.0,
+                                        stop_sigma_mult=2.0)
+    result = _run(strat, bars, start_ts=_utc(2024, 6, 3, 13, 30))
+    fills = [f for f in result.audit.of_kind("fill") if "forced" not in f.payload]
+    sides = [f.payload["side"] for f in fills]
+    assert sides and sides[0] == "buy", f"expected a long entry, got {sides}"
+    if len(fills) > 1:
+        entry_ts = fills[0].ts
+        exit_ts = fills[1].ts
+        gap_minutes = (exit_ts - entry_ts).total_seconds() / 60
+        assert gap_minutes > 2, (
+            f"position exited only {gap_minutes:.0f} min after entry while "
+            f"price never moved against it -- stop was on the wrong side "
+            f"of the entry price (the bug this test guards against)"
+        )
+
+
 def test_session_end_forces_flat():
     """Even with a wide target that never gets hit, position must be
     flat after 15:45 ET."""

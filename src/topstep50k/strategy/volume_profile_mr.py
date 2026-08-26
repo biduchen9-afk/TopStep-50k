@@ -296,11 +296,22 @@ class VolumeProfileMeanReversion:
         s.entry_price = closed_bar.close
         s.frozen_vwap = vwap
         s.frozen_std = std
+        # Stop is measured stop_sigma_mult*std PAST THE ENTRY price, not
+        # from VWAP. Measuring from VWAP (vwap -/+ stop_sigma_mult*std)
+        # silently crosses to the WRONG SIDE of the entry whenever
+        # std < entry_threshold_points / (stop_sigma_mult - 1) -- with
+        # the defaults (threshold=2.0, mult=2.0) that's std < 2.0, which
+        # is common in a running 5-min session std early in low-vol days
+        # -- exactly the regime a low-vol gate selects for. A stop above
+        # a long's own entry price triggers on essentially the next bar
+        # (verified via reproduction: vwap=5000, std=1.5 -> entry=4996.5,
+        # old stop=4997.0, i.e. ABOVE entry). Measuring from entry_price
+        # instead guarantees the stop is always on the correct side.
         if signal > 0:
-            s.stop_price = vwap - self.stop_sigma_mult * std
+            s.stop_price = s.entry_price - self.stop_sigma_mult * std
             s.target_price = vwap
         else:
-            s.stop_price = vwap + self.stop_sigma_mult * std
+            s.stop_price = s.entry_price + self.stop_sigma_mult * std
             s.target_price = vwap
         s.trades_today += 1
         return TargetPosition(
