@@ -35,6 +35,23 @@ Expected cost to pass one $50K Combine at this pass rate (TopStep
 Standard Path, $49/mo rebill + $149 one-time activation): roughly
 $254-$394, central estimate ~$300.
 
+WALK-FORWARD VALIDATION (added 2026-08-26, evaluate_walkforward.py):
+the single 70/30 split above is only one draw of "which period was
+OOS." Re-ran with an expanding walk-forward (500-day minimum IS, 5
+sequential ~133-day OOS folds, weights re-derived each fold from only
+prior data) and concatenated the 5 folds' OOS segments into one
+~665-day walk-forward-OOS series -- nearly double the original
+single-touch OOS length. Result: Monte Carlo mean 33.8%, TIGHTER 90%
+interval [24.6%, 44.0%], P(true rate > 50%) = 0.3%. This confirms the
+single-split number wasn't a lucky (or unlucky) draw -- the walk-
+forward estimate lands almost exactly where the single split did,
+just with a narrower, more confident interval. Also surfaced real
+fold-to-fold variance worth knowing about operationally: one fold
+(2025-06-25 to 2025-12-29) was genuinely negative (Sharpe -0.76,
+-$6,387, pass30=13.5%) -- this system has real multi-month losing
+stretches, not just steady grinding. GC/ORB's weight also decayed to
+0 in the most recent fold, worth monitoring for a possibly-fading edge.
+
 POSITION-SIZING OVERLAY (added 2026-08-26, evaluate_sizing_overlays.py):
 a genuine, if modest, improvement was found NOT from a new signal but
 from a smarter bet-sizing policy on this same edge -- selected using
