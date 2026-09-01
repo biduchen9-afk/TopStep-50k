@@ -31,10 +31,46 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
+from typing import Callable
 
 import numpy as np
 
 from topstep50k.rules.topstep_xfa import PostPayoutDrawdown, XFARules
+
+
+@dataclass(frozen=True)
+class XFAAccountState:
+    """State visible to an XFA sizing function at the START of a trading
+    day -- before that day's own P&L is known (no look-ahead, same
+    discipline as analysis.sizing.AccountState on the Combine side).
+
+    `cushion` and `locked` are the two structurally important fields:
+    pre-first-payout, once cushion reaches the full mll_distance the
+    floor LOCKS at the original starting balance and stops trailing --
+    a genuinely safe state. The lock does not survive a payout: the
+    instant a payout is taken, cushion resets to exactly zero AND the
+    floor resumes trailing indefinitely with no further lock (see
+    PostPayoutDrawdown docstring) -- so a sizing policy that treats
+    "just funded" and "just paid out" the same way is missing the
+    single biggest risk concentration in the whole lifecycle.
+    """
+    balance: Decimal
+    floor: Decimal                    # current PostPayoutDrawdown.line
+    cushion: Decimal                  # balance - floor, always >= 0
+    locked: bool                      # True once the floor has locked (pre-payout only)
+    days_since_funding: int
+    days_since_last_payout: int | None  # None before the first payout
+    n_payouts_so_far: int
+    yesterday_pnl: Decimal | None
+
+
+XFASizingFn = Callable[[XFAAccountState], float]
+
+
+def xfa_full_size(state: XFAAccountState) -> float:
+    """Baseline: no scaling, qty=1 throughout (matches the economics
+    run logged this session -- the one that found 100% breach risk)."""
+    return 1.0
 
 
 @dataclass(frozen=True)
@@ -71,11 +107,19 @@ def simulate_xfa_lifecycle(
     *,
     xfa: XFARules,
     horizon_days: int | None = None,
+    sizing_fn: XFASizingFn = xfa_full_size,
 ) -> XFALifecycleResult:
-    """Step through `daily_pnl` (an ORDERED list of daily $ P&L, already
-    scaled by whatever position-sizing overlay you want modeled) as a
-    funded account's trading life. Stops early on an MLL breach.
-    `horizon_days` caps the run (default: the full length of `daily_pnl`).
+    """Step through `daily_pnl` (an ORDERED list of UNSCALED daily $ P&L
+    -- the raw edge, qty=1) as a funded account's trading life. Each
+    day's raw P&L is scaled by `sizing_fn(state)`, evaluated on state
+    known strictly BEFORE that day (no look-ahead), before being applied
+    to balance -- same pattern as
+    analysis.sizing.simulate_sequential_accounts_sized on the Combine
+    side. With sizing_fn=xfa_full_size this reproduces the original
+    unscaled behavior exactly.
+
+    Stops early on an MLL breach. `horizon_days` caps the run (default:
+    the full length of `daily_pnl`).
     """
     n = len(daily_pnl) if horizon_days is None else min(horizon_days, len(daily_pnl))
     pdd = PostPayoutDrawdown(xfa.starting_balance, xfa.mll_distance)
@@ -83,15 +127,28 @@ def simulate_xfa_lifecycle(
     since_last_payout: dict[date, Decimal] = {}
     payouts: list[PayoutEvent] = []
     breached = False
+    yesterday_pnl: Decimal | None = None
+    days_since_last_payout: int | None = None
 
     days_completed = 0
     for i in range(n):
-        pnl = daily_pnl[i]
+        state = XFAAccountState(
+            balance=balance, floor=pdd.line, cushion=balance - pdd.line,
+            locked=pdd.locked, days_since_funding=i,
+            days_since_last_payout=days_since_last_payout,
+            n_payouts_so_far=len(payouts), yesterday_pnl=yesterday_pnl,
+        )
+        scale = sizing_fn(state)
+        pnl = daily_pnl[i] * Decimal(str(scale))
+
         balance += pnl
         # Synthetic date key -- only used for XFARules' Mapping-keyed
         # eligibility checks, which don't care about real calendar dates.
         day_key = date(2000, 1, 1).fromordinal(1 + i)
         since_last_payout[day_key] = pnl
+        yesterday_pnl = pnl
+        days_since_last_payout = (0 if days_since_last_payout is None
+                                   else days_since_last_payout + 1)
         days_completed = i + 1
 
         if balance <= pdd.line:
@@ -112,9 +169,18 @@ def simulate_xfa_lifecycle(
                     trader_take=trader_take, balance_after=balance,
                 ))
                 since_last_payout = {}
-                if balance <= pdd.line:
-                    breached = True
-                    break
+                days_since_last_payout = 0
+                # NOTE: no breach check here. apply_payout() re-anchors
+                # the line to EXACTLY the post-payout balance (the
+                # documented zero-cushion assumption), so balance ==
+                # pdd.line is true by construction the instant a payout
+                # clears -- checking `balance <= pdd.line` here was a
+                # tautology that flagged a "breach" on literally every
+                # payout, regardless of any actual subsequent loss. The
+                # real breach exposure from zero cushion shows up
+                # correctly on the NEXT iteration's ordinary top-of-loop
+                # check, once a real day's P&L can actually move balance
+                # relative to the (now fixed) line.
 
     return XFALifecycleResult(days_run=days_completed, breached=breached,
                                final_balance=balance, payouts=payouts)
@@ -133,6 +199,10 @@ class XFAMonteCarloResult:
     mean_n_payouts: float
     mean_days_to_first_payout: float | None  # over sims that got a first payout
 
+    @property
+    def prob_survive(self) -> float:
+        return 1.0 - self.prob_breach
+
 
 def monte_carlo_xfa_economics(
     empirical_daily_pnl: list[Decimal],
@@ -142,6 +212,7 @@ def monte_carlo_xfa_economics(
     n_sims: int = 1000,
     block_len: int = 10,
     seed: int = 42,
+    sizing_fn: XFASizingFn = xfa_full_size,
 ) -> XFAMonteCarloResult:
     """Block-bootstrap-resample `empirical_daily_pnl` (same block_len=10
     convention as everywhere else this session) into `n_sims` synthetic
@@ -171,7 +242,8 @@ def monte_carlo_xfa_economics(
         path = np.concatenate(blocks)[:horizon_days]
         daily_pnl = [Decimal(str(round(float(v), 2))) for v in path]
 
-        result = simulate_xfa_lifecycle(daily_pnl, xfa=xfa, horizon_days=horizon_days)
+        result = simulate_xfa_lifecycle(daily_pnl, xfa=xfa, horizon_days=horizon_days,
+                                         sizing_fn=sizing_fn)
         incomes[i] = float(result.total_trader_income)
         breaches[i] = result.breached
         n_payouts_arr[i] = result.n_payouts
