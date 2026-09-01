@@ -234,6 +234,22 @@ def test_preserve_cushion_still_breaches_if_the_request_exceeds_cushion():
     assert result.breached is True
 
 
+def test_max_drawdown_tracks_market_moves_not_withdrawals():
+    xfa = xfa_50k()
+    # Profit to a peak, pull back (real drawdown), profit again to
+    # trigger the day-4 standard payout, then a further pullback.
+    daily = ([Decimal("150"), Decimal("150"), Decimal("1000"),
+              Decimal("150"), Decimal("150")]
+             + [Decimal("-500")] + [Decimal("0")] * 5)
+    result = simulate_xfa_lifecycle(daily, xfa=xfa, payout_policy=take_max_payout)
+    # Peak balance pre-payout = 51600 (after day 4). The day-4 payout
+    # takes the full $2,000, balance drops to 49600 -- that $2,000 drop
+    # is a WITHDRAWAL, not drawdown, so the peak reference resets to
+    # 49600 right after. The one real market pullback in this series
+    # is the post-payout -500 day: drawdown = 500.
+    assert result.max_drawdown == Decimal("500")
+
+
 def test_monte_carlo_shapes_and_bounds():
     rng = np.random.default_rng(0)
     # Mildly positive, streaky-ish synthetic series -- enough winning

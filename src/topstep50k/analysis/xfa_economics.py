@@ -119,6 +119,9 @@ class XFALifecycleResult:
     breached: bool           # True if the account was lost to an MLL breach
     final_balance: Decimal
     payouts: list[PayoutEvent]
+    max_drawdown: Decimal    # largest peak-to-trough BALANCE drop, in $
+                              # (payouts are withdrawals, not drawdown --
+                              # tracked against balance AFTER each payout)
 
     @property
     def n_payouts(self) -> int:
@@ -162,6 +165,12 @@ def simulate_xfa_lifecycle(
     breached = False
     yesterday_pnl: Decimal | None = None
     days_since_last_payout: int | None = None
+    # Trading (market-driven) drawdown only -- a payout is a deliberate
+    # withdrawal, not the market taking money away, so the peak
+    # reference resets to the post-payout balance right after one
+    # clears rather than counting the withdrawal itself as "drawdown."
+    peak_balance = balance
+    max_drawdown = Decimal("0")
 
     days_completed = 0
     for i in range(n):
@@ -184,6 +193,12 @@ def simulate_xfa_lifecycle(
                                    else days_since_last_payout + 1)
         days_completed = i + 1
 
+        if balance > peak_balance:
+            peak_balance = balance
+        drawdown = peak_balance - balance
+        if drawdown > max_drawdown:
+            max_drawdown = drawdown
+
         if balance <= pdd.line:
             breached = True
             break
@@ -204,6 +219,7 @@ def simulate_xfa_lifecycle(
                 ))
                 since_last_payout = {}
                 days_since_last_payout = 0
+                peak_balance = balance  # withdrawal, not a market drawdown
                 # Breach check here is conditional on the mode:
                 # preserve_cushion=False re-anchors the line to EXACTLY
                 # the post-payout balance (documented zero-cushion
@@ -223,7 +239,8 @@ def simulate_xfa_lifecycle(
                     break
 
     return XFALifecycleResult(days_run=days_completed, breached=breached,
-                               final_balance=balance, payouts=payouts)
+                               final_balance=balance, payouts=payouts,
+                               max_drawdown=max_drawdown)
 
 
 @dataclass(frozen=True)
@@ -238,10 +255,21 @@ class XFAMonteCarloResult:
     prob_breach: float              # P(account lost to MLL breach within horizon)
     mean_n_payouts: float
     mean_days_to_first_payout: float | None  # over sims that got a first payout
+    max_drawdown: np.ndarray        # one draw per sim: largest peak-to-trough $ drawdown
+    mean_max_drawdown: float
+    median_max_drawdown: float
+    p95_max_drawdown: float         # 95th percentile of the max-drawdown distribution
 
     @property
     def prob_survive(self) -> float:
         return 1.0 - self.prob_breach
+
+    def max_drawdown_pct_of_balance(self, balance: Decimal) -> float:
+        """Convenience: drawdown percentiles expressed as a fraction of
+        a reference account balance (e.g. the $50,000 starting
+        balance), for comparing against a "keep DD under X%" rule of
+        thumb."""
+        return self.mean_max_drawdown / float(balance)
 
 
 def monte_carlo_xfa_economics(
@@ -271,6 +299,7 @@ def monte_carlo_xfa_economics(
     incomes = np.empty(n_sims)
     breaches = np.empty(n_sims, dtype=bool)
     n_payouts_arr = np.empty(n_sims)
+    max_dds = np.empty(n_sims)
     first_payout_days: list[int] = []
 
     for i in range(n_sims):
@@ -290,6 +319,7 @@ def monte_carlo_xfa_economics(
         incomes[i] = float(result.total_trader_income)
         breaches[i] = result.breached
         n_payouts_arr[i] = result.n_payouts
+        max_dds[i] = float(result.max_drawdown)
         if result.days_to_first_payout is not None:
             first_payout_days.append(result.days_to_first_payout)
 
@@ -304,4 +334,8 @@ def monte_carlo_xfa_economics(
         mean_n_payouts=float(n_payouts_arr.mean()),
         mean_days_to_first_payout=(float(np.mean(first_payout_days))
                                     if first_payout_days else None),
+        max_drawdown=max_dds,
+        mean_max_drawdown=float(max_dds.mean()),
+        median_max_drawdown=float(np.median(max_dds)),
+        p95_max_drawdown=float(np.percentile(max_dds, 95)),
     )
