@@ -93,6 +93,28 @@ def post_payout_cooldown(
     return fn
 
 
+def constant_scale(k: float) -> XFASizingFn:
+    """Trade at a PERMANENTLY smaller size, always -- never reacting to
+    cushion or tenure, never ramping back up. This is what trading
+    MICRO contracts (MES/MNQ/MGC, each exactly 1/10th the $-per-point
+    of the ES/NQ/GC mini) instead of minis actually is: k=0.1 replays
+    the same edge at 1/10th scale, permanently.
+
+    Every OTHER policy in this module is reactive -- it cuts size
+    around cushion or a recent payout, then ramps back to FULL size
+    once that specific condition clears. None of them ever tested a
+    permanently smaller base size, which is a structurally different
+    lever: the ruin exponent 2*mu*D/sigma^2 scales as 1/k under a
+    constant size multiplier k (mu and sigma both scale by k, so
+    mu/sigma^2 scales by 1/k) -- a 10x size cut is worth roughly a 10x
+    improvement in the exponent, dwarfing anything a reactive policy
+    achieved in this session's search.
+    """
+    def fn(state: XFAAccountState) -> float:
+        return k
+    return fn
+
+
 def hard_stop_after(max_days: int, scale_after: float = 0.0) -> XFASizingFn:
     """Cut size to `scale_after` (default 0 = flat) once
     days_since_funding >= max_days. Unlike the two policies above, this

@@ -10,6 +10,7 @@ import pytest
 from topstep50k.analysis.xfa_economics import XFAAccountState
 from topstep50k.analysis.xfa_sizing import (
     combined_xfa_scaling,
+    constant_scale,
     cushion_proportional_scaling,
     hard_stop_after,
     post_payout_cooldown,
@@ -72,3 +73,9 @@ def test_combined_xfa_scaling_takes_the_minimum():
     # After the stop: min(1.0, 0.0) = 0.0
     assert fn(_state(cushion=Decimal("2000"), days_since_funding=20)) == 0.0
 
+
+
+def test_constant_scale_always_returns_k():
+    fn = constant_scale(0.1)
+    assert fn(_state(days_since_funding=0)) == 0.1
+    assert fn(_state(days_since_funding=500, cushion=Decimal("1900"), locked=True)) == 0.1
