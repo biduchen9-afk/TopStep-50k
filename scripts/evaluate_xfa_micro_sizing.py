@@ -168,10 +168,14 @@ def main():
         ts = ASSETS[ak]["tick_size_f"]
         bars = all_bars[ak]
         g = gates[ak]
-        streams[("ORB", ak)] = run_stream(
+        # NOTE: keyed (asset, strategy) here to match IS_WEIGHTS's own
+        # key order exactly -- a prior run silently zeroed the whole
+        # LIVE ensemble because this was (strategy, asset), which never
+        # matched any IS_WEIGHTS key, so `if k in arrays` always failed.
+        streams[(ak, "ORB")] = run_stream(
             bars, lambda gg=g, tts=ts, a=ak: OpeningRangeBreakout(
                 symbol=a, tick_size=tts, daily_filter=gg["orb"], **ORB_PARAMS), ak)
-        streams[("MeanRev", ak)] = run_stream(
+        streams[(ak, "MeanRev")] = run_stream(
             bars, lambda gg=g, tts=ts, a=ak: MeanReversionBollinger(
                 symbol=a, tick_size=tts, daily_filter=gg["mr"], **MR_PARAMS), ak)
     streams[("ThreeDayRev", "NQ")] = run_stream(
