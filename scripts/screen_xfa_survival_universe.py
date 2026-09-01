@@ -36,20 +36,27 @@ themselves.
 Two stages:
   1. Solo stats for all 27 streams: mean/std/Sharpe, analytic ruin
      exponent, and a Monte Carlo standalone survival probability.
-  2. Greedy RISK-PARITY (inverse-solo-std-weighted) forward selection
-     over the Sharpe>0 subset, scored by ensemble XFA survival (Monte
-     Carlo, ground truth -- the analytic formula is an approximation
-     used only for intuition/cross-checking). A first pass used naive
-     equal-DOLLAR weighting and collapsed to ~0% survival by round 2:
-     the pool's daily-std spans roughly a 30x range (VwapFractal ~$50-
-     230/day vs. IntraMom/ORB ~$700-4,600/day), so equal-dollar
-     averaging just lets whichever added stream has more raw volatility
-     swamp everything already in the portfolio -- not a real
-     diversification test, a weighting artifact. Risk-parity weights
-     (1/std, normalized) are a stream-level statistic each stream
-     already carries on its own (not a parameter fit on any
-     COMBINATION), so this is a mechanical scale correction, not
-     tuning weights to the data the way optimizing them would be.
+  2. Greedy MINIMUM-VARIANCE (inverse-solo-variance-weighted) forward
+     selection over the Sharpe>0 subset, scored by ensemble XFA
+     survival (Monte Carlo, ground truth -- the analytic formula is an
+     approximation used for intuition/cross-checking only). Two earlier
+     weighting choices were tried and rejected here, in order: (a)
+     naive equal-DOLLAR weighting collapsed to ~0% survival by round 2
+     -- the pool's daily-std spans a ~30x range (VwapFractal ~$50-230/
+     day vs. IntraMom/ORB ~$700-4,600/day), so a high-vol stream just
+     swamps a low-vol one the instant it's added; (b) inverse-STD
+     ("risk parity" in the equal-risk-contribution sense) collapsed
+     almost as fast, because equal-risk-CONTRIBUTION weights give every
+     added stream the SAME variance contribution as what's already in
+     the portfolio, so total variance grows with portfolio size instead
+     of shrinking -- the right tool for budgeting risk across sleeves
+     of similar importance, not for minimizing total variance, which is
+     the actual goal (sigma^2 sits in the ruin exponent's denominator).
+     Inverse-VARIANCE weighting (1/std^2, normalized) is the classical
+     closed-form minimizer of portfolio variance for independent
+     series -- it can only match or beat the quietest single stream.
+     All three weighting schemes are stream-level statistics, not
+     parameters fit on any particular combination.
 
 Run with: python scripts/screen_xfa_survival_universe.py
 """
@@ -209,21 +216,34 @@ def main():
     print(f"\n{len(viable)}/{len(solo)} streams have positive Sharpe -- candidate pool for diversification.")
 
     def risk_parity_combine(keys: list) -> np.ndarray:
-        """Weight each stream inversely to its OWN solo daily std (a
-        stream-level statistic, not fit on any combination), normalized
-        to sum to 1 -- equal RISK contribution, not equal dollar
-        weight. Equal-dollar-weight averaging lets a high-vol stream
-        swamp a low-vol one the moment it's added (verified: it did,
-        first pass of this search collapsed to 0% survival by round 2
-        of naive equal-weighting) -- this is a mechanical fix for that
-        scale mismatch, not a parameter tuned to the data.
+        """MINIMUM-VARIANCE combination: weight each stream inversely
+        to its OWN solo daily VARIANCE (1/std^2), normalized to sum to
+        1. This is the classical closed-form minimizer of Var(sum w_i
+        X_i) subject to sum w_i = 1 for independent series -- exactly
+        what the ruin exponent 2*mu*D/sigma^2 rewards, since it's
+        sigma^2 in the denominator, not sigma.
+
+        A first pass here used naive equal-DOLLAR weights and collapsed
+        to ~0% survival by round 2 (a high-vol stream swamping the one
+        low-vol stream). A second pass used inverse-STD weights ("risk
+        parity" in the equal-risk-contribution sense) and STILL
+        collapsed almost as fast -- because equal-risk-contribution
+        weights literally give each added stream the SAME variance
+        contribution as the ones already in the portfolio, so total
+        variance grows roughly linearly with portfolio size instead of
+        shrinking. That's the right tool for risk-budgeting across
+        similarly-important sleeves, not for minimizing total variance,
+        which is what actually matters here. Inverse-variance weighting
+        is the one that can only ever match or beat the quietest single
+        stream (for independent series) -- both are stream-level
+        statistics, not parameters fit on any particular combination.
         """
-        inv_std = np.array([1.0 / solo[k]["std"] for k in keys])
-        w = inv_std / inv_std.sum()
+        inv_var = np.array([1.0 / solo[k]["std"] ** 2 for k in keys])
+        w = inv_var / inv_var.sum()
         return sum(w[i] * arrays[k] for i, k in enumerate(keys))
 
     # ── STAGE 2: greedy risk-parity forward selection ───────────────────
-    print(f"\n{'='*96}\nSTAGE 2 -- greedy risk-parity (inverse-vol-weighted) diversification search  "
+    print(f"\n{'='*96}\nSTAGE 2 -- greedy minimum-variance (inverse-variance-weighted) diversification search  "
           f"[{N_SIMS_SCREEN} sims/step]\n{'='*96}")
     t1 = _time.time()
     portfolio: list = []
