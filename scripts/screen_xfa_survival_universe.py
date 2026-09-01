@@ -36,12 +36,20 @@ themselves.
 Two stages:
   1. Solo stats for all 27 streams: mean/std/Sharpe, analytic ruin
      exponent, and a Monte Carlo standalone survival probability.
-  2. Greedy EQUAL-WEIGHT forward selection over the Sharpe>0 subset,
-     scored by ensemble XFA survival (Monte Carlo, ground truth -- the
-     analytic formula is an approximation used only for intuition/
-     cross-checking). Equal weighting is deliberate: this session's
-     standing discipline is no free parameters tuned to the data, and
-     optimizing weights on this same data would be exactly that.
+  2. Greedy RISK-PARITY (inverse-solo-std-weighted) forward selection
+     over the Sharpe>0 subset, scored by ensemble XFA survival (Monte
+     Carlo, ground truth -- the analytic formula is an approximation
+     used only for intuition/cross-checking). A first pass used naive
+     equal-DOLLAR weighting and collapsed to ~0% survival by round 2:
+     the pool's daily-std spans roughly a 30x range (VwapFractal ~$50-
+     230/day vs. IntraMom/ORB ~$700-4,600/day), so equal-dollar
+     averaging just lets whichever added stream has more raw volatility
+     swamp everything already in the portfolio -- not a real
+     diversification test, a weighting artifact. Risk-parity weights
+     (1/std, normalized) are a stream-level statistic each stream
+     already carries on its own (not a parameter fit on any
+     COMBINATION), so this is a mechanical scale correction, not
+     tuning weights to the data the way optimizing them would be.
 
 Run with: python scripts/screen_xfa_survival_universe.py
 """
@@ -200,8 +208,22 @@ def main():
     viable.sort(key=lambda k: -solo[k]["survive"])
     print(f"\n{len(viable)}/{len(solo)} streams have positive Sharpe -- candidate pool for diversification.")
 
-    # ── STAGE 2: greedy equal-weight forward selection ─────────────────
-    print(f"\n{'='*96}\nSTAGE 2 -- greedy equal-weight diversification search  "
+    def risk_parity_combine(keys: list) -> np.ndarray:
+        """Weight each stream inversely to its OWN solo daily std (a
+        stream-level statistic, not fit on any combination), normalized
+        to sum to 1 -- equal RISK contribution, not equal dollar
+        weight. Equal-dollar-weight averaging lets a high-vol stream
+        swamp a low-vol one the moment it's added (verified: it did,
+        first pass of this search collapsed to 0% survival by round 2
+        of naive equal-weighting) -- this is a mechanical fix for that
+        scale mismatch, not a parameter tuned to the data.
+        """
+        inv_std = np.array([1.0 / solo[k]["std"] for k in keys])
+        w = inv_std / inv_std.sum()
+        return sum(w[i] * arrays[k] for i, k in enumerate(keys))
+
+    # ── STAGE 2: greedy risk-parity forward selection ───────────────────
+    print(f"\n{'='*96}\nSTAGE 2 -- greedy risk-parity (inverse-vol-weighted) diversification search  "
           f"[{N_SIMS_SCREEN} sims/step]\n{'='*96}")
     t1 = _time.time()
     portfolio: list = []
@@ -211,7 +233,7 @@ def main():
         best_candidate, best_result = None, None
         for cand in remaining:
             trial = portfolio + [cand]
-            combined = np.mean([arrays[k] for k in trial], axis=0)
+            combined = risk_parity_combine(trial)
             r = xfa_mc(combined, N_SIMS_SCREEN)
             if best_result is None or r.prob_survive > best_result.prob_survive:
                 best_candidate, best_result = cand, r
@@ -232,7 +254,7 @@ def main():
 
     # ── FINAL CONFIRMATION at higher n_sims ─────────────────────────────
     print(f"\n{'='*96}\nFINAL CONFIRMATION  [{N_SIMS_FINAL} sims]\n{'='*96}")
-    combined = np.mean([arrays[k] for k in best_portfolio], axis=0)
+    combined = risk_parity_combine(best_portfolio)
     mean, std = combined.mean(), combined.std()
     sharpe = mean / std * np.sqrt(252) if std > 0 else 0.0
     r = xfa_mc(combined, N_SIMS_FINAL)
