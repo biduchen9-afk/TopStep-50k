@@ -139,6 +139,37 @@ def test_post_payout_drawdown_floor_pinned_until_distance_regained():
     assert not pp.locked
 
 
+def test_post_payout_drawdown_preserve_cushion_leaves_the_floor_untouched():
+    # Same setup as the zero-cushion test above, but with the alternate
+    # reading requested: a partial payout should leave real cushion
+    # behind, not reset to zero regardless of amount withdrawn.
+    pp = PostPayoutDrawdown(starting_balance=Decimal("50000"), distance=Decimal("2000"))
+    pp.update_end_of_day(Decimal("51500"))  # not locked yet (peak 51500 < 52000)
+    line_before = pp.line
+    assert line_before == Decimal("49500")  # 51500 - 2000
+
+    # Withdraw only $500 of the available cushion, preserve_cushion=True.
+    pp.apply_payout(payout_amount=Decimal("500"), post_payout_balance=Decimal("51000"),
+                     preserve_cushion=True)
+    assert pp.line == line_before  # floor didn't move at all
+    assert pp.n_payouts == 1
+    assert pp.total_paid_out == Decimal("500")
+    # Real cushion left behind: balance(51000) - floor(49500) = 1500,
+    # NOT zero -- this is the whole point of preserve_cushion.
+    assert Decimal("51000") - pp.line == Decimal("1500")
+
+
+def test_post_payout_drawdown_preserve_cushion_keeps_the_lock():
+    pp = PostPayoutDrawdown(starting_balance=Decimal("50000"), distance=Decimal("2000"))
+    pp.update_end_of_day(Decimal("56000"))  # locks: anchor=52000, line=50000
+    assert pp.locked
+
+    pp.apply_payout(payout_amount=Decimal("1000"), post_payout_balance=Decimal("55000"),
+                     preserve_cushion=True)
+    assert pp.locked  # unlike preserve_cushion=False, the lock survives
+    assert pp.line == Decimal("50000")  # unchanged
+
+
 # ---- rebill lifecycle -------------------------------------------------
 
 

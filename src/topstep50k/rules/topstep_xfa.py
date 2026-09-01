@@ -233,18 +233,46 @@ class PostPayoutDrawdown:
         else:
             self.anchor = candidate
 
-    def apply_payout(self, payout_amount: Decimal, post_payout_balance: Decimal) -> None:
-        """Re-anchor the trail at the post-payout balance with zero
-        cushion; from here it trails indefinitely (same distance, no
-        further locking). Call this the same "day" the payout clears,
-        before that day's update_end_of_day.
+    def apply_payout(self, payout_amount: Decimal, post_payout_balance: Decimal,
+                      *, preserve_cushion: bool = False) -> None:
+        """Apply a payout. Call the same "day" it clears, before that
+        day's update_end_of_day. `payout_amount` is the dollar amount
+        withdrawn (bookkeeping); `post_payout_balance` is the account
+        balance immediately after the withdrawal.
 
-        `payout_amount` is the dollar amount withdrawn (for bookkeeping
-        only); `post_payout_balance` is the account balance immediately
-        after the withdrawal (what the new floor re-anchors to).
+        Two interpretations, selected by `preserve_cushion` -- the
+        source example ("balance $6,000, floor $4,000, request the
+        FULL $2,000 cushion, floor resets to $4,000 == new balance")
+        cannot distinguish them, because it happens to withdraw the
+        ENTIRE cushion: both readings agree exactly when payout_amount
+        == cushion_before.
+
+          preserve_cushion=False (default, the ORIGINAL conservative
+            reading): the floor re-anchors to EXACTLY the post-payout
+            balance, i.e. cushion resets to zero regardless of how much
+            was actually withdrawn. Also un-locks (resumes trailing
+            indefinitely) if it had locked pre-payout.
+
+          preserve_cushion=True (alternate reading, untested against
+            Topstep's own wording -- exists so a "withdraw less, keep
+            more cushion" policy is even mechanically possible to
+            model): the floor is left COMPLETELY ALONE. A payout is
+            just cash leaving the account, like a loss, and the
+            trailing floor keeps tracking whatever high-water mark it
+            already had -- so cushion drops by exactly payout_amount
+            (not to zero), and if the floor was already LOCKED
+            pre-payout, it stays locked. This is the reading a partial-
+            payout strategy ("take $500 of a $1,500-eligible cushion,
+            keep $1,000 behind") requires to do anything at all: under
+            preserve_cushion=False, a partial payout is worthless --
+            cushion resets to zero either way, so withdrawing less
+            just leaves money on the table for no safety benefit.
         """
-        self.anchor = post_payout_balance + self.distance  # line == post_payout_balance
-        self.locked = False
-        self._post_payout = True
+        if preserve_cushion:
+            self._post_payout = True
+        else:
+            self.anchor = post_payout_balance + self.distance  # line == post_payout_balance
+            self.locked = False
+            self._post_payout = True
         self.total_paid_out += payout_amount
         self.n_payouts += 1

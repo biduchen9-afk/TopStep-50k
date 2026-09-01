@@ -73,6 +73,37 @@ def xfa_full_size(state: XFAAccountState) -> float:
     return 1.0
 
 
+PayoutPolicy = Callable[[str, Decimal, Decimal], Decimal]  # (path, max_allowed, balance) -> requested amount
+
+
+def take_max_payout(path: str, max_allowed: Decimal, balance: Decimal) -> Decimal:
+    """Baseline: always request the full eligible amount (matches every
+    prior XFA economics run this session)."""
+    return max_allowed
+
+
+def take_fixed_amount(target: Decimal) -> PayoutPolicy:
+    """Request `target`, capped at whatever's actually eligible.
+    Combine with preserve_cushion=True on simulate_xfa_lifecycle to get
+    the "generate $1,500, withdraw $500, keep $1,000 cushion" policy --
+    under preserve_cushion=False this still works arithmetically but
+    accomplishes nothing: cushion resets to zero regardless of amount
+    withdrawn under that reading, so a smaller request only means
+    smaller income for the same reset.
+    """
+    def fn(path: str, max_allowed: Decimal, balance: Decimal) -> Decimal:
+        return min(target, max_allowed)
+    return fn
+
+
+def take_fraction_of_max(fraction: float) -> PayoutPolicy:
+    """Request `fraction` of whatever's eligible (e.g. 0.33 to leave
+    roughly 2/3 of the eligible cushion behind)."""
+    def fn(path: str, max_allowed: Decimal, balance: Decimal) -> Decimal:
+        return max_allowed * Decimal(str(fraction))
+    return fn
+
+
 @dataclass(frozen=True)
 class PayoutEvent:
     day_index: int
@@ -108,6 +139,8 @@ def simulate_xfa_lifecycle(
     xfa: XFARules,
     horizon_days: int | None = None,
     sizing_fn: XFASizingFn = xfa_full_size,
+    payout_policy: PayoutPolicy = take_max_payout,
+    preserve_cushion: bool = False,
 ) -> XFALifecycleResult:
     """Step through `daily_pnl` (an ORDERED list of UNSCALED daily $ P&L
     -- the raw edge, qty=1) as a funded account's trading life. Each
@@ -159,28 +192,35 @@ def simulate_xfa_lifecycle(
         paths = xfa.eligible_paths(since_last_payout)
         if paths:
             best_path = max(paths, key=lambda p: xfa.max_payout(p, balance))
-            payout = xfa.max_payout(best_path, balance)
+            max_eligible = xfa.max_payout(best_path, balance)
+            payout = payout_policy(best_path, max_eligible, balance)
             if payout > 0:
                 trader_take = xfa.trader_take(payout)
                 balance -= payout
-                pdd.apply_payout(payout, balance)
+                pdd.apply_payout(payout, balance, preserve_cushion=preserve_cushion)
                 payouts.append(PayoutEvent(
                     day_index=i, path=best_path, payout_amount=payout,
                     trader_take=trader_take, balance_after=balance,
                 ))
                 since_last_payout = {}
                 days_since_last_payout = 0
-                # NOTE: no breach check here. apply_payout() re-anchors
-                # the line to EXACTLY the post-payout balance (the
-                # documented zero-cushion assumption), so balance ==
-                # pdd.line is true by construction the instant a payout
-                # clears -- checking `balance <= pdd.line` here was a
-                # tautology that flagged a "breach" on literally every
-                # payout, regardless of any actual subsequent loss. The
-                # real breach exposure from zero cushion shows up
-                # correctly on the NEXT iteration's ordinary top-of-loop
-                # check, once a real day's P&L can actually move balance
-                # relative to the (now fixed) line.
+                # Breach check here is conditional on the mode:
+                # preserve_cushion=False re-anchors the line to EXACTLY
+                # the post-payout balance (documented zero-cushion
+                # assumption), so balance == pdd.line is true BY
+                # CONSTRUCTION the instant a payout clears -- checking
+                # it here would be a tautology (every payout would
+                # "breach" regardless of any real subsequent loss; the
+                # real exposure shows up correctly on the next
+                # iteration's ordinary top-of-loop check instead).
+                # preserve_cushion=True leaves the line where it was, so
+                # requesting MORE than the cushion actually built up
+                # (max_payout() is capped by path/balance rules, NOT by
+                # current cushion) is a real, checkable breach caused
+                # directly by the withdrawal itself.
+                if preserve_cushion and balance <= pdd.line:
+                    breached = True
+                    break
 
     return XFALifecycleResult(days_run=days_completed, breached=breached,
                                final_balance=balance, payouts=payouts)
@@ -213,6 +253,8 @@ def monte_carlo_xfa_economics(
     block_len: int = 10,
     seed: int = 42,
     sizing_fn: XFASizingFn = xfa_full_size,
+    payout_policy: PayoutPolicy = take_max_payout,
+    preserve_cushion: bool = False,
 ) -> XFAMonteCarloResult:
     """Block-bootstrap-resample `empirical_daily_pnl` (same block_len=10
     convention as everywhere else this session) into `n_sims` synthetic
@@ -243,7 +285,8 @@ def monte_carlo_xfa_economics(
         daily_pnl = [Decimal(str(round(float(v), 2))) for v in path]
 
         result = simulate_xfa_lifecycle(daily_pnl, xfa=xfa, horizon_days=horizon_days,
-                                         sizing_fn=sizing_fn)
+                                         sizing_fn=sizing_fn, payout_policy=payout_policy,
+                                         preserve_cushion=preserve_cushion)
         incomes[i] = float(result.total_trader_income)
         breaches[i] = result.breached
         n_payouts_arr[i] = result.n_payouts

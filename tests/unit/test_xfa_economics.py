@@ -11,6 +11,8 @@ from topstep50k.analysis.xfa_economics import (
     XFAAccountState,
     monte_carlo_xfa_economics,
     simulate_xfa_lifecycle,
+    take_fixed_amount,
+    take_max_payout,
     xfa_full_size,
 )
 from topstep50k.analysis.xfa_sizing import post_payout_cooldown
@@ -184,6 +186,52 @@ def test_post_payout_reset_clears_cushion_and_the_lock():
     assert seen[5].days_since_last_payout == 0
     assert seen[5].cushion == Decimal("0")
     assert seen[5].n_payouts_so_far == 1
+
+
+def test_partial_payout_with_preserve_cushion_leaves_real_buffer():
+    # Same skewed 5-day pattern used throughout this file: reaches the
+    # standard path at day index 4 with $2,000 of cushion built up
+    # (pinned at mll_distance while trading at a new high -- see
+    # test_xfa_account_state_cushion_pinned_at_distance_while_at_a_new_
+    # high). Compare taking the FULL eligible payout (old default) vs.
+    # a $500 partial request with preserve_cushion=True.
+    xfa = xfa_50k()
+    daily = ([Decimal("150"), Decimal("150"), Decimal("1000"),
+              Decimal("150"), Decimal("150")]
+             + [Decimal("-1000")] + [Decimal("0")] * 5)
+
+    full_result = simulate_xfa_lifecycle(daily, xfa=xfa, payout_policy=take_max_payout)
+    assert full_result.payouts[0].payout_amount == Decimal("2000")
+    # Balance after payout = 51600 - 2000 = 49600 = the new floor
+    # (zero cushion) -- the very next day's -1000 breaches immediately,
+    # even though -1000 is a small loss relative to the $2,000 distance.
+    assert full_result.breached is True
+
+    partial_result = simulate_xfa_lifecycle(
+        daily, xfa=xfa, payout_policy=take_fixed_amount(Decimal("500")),
+        preserve_cushion=True)
+    assert partial_result.payouts[0].payout_amount == Decimal("500")
+    # Floor stayed at 49600 (untouched); balance after payout = 51100,
+    # so there's $1,500 of real cushion left -- the same -1000 day the
+    # FULL-payout version couldn't survive at all now only eats $1,000
+    # of that $1,500 buffer instead of breaching outright.
+    assert partial_result.breached is False
+    assert partial_result.final_balance == Decimal("51100") - Decimal("1000")
+
+
+def test_preserve_cushion_still_breaches_if_the_request_exceeds_cushion():
+    # max_payout() is capped by path/balance rules, NOT by the cushion
+    # actually built up -- requesting more than the real cushion under
+    # preserve_cushion=True is a genuine, checkable breach caused by
+    # the withdrawal itself (see the note in simulate_xfa_lifecycle).
+    xfa = xfa_50k()
+    # 3 equal $700 days: consistency-eligible at day index 2, balance
+    # 52100, but the floor is still trailing close behind (not locked),
+    # so cushion is far short of the full $3,000 consistency cap.
+    daily = [Decimal("700")] * 3
+    result = simulate_xfa_lifecycle(
+        daily, xfa=xfa, payout_policy=take_max_payout, preserve_cushion=True)
+    assert result.breached is True
 
 
 def test_monte_carlo_shapes_and_bounds():
