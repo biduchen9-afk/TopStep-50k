@@ -1,0 +1,54 @@
+Loading cached streams from /home/user/TopStep-50k/results/cache/multi_asset_streams.npz...
+  9 streams over 1348 days
+TRAIN days: 623  TEST days: 725
+
+Ensemble TRAIN stats: mu=$-3.29/d  sigma=$426.91/d  Sharpe=-0.12
+Ensemble TEST  stats: mu=$+83.14/d  sigma=$795.80/d  Sharpe=+1.66
+
+==============================================================================
+Kelly multiplier derivation (TRAIN, $50K bankroll)
+==============================================================================
+  mu_train = $-3.29/d  sigma_train = $426.91/d
+  full-Kelly multiplier k* = mu*B/sigma^2 = $-3.29 * 50,000 / 426.91^2 = -0.902
+  (interpretation: at k*=-0.90, expected log-growth per day is maximised given TRAIN distribution.)
+
+==============================================================================
+CONSTANT KELLY-MULTIPLIER pass-rates on TEST (proper rules)
+==============================================================================
+  variant                  mult |  $50K p30  $50K p45 |  $25K p30  $25K p45 | Sharpe
+  baseline qty=1           1.00 |    30.6%     44.2%  |    36.2%     45.2%   +1.66
+  0.25*k*                 -0.23 |     0.0%      0.0%  |     1.0%      0.0%   -1.66
+  0.5*k* (half-Kelly)     -0.45 |     1.0%      0.0%  |     1.3%      0.3%   -1.66
+  0.75*k*                 -0.68 |     1.0%      0.0%  |     1.4%      0.3%   -1.66
+  1.0*k* (full Kelly)     -0.90 |     1.3%      0.3%  |     1.4%      0.3%   -1.66
+
+==============================================================================
+VOL-TARGETING (target = TRAIN realised stdev = $426.91/d)
+==============================================================================
+  variant                |  $50K p30  $50K p45 |  $25K p30  $25K p45 | Sharpe  scale_mean
+  baseline qty=1         |    30.6%     44.2%  |    36.2%     45.2%   +1.66    1.00
+  vol-target L=10        |    32.2%     41.3%  |    35.8%     40.2%   +2.03    0.99
+  vol-target L=20 *      |    29.9%     41.9%  |    34.2%     38.6%   +2.11    0.88
+  vol-target L=60        |    31.2%     42.6%  |    36.9%     44.1%   +2.11    0.80
+
+==============================================================================
+HEADLINE: every advanced sizing variant vs baseline on $50K pass45
+==============================================================================
+  variant                     $50K p45   vs baseline
+  baseline (qty=1)              44.2%   (reference)
+  0.25*k*                        0.0%       -44.2%
+  0.5*k* (half-Kelly)            0.0%       -44.2%
+  0.75*k*                        0.0%       -44.2%
+  1.0*k* (full Kelly)            0.3%       -43.9%
+  vol-target L=10               41.3%        -2.9%
+  vol-target L=20 *             41.9%        -2.3%
+  vol-target L=60               42.6%        -1.6%
+
+==============================================================================
+Deflated Sharpe -- 7 new trials this pass
+==============================================================================
+  winner (by $50K p45): vol-target L=60      (pass45=42.6%)
+    raw Sharpe (annual): 2.110
+    expected-max under null: 2.841
+    DSR: 0.1172
+    trials this pass: 8  (cumulative since project start: 19+8=27)

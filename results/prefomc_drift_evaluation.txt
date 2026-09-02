@@ -1,0 +1,59 @@
+========================================================================
+STRATEGY #6: PRE-FOMC DRIFT — PROMOTION CHECKLIST
+Pre-committed: long FOMC-eve close → FOMC-day open, Lucca & Moench 2015
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 19.3s
+
+Running ES PreFOMCDrift...
+  done in 6.6s  (1348 active days)
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)
+
+FOMC events in IS: 48 | OOS: 20
+
+────────────────────────────────────────────────────────────────────────
+QUICK STATS (IS only)
+────────────────────────────────────────────────────────────────────────
+  ES PreFOMCDrift                    : n_days=943 nz=  48 total=$  +10,980 Sharpe=+0.97 PF=2.41 MaxDD=$  -3,388
+                                       pass30=0.0% (0/914)  pass45=1.0% (9/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: PreFOMCDrift-ES
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✗] trades_per_year                obs=12.827     thr=20.000  
+  [✓] EV per day ($)                 obs=11.644     thr=0.000  
+  [✓] profit_factor                  obs=2.414      thr=1.000  
+  [✓] t_stat (IS)                    obs=1.878      thr=1.500  
+  [✓] sharpe_annual (IS)             obs=0.971      thr=0.300  
+  [✓] max_loss / avg_win             obs=1.368      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS STANDALONE STATS (reference)
+────────────────────────────────────────────────────────────────────────
+  ES PreFOMCDrift OOS                : n_days=405 nz=  20 total=$     -512 Sharpe=-0.13 PF=0.90 MaxDD=$  -2,555
+                                       pass30=0.0% (0/376)  pass45=0.0% (0/361)
+
+────────────────────────────────────────────────────────────────────────
+DSR TRIAL ACCOUNTING
+────────────────────────────────────────────────────────────────────────
+  Trials added this evaluation: 1 (single variant — FOMC filter IS the strategy)
+  Cumulative project trials: ~31 + 1 = 32
+
+========================================================================
+VERDICT
+========================================================================
+  PreFOMCDrift-ES : RETIRED
+
+Note: Low trade frequency (~8/year) means t_stat and pass30 may
+be volatile. Academic effect well-documented but sparse in any
+single instrument's time series.

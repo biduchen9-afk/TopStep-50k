@@ -1,0 +1,57 @@
+Loading cached streams from /home/user/TopStep-50k/results/cache/multi_asset_streams.npz...
+  9 streams over 1348 days
+
+TRAIN: 2021-12-31 -> 2023-12-29 (623 d)
+TEST : 2023-12-31 -> 2026-04-24 (725 d)
+
+Solo TRAIN pass-rate weighting on $25K rules / 30d window
+
+==============================================================================
+Baseline (no path-aware sizing, qty=1 across the board)
+==============================================================================
+           multi-asset baseline (unscaled) : Sharpe=+1.66  total=$   +60,279  MaxDD=$  -12,840
+                                             $50K Combine    pass30=30.6% (213/696)  pass45=44.2% (301/681)
+                                             $25K Combine    pass30=36.2% (252/696)  pass45=45.2% (308/681)
+
+==============================================================================
+PATH-AWARE sizing: {defend=0.5x, neutral=1.0x, attack=1.5x}
+Thresholds: defend if cum <= -M/2, attack if cum >= +T/2 (MECHANICAL, not data-tuned)
+==============================================================================
+
+  $50K Combine: target=$3,000  MLL=$2,000
+    SYM   0.5/1.0/1.5     pass30=25.0% (174/696)   day-scale mix: defend=18% neutral=53% attack=28%
+    SYM2  0.5/1.0/2.0     pass30=19.1% (133/696)   day-scale mix: defend=19% neutral=56% attack=25%
+    DEF   0.5/1.0/1.0     pass30=30.3% (211/696)   day-scale mix: defend=17% neutral=51% attack=33%
+    DEF2  0.25/1.0/1.0    pass30=30.0% (209/696)   day-scale mix: defend=21% neutral=47% attack=32%
+    SYM   0.5/1.0/1.5     pass45=35.7% (243/681)   day-scale mix: defend=21% neutral=43% attack=37%
+    SYM2  0.5/1.0/2.0     pass45=29.1% (198/681)   day-scale mix: defend=22% neutral=45% attack=33%
+    DEF   0.5/1.0/1.0     pass45=43.5% (296/681)   day-scale mix: defend=17% neutral=40% attack=43%
+    DEF2  0.25/1.0/1.0    pass45=43.0% (293/681)   day-scale mix: defend=22% neutral=36% attack=41%
+
+  $25K Combine: target=$1,500  MLL=$1,500
+    SYM   0.5/1.0/1.5     pass30=29.0% (202/696)   day-scale mix: defend=23% neutral=35% attack=41%
+    SYM2  0.5/1.0/2.0     pass30=21.6% (150/696)   day-scale mix: defend=27% neutral=37% attack=37%
+    DEF   0.5/1.0/1.0     pass30=35.6% (248/696)   day-scale mix: defend=20% neutral=33% attack=47%
+    DEF2  0.25/1.0/1.0    pass30=35.3% (246/696)   day-scale mix: defend=25% neutral=30% attack=45%
+    SYM   0.5/1.0/1.5     pass45=37.0% (252/681)   day-scale mix: defend=25% neutral=28% attack=47%
+    SYM2  0.5/1.0/2.0     pass45=30.2% (206/681)   day-scale mix: defend=28% neutral=30% attack=42%
+    DEF   0.5/1.0/1.0     pass45=44.6% (304/681)   day-scale mix: defend=20% neutral=26% attack=54%
+    DEF2  0.25/1.0/1.0    pass45=42.6% (290/681)   day-scale mix: defend=26% neutral=23% attack=51%
+
+==============================================================================
+SUMMARY: baseline (qty=1) vs each path-aware variant
+==============================================================================
+                 window    baseline  SYM   0.5/1.0  SYM2  0.5/1.0  DEF   0.5/1.0  DEF2  0.25/1.
+  $50K Combine   30          30.6%         25.0%         19.1%         30.3%         30.0%
+  $50K Combine   45          44.2%         35.7%         29.1%         43.5%         43.0%
+  $25K Combine   30          36.2%         29.0%         21.6%         35.6%         35.3%
+  $25K Combine   45          45.2%         37.0%         30.2%         44.6%         42.6%
+
+==============================================================================
+Deflated Sharpe (path-aware sizing on $50K rules, pass45 winner)
+==============================================================================
+  candidate winner: DEF   0.5/1.0/1.0
+    raw Sharpe (annual): 1.536
+    expected-max under null: 0.192
+    DSR: 0.9885
+    trials this pass: 5  (cumulative since start: 14+5=19)

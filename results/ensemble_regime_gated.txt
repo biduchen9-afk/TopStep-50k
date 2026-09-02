@@ -1,0 +1,76 @@
+Loading ES bars...
+  1,522,612 bars in 22.4s
+
+Building regime conditioners from bar history...
+  per-day stats for 1365 dates, 1.9s
+
+Gate fire-rates over the full history (1365 days):
+  ORB-expansion gate    : 61.6%
+  MeanRev-low-vol gate  : 46.4%
+  OvernightDrift gate   : 36.9% (NY Fed 'post-selloff')
+
+Running UN-GATED baseline strategies (qty=1)...
+  [ORB-base] 1348 days, 16.3s
+  [MeanRev-base] 1348 days, 6.2s
+  [OD-base] 1348 days, 10.2s
+
+Running GATED strategies (literature conditioners)...
+  [ORB-gated] 1348 days, 9.1s
+  [MeanRev-gated] 1348 days, 5.6s
+  [OD-gated] 1348 days, 12.2s
+
+TRAIN: 2021-12-31 -> 2023-12-29 (623 days)
+TEST : 2023-12-31 -> 2026-04-24 (725 days)
+
+Inverse-vol weights (from BASELINE TRAIN, unchanged): {'ORB': 0.196, 'MeanRev': 0.662, 'OvernightDrift': 0.142}
+
+=== Per-strategy on TEST: BASELINE vs GATED ===
+
+         ORB BASE (TEST) : days=725  nz= 595  total=$  +15,368  Sharpe=+0.31  win-rate=43.3%  PF=1.05  MaxDD=$ -26,485
+                           $50K Combine    pass30=15.1% (105/696)  pass45=11.9% (81/681)
+                           $25K Combine    pass30=12.4% (86/696)  pass45= 8.5% (58/681)
+        ORB GATED (TEST) : days=725  nz= 342  total=$   +7,352  Sharpe=+0.17  win-rate=25.4%  PF=1.04  MaxDD=$ -26,742
+                           $50K Combine    pass30=11.8% (82/696)  pass45=17.0% (116/681)
+                           $25K Combine    pass30=14.2% (99/696)  pass45=17.0% (116/681)
+
+     MeanRev BASE (TEST) : days=725  nz= 595  total=$     +938  Sharpe=+0.07  win-rate=29.5%  PF=1.01  MaxDD=$ -10,425
+                           $50K Combine    pass30= 1.0% (7/696)  pass45= 7.8% (53/681)
+                           $25K Combine    pass30=12.5% (87/696)  pass45=21.6% (147/681)
+    MeanRev GATED (TEST) : days=725  nz= 266  total=$   +4,270  Sharpe=+0.56  win-rate=15.3%  PF=1.16  MaxDD=$  -3,525
+                           $50K Combine    pass30= 0.0% (0/696)  pass45= 2.9% (20/681)
+                           $25K Combine    pass30= 6.6% (46/696)  pass45= 8.4% (57/681)
+
+  OvernightDrift BASE (TEST) : days=725  nz= 724  total=$  +55,302  Sharpe=+0.69  win-rate=55.3%  PF=1.15  MaxDD=$ -53,868
+                           $50K Combine    pass30=18.0% (125/696)  pass45=21.9% (149/681)
+                           $25K Combine    pass30=16.7% (116/696)  pass45=19.7% (134/681)
+  OvernightDrift GATED (TEST) : days=725  nz= 478  total=$  +64,010  Sharpe=+1.16  win-rate=37.4%  PF=1.34  MaxDD=$ -32,040
+                           $50K Combine    pass30=25.6% (178/696)  pass45=26.4% (180/681)
+                           $25K Combine    pass30=25.7% (179/696)  pass45=26.1% (178/681)
+
+=== Ensemble on TEST: BASELINE vs GATED ===
+
+    ENSEMBLE BASE (TEST) : days=725  nz= 724  total=$  +11,494  Sharpe=+0.72  win-rate=53.9%  PF=1.14  MaxDD=$  -7,704
+                           $50K Combine    pass30= 8.8% (61/696)  pass45=23.6% (161/681)
+                           $25K Combine    pass30=28.2% (196/696)  pass45=33.3% (227/681)
+   ENSEMBLE GATED (TEST) : days=725  nz= 628  total=$  +13,369  Sharpe=+1.16  win-rate=47.7%  PF=1.26  MaxDD=$  -4,734
+                           $50K Combine    pass30= 2.7% (19/696)  pass45= 3.5% (24/681)
+                           $25K Combine    pass30=22.6% (157/696)  pass45=31.6% (215/681)
+
+=== Drop-one diagnostics, GATED ensemble (sensitivity) ===
+          GATED drop ORB : days=725  nz= 569  total=$  +14,833  Sharpe=+1.28  win-rate=40.8%  PF=1.31  MaxDD=$  -5,665
+                           $50K Combine    pass30= 0.9% (6/696)  pass45=10.1% (69/681)
+                           $25K Combine    pass30=26.6% (185/696)  pass45=36.6% (249/681)
+      GATED drop MeanRev : days=725  nz= 583  total=$  +31,189  Sharpe=+0.99  win-rate=44.6%  PF=1.23  MaxDD=$ -13,253
+                           $50K Combine    pass30=13.5% (94/696)  pass45=22.3% (152/681)
+                           $25K Combine    pass30=21.8% (152/696)  pass45=23.6% (161/681)
+  GATED drop OvernightDrift : days=725  nz= 465  total=$   +4,974  Sharpe=+0.45  win-rate=33.7%  PF=1.10  MaxDD=$  -6,494
+                           $50K Combine    pass30= 1.1% (8/696)  pass45= 2.8% (19/681)
+                           $25K Combine    pass30=14.2% (99/696)  pass45=15.7% (107/681)
+
+=== Deflated Sharpe ===
+  winner: GATED ensemble
+    raw Sharpe (annual): 1.160
+    expected-max under null: 0.678
+    DSR: 0.7922
+    trials accumulated this pass: 11
+    -> NOT statistically distinguishable from selection bias

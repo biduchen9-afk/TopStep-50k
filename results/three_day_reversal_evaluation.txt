@@ -1,0 +1,77 @@
+========================================================================
+STRATEGY #7: 3-DAY REVERSAL — PROMOTION CHECKLIST
+Pre-committed: long after 3-down closes / short after 3-up closes
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 19.7s
+
+Running ES ThreeDayReversal (no filter)...
+  done in 12.9s  (1348 days)
+Running ES ThreeDayReversal (skip FOMC+NFP)...
+  done in 8.5s  (1348 days)
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)
+
+────────────────────────────────────────────────────────────────────────
+QUICK STATS (IS only)
+────────────────────────────────────────────────────────────────────────
+  ES ThreeDayReversal raw            : n_days=943 nz= 416 total=$   -4,490 Sharpe=-0.06 PF=0.98 MaxDD=$ -32,135
+                                       pass30=2.2% (20/914)  pass45=2.7% (24/899)
+  ES ThreeDayReversal +filter        : n_days=943 nz= 388 total=$  +23,700 Sharpe=+0.35 PF=1.10 MaxDD=$ -26,330
+                                       pass30=2.2% (20/914)  pass45=2.7% (24/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST (raw variant)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: ThreeDayReversal-ES-raw
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=111.169    thr=20.000  
+  [✗] EV per day ($)                 obs=-4.761     thr=0.000  
+  [✗] profit_factor                  obs=0.984      thr=1.000  
+  [✗] t_stat (IS)                    obs=-0.122     thr=1.500  
+  [✗] sharpe_annual (IS)             obs=-0.063     thr=0.300  
+  [✗] max_loss / avg_win             obs=4.036      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST (+FOMC/NFP filter)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: ThreeDayReversal-ES-filtered
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=103.686    thr=20.000  
+  [✓] EV per day ($)                 obs=25.133     thr=0.000  
+  [✓] profit_factor                  obs=1.098      thr=1.000  
+  [✗] t_stat (IS)                    obs=0.670      thr=1.500  
+  [✓] sharpe_annual (IS)             obs=0.347      thr=0.300  
+  [✗] max_loss / avg_win             obs=3.972      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS STANDALONE STATS (reference)
+────────────────────────────────────────────────────────────────────────
+  ES ThreeDayRev raw OOS             : n_days=405 nz= 177 total=$  +20,712 Sharpe=+0.44 PF=1.15 MaxDD=$ -30,450
+                                       pass30=0.0% (0/376)  pass45=0.0% (0/361)
+  ES ThreeDayRev +filt OOS           : n_days=405 nz= 164 total=$   +2,740 Sharpe=+0.06 PF=1.02 MaxDD=$ -34,732
+                                       pass30=0.3% (1/376)  pass45=0.3% (1/361)
+
+────────────────────────────────────────────────────────────────────────
+DSR TRIAL ACCOUNTING
+────────────────────────────────────────────────────────────────────────
+  Trials added this evaluation: 2 (raw + filtered)
+  Cumulative project trials: ~32 + 2 = 34
+
+========================================================================
+VERDICT
+========================================================================
+  raw variant    : RETIRED
+  filter variant : RETIRED

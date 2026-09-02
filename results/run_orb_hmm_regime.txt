@@ -1,0 +1,44 @@
+Loading ES bars...
+  1,522,612 bars in 19.2s
+
+Daily features: 1365 trading days, 2021-12-31 -> 2026-04-24
+
+Walk-forward windows:
+  TRAIN: 2021-12-31 -> 2023-12-29 (630 days)
+  SELECT: 2023-12-31 -> 2024-12-29 (316 days)
+  TEST: 2024-12-30 -> 2026-04-24 (419 days)
+
+Fitting HMM(n_states=3) on TRAIN features...
+Model is not converging.  Current: 12605.96961303179 is not greater than 15954.605618164393. Delta is -3348.636005132603
+  fit in 1.6s, converged=True, train log-likelihood=12918.8
+  state 0: log_r=-0.0028 abs_r=0.0030 range=0.0087 vol5=0.0081 vol20=0.0086
+  state 1: log_r=-0.0118 abs_r=0.0118 range=0.0215 vol5=0.0115 vol20=0.0116
+  state 2: log_r=+0.0076 abs_r=0.0077 range=0.0142 vol5=0.0095 vol20=0.0100
+
+Regime distribution across all 1365 days: {0: 301, 1: 308, 2: 756}
+
+Running baseline ORB (no filter) for regime PnL bucketing...
+  done in 12.0s, 1348 trading days
+
+SELECT-window per-regime PnL (used to pick tradable set):
+  regime 0:  81 days  mean=$  -68.86/day  total=$-5,578
+  regime 1:  43 days  mean=$ +195.99/day  total=$+8,428
+  regime 2: 188 days  mean=$   -6.70/day  total=$-1,260
+  -> tradable regimes (SELECT mean > 0): [1]
+
+Running ORB on full series with regime filter; measuring TEST window only...
+  done in 14.8s, 1348 trading days emitted
+  TEST trading days: filtered=412, baseline=412
+
+=== TEST window results ===
+                      metric     baseline    HMM-gated
+                trading days          412          412
+               total PnL ($)       13,778       -6,255
+             Sharpe (annual)         0.42        -0.29
+               Profit factor         1.07         0.90
+              win-rate (day)        44.2%         8.3%
+                  Max DD ($)       26,485       19,682
+                best day ($)        6,132        6,132
+               worst day ($)       -4,518       -4,518
+      pass-rate (30d window)       17.2% (66/383)         6.3% (24/383)
+      pass-rate (45d window)       10.1% (37/368)         7.3% (27/368)

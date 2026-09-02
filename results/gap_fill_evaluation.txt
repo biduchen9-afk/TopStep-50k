@@ -1,0 +1,78 @@
+========================================================================
+STRATEGY #4: GAP FILL — PROMOTION CHECKLIST
+Pre-committed prediction: long gap-down / short gap-up, IS pass30 15-30%
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 26.5s
+
+Running ES GapFill (no filter)...
+  done in 29.1s  (1348 days)
+Running ES GapFill (skip FOMC + NFP days)...
+  done in 17.1s  (1348 days)
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)
+
+────────────────────────────────────────────────────────────────────────
+QUICK STATS (IS only, for Gate 2/3 preview)
+────────────────────────────────────────────────────────────────────────
+  ES GapFill raw                : n_days=943 nz= 498 total=$  -32,848 Sharpe=-0.86 PF=0.83 MaxDD=$ -39,518
+                                  pass30=10.2% (93/914)  pass45=11.0% (99/899)
+  ES GapFill +filter            : n_days=943 nz= 455 total=$  -26,408 Sharpe=-0.74 PF=0.85 MaxDD=$ -33,078
+                                  pass30=11.2% (102/914)  pass45=12.8% (115/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST (raw variant first)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: GapFill-ES-raw
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=133.082    thr=20.000  
+  [✗] EV per day ($)                 obs=-34.833    thr=0.000  
+  [✗] profit_factor                  obs=0.832      thr=1.000  
+  [✗] t_stat (IS)                    obs=-1.657     thr=1.500  
+  [✗] sharpe_annual (IS)             obs=-0.857     thr=0.300  
+  [✗] max_loss / avg_win             obs=4.905      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST (+FOMC/NFP filter)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: GapFill-ES-filtered
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=121.591    thr=20.000  
+  [✗] EV per day ($)                 obs=-28.004    thr=0.000  
+  [✗] profit_factor                  obs=0.848      thr=1.000  
+  [✗] t_stat (IS)                    obs=-1.432     thr=1.500  
+  [✗] sharpe_annual (IS)             obs=-0.740     thr=0.300  
+  [✗] max_loss / avg_win             obs=4.405      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS STANDALONE STATS (for reference)
+────────────────────────────────────────────────────────────────────────
+  ES GapFill raw OOS            : n_days=405 nz= 193 total=$   +7,498 Sharpe=+0.36 PF=1.09 MaxDD=$  -8,568
+                                  pass30=13.8% (52/376)  pass45=15.8% (57/361)
+  ES GapFill +filt OOS          : n_days=405 nz= 178 total=$  +14,985 Sharpe=+0.75 PF=1.20 MaxDD=$  -7,570
+                                  pass30=15.2% (57/376)  pass45=16.6% (60/361)
+
+────────────────────────────────────────────────────────────────────────
+DSR TRIAL ACCOUNTING
+────────────────────────────────────────────────────────────────────────
+  Trials added this evaluation: 2 (raw + filtered)
+  Cumulative project trials: ~27 + 2 = 29
+  Note: gap-fill OOS is counted regardless of promotion outcome.
+
+========================================================================
+VERDICT
+========================================================================
+  raw variant    : RETIRED
+  filter variant : RETIRED

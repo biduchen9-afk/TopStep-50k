@@ -1,0 +1,78 @@
+========================================================================
+STRATEGY #11: SWEEP → MSS/IMPULSE (Pine Script port) — GC
+Pre-committed: Bangkok windows 12-14 / 18-19:30, ATR×0.65, MSS=5
+========================================================================
+
+Loading GC bars from gc_cleaned.txt...
+  1,510,120 bars in 26.7s
+
+Running SweepMSS on GC (1 contract, full history)...
+  done in 21.0s (1338 days)
+
+IS : 2021-12-31 -> 2025-01-08 (936 d)
+OOS: 2025-01-09 -> 2026-04-24 (402 d)
+
+────────────────────────────────────────────────────────────────────────
+IS QUICK STATS — 1 contract
+────────────────────────────────────────────────────────────────────────
+  SweepMSS GC IS (1c)                : n_days=936 nz= 846 total=$   +35,288 EV=$ +37.7/day Sharpe=+0.41 PF=1.08 MaxDD=$  -29,342
+                                       pass30=9.0% (82/907)  pass45=9.2% (82/892)
+                                       30d outcomes: pass=82 mll=564 cons=261 no_target=0
+
+────────────────────────────────────────────────────────────────────────
+IS GATE-BY-GATE CHECKLIST (1 contract)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: SweepMSS-GC-1c
+IS=936d  OOS=402d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=227.769    thr=20.000  
+  [✓] EV per day ($)                 obs=37.700     thr=0.000  
+  [✓] profit_factor                  obs=1.080      thr=1.000  
+  [✗] t_stat (IS)                    obs=0.784      thr=1.500  
+  [✓] sharpe_annual (IS)             obs=0.407      thr=0.300  
+  [✗] max_loss / avg_win             obs=8.032      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS QUICK STATS — 1 contract
+────────────────────────────────────────────────────────────────────────
+  SweepMSS GC OOS (1c)               : n_days=402 nz= 360 total=$   +39,695 EV=$ +98.7/day Sharpe=+0.33 PF=1.08 MaxDD=$ -101,408
+                                       pass30=1.9% (7/373)  pass45=2.0% (7/358)
+                                       30d outcomes: pass=7 mll=220 cons=146 no_target=0
+
+Running SweepMSS on GC OOS (3 contracts)...
+  done in 18.2s
+
+────────────────────────────────────────────────────────────────────────
+OOS QUICK STATS — 3 contracts (scaled, '100% of equity' analog)
+────────────────────────────────────────────────────────────────────────
+  SweepMSS GC OOS (3c)               : n_days=402 nz= 360 total=$  +119,085 EV=$+296.2/day Sharpe=+0.33 PF=1.08 MaxDD=$ -304,222
+                                       pass30=0.3% (1/373)  pass45=0.3% (1/358)
+                                       30d outcomes: pass=1 mll=219 cons=153 no_target=0
+
+────────────────────────────────────────────────────────────────────────
+OOS DRAWDOWN & MLL ANALYSIS
+────────────────────────────────────────────────────────────────────────
+  1 contract:
+    Worst running drawdown vs peak: $-101,408
+    Days deeper than -$2,000 (MLL proxy): 369 of 402
+    Worst single-day PnL: $-17,942
+    Best single-day PnL: $+46,058
+  3 contracts:
+    Worst running drawdown vs peak: $-304,222
+    Days deeper than -$2,000 (MLL proxy): 380 of 402
+    Worst single-day PnL: $-53,828
+    Best single-day PnL: $+138,172
+
+========================================================================
+SUMMARY
+========================================================================
+  IS (1c) Sharpe=+0.41, total=$+35,288, EV=$+37.70/day
+  OOS (1c) Sharpe=+0.33, total=$+39,695, EV=$+98.74/day
+  OOS (3c) Sharpe=+0.33, total=$+119,085, EV=$+296.23/day
+
+  DSR trials added: 3 (IS-1c, OOS-1c, OOS-3c)
+  Cumulative project trials: ~40 + 3 = 43
