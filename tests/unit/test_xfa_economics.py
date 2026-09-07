@@ -6,10 +6,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 import numpy as np
+import pytest
 
 from topstep50k.analysis.xfa_economics import (
     XFAAccountState,
     monte_carlo_xfa_economics,
+    monte_carlo_xfa_portfolio,
     simulate_xfa_lifecycle,
     take_fixed_amount,
     take_max_payout,
@@ -265,3 +267,42 @@ def test_monte_carlo_shapes_and_bounds():
     assert result.mean_income >= 0
     assert 0.0 <= result.prob_breach <= 1.0
     assert result.p05_income <= result.median_income <= result.p95_income
+
+
+def test_portfolio_pools_income_and_payouts_across_accounts():
+    rng = np.random.default_rng(0)
+    values = list(rng.normal(60, 400, size=300))
+    daily = [Decimal(str(round(v, 2))) for v in values]
+    xfa = xfa_50k()
+
+    solo = monte_carlo_xfa_economics(daily, xfa=xfa, horizon_days=120,
+                                      n_sims=200, block_len=10, seed=1)
+    portfolio = monte_carlo_xfa_portfolio(daily, xfa=xfa, n_accounts=5, horizon_days=120,
+                                          n_sims=200, block_len=10, seed=1)
+
+    assert portfolio.n_accounts == 5
+    # Pooling 5 independent accounts should scale mean income and mean
+    # payout count roughly 5x a single account's (not exactly, since
+    # each draws its own independent resample, but well within a wide
+    # band -- this just guards against a copy-paste bug that forgot to
+    # actually loop over n_accounts).
+    assert 3.0 * solo.mean_income < portfolio.mean_income < 7.0 * solo.mean_income
+    assert 3.0 * solo.mean_n_payouts < portfolio.mean_n_payouts < 7.0 * solo.mean_n_payouts
+    assert 0.0 <= portfolio.frac_months_with_a_payout <= 1.0
+    assert 0.0 <= portfolio.mean_n_breached <= 5.0
+
+
+def test_portfolio_with_one_account_matches_solo_monte_carlo():
+    rng = np.random.default_rng(0)
+    values = list(rng.normal(60, 400, size=300))
+    daily = [Decimal(str(round(v, 2))) for v in values]
+    xfa = xfa_50k()
+
+    solo = monte_carlo_xfa_economics(daily, xfa=xfa, horizon_days=120,
+                                      n_sims=50, block_len=10, seed=7)
+    portfolio = monte_carlo_xfa_portfolio(daily, xfa=xfa, n_accounts=1, horizon_days=120,
+                                          n_sims=50, block_len=10, seed=7)
+    # Same seed, same resampling logic, n_accounts=1 -- should be an
+    # exact match (both draw the same sequence of resampled paths).
+    assert portfolio.mean_income == pytest.approx(solo.mean_income)
+    assert portfolio.mean_n_payouts == pytest.approx(solo.mean_n_payouts)

@@ -339,3 +339,113 @@ def monte_carlo_xfa_economics(
         median_max_drawdown=float(np.median(max_dds)),
         p95_max_drawdown=float(np.percentile(max_dds, 95)),
     )
+
+
+@dataclass(frozen=True)
+class XFAPortfolioMonteCarloResult:
+    """Outcome of `n_accounts` INDEPENDENT funded accounts, all running
+    the same edge, pooled together -- the "run more accounts to smooth
+    cash flow" question, quantified. See monte_carlo_xfa_portfolio's
+    docstring for the independence caveat."""
+    n_sims: int
+    n_accounts: int
+    horizon_days: int
+    total_income: np.ndarray        # one draw per sim: COMBINED trader $ across all n_accounts
+    mean_income: float
+    median_income: float
+    p05_income: float
+    p95_income: float
+    mean_n_payouts: float           # combined payout count across all accounts, per sim
+    payouts_per_month: float        # mean_n_payouts / (horizon_days/21)
+    frac_months_with_a_payout: float  # fraction of calendar months, pooled across sims, with >=1 payout
+    mean_n_breached: float          # average number of the n_accounts breached within horizon
+
+
+def monte_carlo_xfa_portfolio(
+    empirical_daily_pnl: list[Decimal],
+    *,
+    xfa: XFARules,
+    n_accounts: int,
+    horizon_days: int = 252,
+    n_sims: int = 500,
+    block_len: int = 10,
+    seed: int = 42,
+    sizing_fn: XFASizingFn = xfa_full_size,
+    payout_policy: PayoutPolicy = take_max_payout,
+    preserve_cushion: bool = False,
+) -> XFAPortfolioMonteCarloResult:
+    """Simulate `n_accounts` INDEPENDENTLY bootstrap-resampled funded
+    accounts per outer draw, all running the SAME edge, and pool their
+    combined income/payout timing -- this is "bring in more accounts
+    and reinvest payouts into them," quantified: does an individual
+    account's rare payout rate (well under monthly) become something
+    closer to monthly cash flow once pooled across many accounts?
+
+    INDEPENDENCE CAVEAT: each account here draws its OWN independent
+    block-bootstrap resample, which is equivalent to modeling accounts
+    that experience unrelated market days. In reality, N real funded
+    accounts all trading the SAME strategy on the SAME instrument would
+    share the same P&L on the same calendar days -- their returns are
+    NOT independent. What IS real and does genuinely help: funding
+    accounts on STAGGERED dates staggers each account's own "days since
+    last payout" eligibility clock, spreading out when each one crosses
+    its payout threshold even against a correlated return stream. This
+    function overstates the diversification benefit versus that more
+    realistic staggered-but-correlated picture -- treat its payout-
+    smoothing numbers as an optimistic upper bound, not a promise.
+    """
+    values = np.array([float(v) for v in empirical_daily_pnl])
+    m = len(values)
+    if m < block_len:
+        raise ValueError(f"need at least block_len={block_len} days, have {m}")
+    rng = np.random.default_rng(seed)
+    n_blocks = -(-horizon_days // block_len)
+    n_months = max(1, round(horizon_days / 21))
+
+    total_incomes = np.empty(n_sims)
+    total_payouts = np.empty(n_sims, dtype=int)
+    n_breached = np.empty(n_sims, dtype=int)
+    month_has_payout = np.zeros((n_sims, n_months), dtype=bool)
+
+    for i in range(n_sims):
+        combined_income = 0.0
+        combined_payouts = 0
+        breaches_this_sim = 0
+        for _acct in range(n_accounts):
+            starts = rng.integers(0, m, size=n_blocks)
+            blocks = []
+            for s in starts:
+                if s + block_len <= m:
+                    blocks.append(values[s : s + block_len])
+                else:
+                    blocks.append(np.concatenate([values[s:], values[: block_len - (m - s)]]))
+            path = np.concatenate(blocks)[:horizon_days]
+            daily_pnl = [Decimal(str(round(float(v), 2))) for v in path]
+
+            result = simulate_xfa_lifecycle(daily_pnl, xfa=xfa, horizon_days=horizon_days,
+                                             sizing_fn=sizing_fn, payout_policy=payout_policy,
+                                             preserve_cushion=preserve_cushion)
+            combined_income += float(result.total_trader_income)
+            combined_payouts += result.n_payouts
+            if result.breached:
+                breaches_this_sim += 1
+            for p in result.payouts:
+                month_idx = min(p.day_index // 21, n_months - 1)
+                month_has_payout[i, month_idx] = True
+
+        total_incomes[i] = combined_income
+        total_payouts[i] = combined_payouts
+        n_breached[i] = breaches_this_sim
+
+    return XFAPortfolioMonteCarloResult(
+        n_sims=n_sims, n_accounts=n_accounts, horizon_days=horizon_days,
+        total_income=total_incomes,
+        mean_income=float(total_incomes.mean()),
+        median_income=float(np.median(total_incomes)),
+        p05_income=float(np.percentile(total_incomes, 5)),
+        p95_income=float(np.percentile(total_incomes, 95)),
+        mean_n_payouts=float(total_payouts.mean()),
+        payouts_per_month=float(total_payouts.mean()) / n_months,
+        frac_months_with_a_payout=float(month_has_payout.mean()),
+        mean_n_breached=float(n_breached.mean()),
+    )
