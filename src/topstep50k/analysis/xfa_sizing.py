@@ -53,6 +53,7 @@ from decimal import Decimal
 from typing import Callable
 
 from topstep50k.analysis.xfa_economics import XFAAccountState, XFASizingFn, xfa_full_size
+from topstep50k.rules.topstep_xfa import XFARules
 
 
 def cushion_proportional_scaling(
@@ -112,6 +113,39 @@ def constant_scale(k: float) -> XFASizingFn:
     """
     def fn(state: XFAAccountState) -> float:
         return k
+    return fn
+
+
+def scaling_plan_micros(xfa: XFARules, unit_k: float = 0.1) -> XFASizingFn:
+    """RISK UP as the account proves itself, using Topstep's OWN
+    Scaling Plan (`xfa.max_contracts`) rather than an invented ramp --
+    the "risk adjust to when we need to risk more" policy. Each
+    "contract" the plan grants is worth `unit_k` of one mini (default
+    0.1 = one MICRO); the plan's default steps (2 -> 3 -> 5 contracts
+    at $1,500 / $2,000 cumulative profit -- see xfa_50k()) then read as
+    2 -> 3 -> 5 micros, not 2 -> 5 MINIS, which every result this
+    session says would be catastrophic (a single mini already carries
+    10x the risk this account can survive).
+
+    Cumulative profit is profit-since-FUNDING (balance -
+    starting_balance), exactly as Topstep's own plan is described --
+    NOT profit-since-last-payout. This means size correctly drops back
+    down right after a payout (balance falls, so does cumulative
+    profit), without needing a separate post-payout special case: the
+    same de-risk-after-cashing-out behavior this session's search has
+    repeatedly found necessary falls out of using the real rule as
+    written, not a bespoke addition.
+
+    `xfa.scaling_plan` is genuinely unverified this session (see its
+    docstring in rules/topstep_xfa.py) -- pass a `dataclasses.replace`d
+    XFARules with a custom scaling_plan to test a more conservative
+    schedule than Topstep's stated one if the real thresholds turn out
+    to assume mini-sized contracts instead of micros.
+    """
+    def fn(state: XFAAccountState) -> float:
+        cumulative_profit = state.balance - xfa.starting_balance
+        n_contracts = xfa.max_contracts(cumulative_profit)
+        return n_contracts * unit_k
     return fn
 
 

@@ -14,8 +14,10 @@ from topstep50k.analysis.xfa_sizing import (
     cushion_proportional_scaling,
     hard_stop_after,
     post_payout_cooldown,
+    scaling_plan_micros,
     time_decay_scaling,
 )
+from topstep50k.rules.topstep_xfa import xfa_50k
 
 
 def _state(**kwargs) -> XFAAccountState:
@@ -79,3 +81,23 @@ def test_constant_scale_always_returns_k():
     fn = constant_scale(0.1)
     assert fn(_state(days_since_funding=0)) == 0.1
     assert fn(_state(days_since_funding=500, cushion=Decimal("1900"), locked=True)) == 0.1
+
+
+def test_scaling_plan_micros_follows_xfa_scaling_plan_thresholds():
+    xfa = xfa_50k()  # scaling_plan: 2@$0, 3@$1500, 5@$2000 -- see xfa_50k()
+    fn = scaling_plan_micros(xfa, unit_k=0.1)
+    starting = xfa.starting_balance
+    assert fn(_state(balance=starting)) == pytest.approx(0.2)  # 2 micros, no profit yet
+    assert fn(_state(balance=starting + Decimal("1000"))) == pytest.approx(0.2)  # still below $1,500
+    assert fn(_state(balance=starting + Decimal("1500"))) == pytest.approx(0.3)  # 3 micros
+    assert fn(_state(balance=starting + Decimal("2000"))) == pytest.approx(0.5)  # 5 micros
+
+
+def test_scaling_plan_micros_drops_back_down_after_a_payout_shrinks_balance():
+    xfa = xfa_50k()
+    fn = scaling_plan_micros(xfa, unit_k=0.1)
+    starting = xfa.starting_balance
+    # Balance fell back close to starting_balance (e.g. right after a
+    # payout under the reset-to-zero-cushion reading) -- size should
+    # fall back to the base 2-contract step, no special-casing needed.
+    assert fn(_state(balance=starting + Decimal("100"))) == pytest.approx(0.2)
