@@ -72,6 +72,15 @@ VERY_LOW_XFA = replace(XFA, scaling_plan=(
     ScalingStep(Decimal("150"), 2),
     ScalingStep(Decimal("300"), 3),
 ))
+# 2-micro BASE (not 1) with a low-threshold ladder on top -- a bigger
+# base generates profit faster, so this checks whether starting from
+# 2 gives the ladder something to actually climb, instead of starving
+# it the way a 1-micro base did.
+TWO_BASE_XFA = replace(XFA, scaling_plan=(
+    ScalingStep(Decimal("0"), 2),
+    ScalingStep(Decimal("300"), 3),
+    ScalingStep(Decimal("600"), 5),
+))
 
 
 def main():
@@ -115,6 +124,7 @@ def main():
         ("Topstep plan (2/3/5 @ $0/1.5k/2k)", scaling_plan_micros(XFA, BASE_UNIT_K)),
         ("conservative plan (1/2/3 @ $0/500/1k)", scaling_plan_micros(CONSERVATIVE_XFA, BASE_UNIT_K)),
         ("very-low plan (1/2/3 @ $0/150/300)", scaling_plan_micros(VERY_LOW_XFA, BASE_UNIT_K)),
+        ("2-micro base + ladder (2/3/5 @ $0/300/600)", scaling_plan_micros(TWO_BASE_XFA, BASE_UNIT_K)),
     ]
 
     print(f"\n{'='*96}\nRESULTS  [{N_SIMS} sims each]\n{'='*96}")
@@ -122,12 +132,16 @@ def main():
         print(f"\n  {label}:")
         r_max = mc(sizing_fn, take_max_payout, False)
         r_partial = mc(sizing_fn, take_fixed_amount(Decimal("500")), True)
+        d1 = f"{r_max.mean_days_to_first_payout:.0f}d" if r_max.mean_days_to_first_payout else "n/a"
+        d2 = f"{r_partial.mean_days_to_first_payout:.0f}d" if r_partial.mean_days_to_first_payout else "n/a"
         print(f"    take-max, reset-to-zero:        survive={r_max.prob_survive:6.1%}  "
               f"EV=${r_max.mean_income:>7,.0f}  payouts/yr={r_max.mean_n_payouts:4.2f}  "
+              f"days-to-1st-payout={d1:>6}  "
               f"DD: mean=${r_max.mean_max_drawdown:>6,.0f} ({r_max.mean_max_drawdown/50000:.1%})  "
               f"p95=${r_max.p95_max_drawdown:>6,.0f}")
         print(f"    partial $500, preserve cushion:  survive={r_partial.prob_survive:6.1%}  "
               f"EV=${r_partial.mean_income:>7,.0f}  payouts/yr={r_partial.mean_n_payouts:4.2f}  "
+              f"days-to-1st-payout={d2:>6}  "
               f"DD: mean=${r_partial.mean_max_drawdown:>6,.0f} ({r_partial.mean_max_drawdown/50000:.1%})  "
               f"p95=${r_partial.p95_max_drawdown:>6,.0f}")
 
