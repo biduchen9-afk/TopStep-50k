@@ -1,0 +1,75 @@
+========================================================================
+9-STREAM ENSEMBLE — IS EVALUATION (70/30 SPLIT, IS ONLY)
+Strategies: ORB + MeanRev + OvernightDrift × ES + NQ + GC
+All with literature-grounded regime gates (pre-committed)
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 18.8s
+
+Loading NQ bars...
+  1,406,058 bars in 17.6s
+
+Loading GC bars...
+  1,510,120 bars in 19.4s
+
+Running 9 strategy-asset streams...
+  ES: 3 streams in 41.2s
+  NQ: 3 streams in 25.5s
+  GC: 3 streams in 26.0s
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)  ← NOT evaluated
+
+────────────────────────────────────────────────────────────────────────
+PER-STREAM IS STATS (for weight derivation)
+────────────────────────────────────────────────────────────────────────
+  ES/ORB           : nz=477 IS-total=$   +4,165 Sharpe=+0.09  IS-pass30=25.7% (235/914)
+  ES/MeanRev       : nz=372 IS-total=$  +10,728 Sharpe=+1.00  IS-pass30=0.9% (8/914)
+  ES/OD            : nz=612 IS-total=$   -1,572 Sharpe=-0.03  IS-pass30=13.1% (120/914)
+  NQ/ORB           : nz=459 IS-total=$  +68,560 Sharpe=+0.88  IS-pass30=10.5% (96/914)
+  NQ/MeanRev       : nz=347 IS-total=$   -1,690 Sharpe=-0.17  IS-pass30=0.8% (7/914)
+  NQ/OD            : nz=567 IS-total=$  +22,455 Sharpe=+0.26  IS-pass30=4.6% (42/914)
+  GC/ORB           : nz=456 IS-total=$  +14,055 Sharpe=+0.46  IS-pass30=14.8% (135/914)
+  GC/MeanRev       : nz=397 IS-total=$   -9,375 Sharpe=-1.14  IS-pass30=0.0% (0/914)
+  GC/OD            : nz=649 IS-total=$  +34,245 Sharpe=+0.61  IS-pass30=18.7% (171/914)
+
+Pass-rate-aware IS weights:
+  ES/ORB           : 0.289
+  GC/OD            : 0.210
+  GC/ORB           : 0.166
+  ES/OD            : 0.147
+  NQ/ORB           : 0.118
+  NQ/OD            : 0.052
+  ES/MeanRev       : 0.010
+  NQ/MeanRev       : 0.009
+  GC/MeanRev       : 0.000
+
+────────────────────────────────────────────────────────────────────────
+ENSEMBLE IS STATS
+────────────────────────────────────────────────────────────────────────
+  9-stream pass-rate-weighted        : nz= 922 total=$  +19,831 Sharpe=+0.73 PF=1.14 MaxDD=$ -12,382
+                                       IS pass30=15.6% (143/914)  pass45=29.8% (268/899)
+
+  9-stream equal-weighted            : nz= 922 total=$  +15,730 Sharpe=+0.73 PF=1.15 MaxDD=$ -10,746
+                                       IS pass30=8.5% (78/914)  pass45=19.2% (173/899)
+
+────────────────────────────────────────────────────────────────────────
+PER-ASSET 3-STREAM SUB-ENSEMBLES (IS)
+────────────────────────────────────────────────────────────────────────
+  ES 3-strategy ensemble             : nz= 830 total=$   +2,413 Sharpe=+0.07 PF=1.01 MaxDD=$ -27,657
+                                       IS pass30=14.6% (133/914)  pass45=24.4% (219/899)
+  NQ 3-strategy ensemble             : nz= 770 total=$  +51,814 Sharpe=+0.90 PF=1.19 MaxDD=$ -19,593
+                                       IS pass30=18.1% (165/914)  pass45=18.5% (166/899)
+  GC 3-strategy ensemble             : nz= 800 total=$  +25,338 Sharpe=+0.74 PF=1.17 MaxDD=$  -8,853
+                                       IS pass30=14.1% (129/914)  pass45=20.5% (184/899)
+
+========================================================================
+CONCLUSION
+========================================================================
+  IS pass30 = 15.6%  (143/914 windows)
+  IS pass45 = 29.8%  (268/899 windows)
+
+  OOS NOT EVALUATED — reserved for final go/no-go decision.
+  Existing baseline (old 2y split, corrected passrate): pass30=33.3%
+  This run uses 70/30 IS split (IS ends 2025-01-07).

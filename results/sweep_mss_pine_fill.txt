@@ -1,0 +1,37 @@
+========================================================================
+STRATEGY #11 (RE-RUN): SWEEP → MSS — PINE-STYLE SAME-BAR FILLS
+Entry = signal bar's CLOSE; stops/targets touch on subsequent 1m bars
+========================================================================
+
+Loading GC bars...
+  1,510,120 bars in 20.7s
+
+Simulating with Pine-style fills (1 contract)...
+  1741 trades, 1044 active days in 4.3s
+
+IS : 2022-01-01 → 2025-01-14 (978d)
+OOS: 2025-01-15 → 2026-04-25 (420d)
+
+────────────────────────────────────────────────────────────────────────
+IS (1 contract, same-bar-close fills)
+────────────────────────────────────────────────────────────────────────
+  IS Pine-fill                       : n=978 nz=736 total=$+540 EV=$+0.6/day Sharpe=+0.01 PF=1.00 MaxDD=$-28,940
+                                       pass30=18.0% (171/949)  pass45=18.1% (169/934)
+                                       30d outcomes: pass=171 mll=584 cons=166 no_target=28
+
+────────────────────────────────────────────────────────────────────────
+OOS (1 contract, same-bar-close fills)
+────────────────────────────────────────────────────────────────────────
+  OOS Pine-fill                      : n=420 nz=308 total=$-38,595 EV=$-91.9/day Sharpe=-0.61 PF=0.87 MaxDD=$-84,155
+                                       pass30=4.1% (16/391)  pass45=4.3% (16/376)
+                                       30d outcomes: pass=16 mll=261 cons=114 no_target=0
+
+────────────────────────────────────────────────────────────────────────
+TRADE-LEVEL BREAKDOWN (full history)
+────────────────────────────────────────────────────────────────────────
+  Total trades: 1741
+  Win rate: 38.4% (669/1741)
+  Avg win: $+1,074  Max win: $+23,535
+  Avg loss: $-706  Max loss: $-6,955
+  Profit factor: 0.950
+  Exit reasons: {'sl': 911, 'tp': 408, 'force_close': 422}

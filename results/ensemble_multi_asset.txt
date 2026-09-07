@@ -1,0 +1,109 @@
+Loading ES...
+  ES: 1,522,612 bars in 16.1s
+Loading NQ...
+  NQ: 1,406,058 bars in 15.0s
+Loading GC...
+  GC: 1,510,120 bars in 19.1s
+
+Building per-asset regime conditioners...
+
+Running 9 strategy-asset combinations...
+  [                ES-ORB] 1348 days, 667 nonzero, 13.4s
+  [            ES-MeanRev] 1348 days, 518 nonzero, 5.5s
+  [     ES-OvernightDrift] 1348 days, 879 nonzero, 13.0s
+  [                NQ-ORB] 1250 days, 654 nonzero, 5.0s
+  [            NQ-MeanRev] 1250 days, 487 nonzero, 8.8s
+  [     NQ-OvernightDrift] 1250 days, 821 nonzero, 9.9s
+  [                GC-ORB] 1338 days, 655 nonzero, 5.6s
+  [            GC-MeanRev] 1338 days, 556 nonzero, 11.4s
+  [     GC-OvernightDrift] 1338 days, 921 nonzero, 5.9s
+
+TRAIN: 2021-12-31 -> 2023-12-29 (623 d)
+TEST : 2023-12-31 -> 2026-04-24 (725 d)
+
+==============================================================================
+Solo TRAIN pass-rates (gated, 30d, $25K rules) per stream
+==============================================================================
+   ES/ORB              : solo TRAIN pass30 = 44.1%  TRAIN total $=    +2,462  TRAIN stdev=$  +815
+   ES/MeanRev          : solo TRAIN pass30 = 14.5%  TRAIN total $=    +6,678  TRAIN stdev=$  +191
+   ES/OvernightDrift   : solo TRAIN pass30 = 32.7%  TRAIN total $=   -38,225  TRAIN stdev=$  +932
+   NQ/ORB              : solo TRAIN pass30 = 41.8%  TRAIN total $=   +32,710  TRAIN stdev=$+1,260
+   NQ/MeanRev          : solo TRAIN pass30 = 12.5%  TRAIN total $=    +2,795  TRAIN stdev=$  +193
+   NQ/OvernightDrift   : solo TRAIN pass30 = 38.9%  TRAIN total $=   -41,908  TRAIN stdev=$+1,261
+   GC/ORB              : solo TRAIN pass30 = 44.6%  TRAIN total $=   +14,175  TRAIN stdev=$  +457
+   GC/MeanRev          : solo TRAIN pass30 =  5.2%  TRAIN total $=    -3,175  TRAIN stdev=$  +134
+   GC/OvernightDrift   : solo TRAIN pass30 = 48.0%  TRAIN total $=    +1,638  TRAIN stdev=$  +821
+
+Pass-rate-aware weights (normalised):
+   ES/ORB              : 0.156
+   ES/MeanRev          : 0.051
+   ES/OvernightDrift   : 0.116
+   NQ/ORB              : 0.148
+   NQ/MeanRev          : 0.044
+   NQ/OvernightDrift   : 0.138
+   GC/ORB              : 0.158
+   GC/MeanRev          : 0.018
+   GC/OvernightDrift   : 0.170
+
+==============================================================================
+Per-asset ensembles on TEST window
+==============================================================================
+         ES-only ensemble (3-strategy) : days=725  nz= 628  total=$   +27,143  Sharpe=+1.03  WR=47.4%  PF=1.24  MaxDD=$  -11,171
+                                         $50K Combine    pass30=11.9% (83/696)  pass45=23.9% (163/681)
+                                         $25K Combine    pass30=24.0% (167/696)  pass45=27.5% (187/681)
+
+         NQ-only ensemble (3-strategy) : days=725  nz= 628  total=$   +90,312  Sharpe=+1.63  WR=47.9%  PF=1.39  MaxDD=$  -11,130
+                                         $50K Combine    pass30=24.9% (173/696)  pass45=30.4% (207/681)
+                                         $25K Combine    pass30=21.4% (149/696)  pass45=25.8% (176/681)
+
+         GC-only ensemble (3-strategy) : days=725  nz= 657  total=$   +62,606  Sharpe=+0.96  WR=48.4%  PF=1.27  MaxDD=$  -30,340
+                                         $50K Combine    pass30=18.7% (130/696)  pass45=21.1% (144/681)
+                                         $25K Combine    pass30=17.5% (122/696)  pass45=18.2% (124/681)
+
+==============================================================================
+HEADLINE: 9-stream multi-asset ensemble on TEST
+==============================================================================
+        multi-asset pass-rate-weighted : days=725  nz= 708  total=$   +60,279  Sharpe=+1.66  WR=54.3%  PF=1.42  MaxDD=$  -12,840
+                                         $50K Combine    pass30=30.6% (213/696)  pass45=44.2% (301/681)
+                                         $25K Combine    pass30=36.2% (252/696)  pass45=45.2% (308/681)
+
+            multi-asset EQUAL-weighted : days=725  nz= 708  total=$   +44,332  Sharpe=+1.64  WR=54.9%  PF=1.41  MaxDD=$   -8,616
+                                         $50K Combine    pass30=21.3% (148/696)  pass45=35.5% (242/681)
+                                         $25K Combine    pass30=33.5% (233/696)  pass45=45.8% (312/681)
+
+==============================================================================
+Drop-asset sensitivity (post-hoc, NOT a recommendation)
+==============================================================================
+                         drop asset ES : days=725  nz= 706  total=$   +76,117  Sharpe=+1.63  WR=55.2%  PF=1.42  MaxDD=$  -14,458
+                                         $50K Combine    pass30=31.2% (217/696)  pass45=38.6% (263/681)
+                                         $25K Combine    pass30=31.9% (222/696)  pass45=37.2% (253/681)
+                         drop asset NQ : days=725  nz= 698  total=$   +45,490  Sharpe=+1.22  WR=52.7%  PF=1.33  MaxDD=$  -18,659
+                                         $50K Combine    pass30=17.1% (119/696)  pass45=29.2% (199/681)
+                                         $25K Combine    pass30=27.4% (191/696)  pass45=33.5% (228/681)
+                         drop asset GC : days=725  nz= 659  total=$   +59,045  Sharpe=+1.54  WR=50.1%  PF=1.37  MaxDD=$   -9,072
+                                         $50K Combine    pass30=23.6% (164/696)  pass45=31.0% (211/681)
+                                         $25K Combine    pass30=23.9% (166/696)  pass45=26.9% (183/681)
+
+==============================================================================
+Deflated Sharpe
+==============================================================================
+  candidate winner: multi-asset pass-rate
+    raw Sharpe (annual): 1.659
+    expected-max under null: 1.492
+    DSR: 0.6103
+    trials this pass: 14
+    -> NOT statistically distinguishable from selection bias
+
+==============================================================================
+Cross-stream correlation on TEST (diversification check)
+==============================================================================
+                           ES/ORB  ES/MeanRe  ES/Overni     NQ/ORB  NQ/MeanRe  NQ/Overni     GC/ORB  GC/MeanRe  GC/Overni
+                ES/ORB      +1.00      -0.06      -0.13      +0.54      -0.06      -0.11      +0.14      -0.05      -0.01
+            ES/MeanRev      -0.06      +1.00      -0.01      -0.04      +0.13      +0.01      +0.04      -0.04      -0.05
+     ES/OvernightDrift      -0.13      -0.01      +1.00      -0.04      -0.02      +0.86      -0.11      +0.06      +0.15
+                NQ/ORB      +0.54      -0.04      -0.04      +1.00      -0.06      -0.02      +0.18      +0.05      +0.05
+            NQ/MeanRev      -0.06      +0.13      -0.02      -0.06      +1.00      -0.01      -0.23      +0.04      -0.03
+     NQ/OvernightDrift      -0.11      +0.01      +0.86      -0.02      -0.01      +1.00      -0.06      +0.02      +0.16
+                GC/ORB      +0.14      +0.04      -0.11      +0.18      -0.23      -0.06      +1.00      -0.11      -0.02
+            GC/MeanRev      -0.05      -0.04      +0.06      +0.05      +0.04      +0.02      -0.11      +1.00      +0.02
+     GC/OvernightDrift      -0.01      -0.05      +0.15      +0.05      -0.03      +0.16      -0.02      +0.02      +1.00

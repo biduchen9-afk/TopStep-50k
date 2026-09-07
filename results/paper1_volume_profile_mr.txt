@@ -1,0 +1,37 @@
+Loading NQ 1-minute bars...
+  1,406,058 bars in 17.1s
+  range: 2022-04-07 17:01:00+00:00 -> 2026-04-10 21:00:00+00:00
+
+Running Volume-Profile Mean-Reversion (paper params)...
+  backtest done in 20.4s
+  total fill events: 36356
+
+======================================================================
+PAPER 1 REPLICATION: Volume-Profile Mean-Reversion on NQ
+======================================================================
+Metric                          Paper claim       Our replication
+----------------------------------------------------------------------
+Period                   2022-04-07 -> 2026-04-10
+Trades                                7,813                18,178
+Win rate                              66.8%                 33.9%
+Avg win (pts)                         +38.3                 22.03
+Avg loss (pts)                        -16.8                -14.19
+Profit factor                          4.59                  0.79
+Net PnL (pts)                      +156,232               -35,081
+Net PnL ($, 1 contract)         +$3,124,640              -701,625
+Max DD (pts)                          ~-311               -35,196
+Trading days w/ PnL                                         1,038
+
+Year-by-year (our replication):
+  Year        Trades       PnL (pts)    Mean/trade
+  2022         3,197          -6,482         -2.03
+  2023         4,874          -8,926         -1.83
+  2024         4,655          -8,629         -1.85
+  2025         4,342          -9,503         -2.19
+  2026         1,110          -1,541         -1.39
+
+Annualised Sharpe (daily, $)                     -4.58
+Mean daily $                                      -676
+Stdev daily $                                    2,343
+Best day $                                       9,105
+Worst day $                                    -14,125

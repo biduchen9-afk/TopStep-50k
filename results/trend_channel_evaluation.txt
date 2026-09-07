@@ -1,0 +1,106 @@
+========================================================================
+STRATEGY #9: TREND CHANNEL BREAKOUT — PROMOTION CHECKLIST
+Pre-committed: Donchian 10-day channel, 2×ATR stop, 5-day exit
+========================================================================
+
+Loading ES bars...
+  1,522,612 bars in 18.8s
+Running ES TrendChannel...
+  done in 7.4s  (1348 days)
+
+Loading NQ bars...
+  1,406,058 bars in 17.5s
+Running NQ TrendChannel...
+  done in 7.5s  (1250 days)
+
+Loading GC bars...
+  1,510,120 bars in 18.6s
+Running GC TrendChannel...
+  done in 9.4s  (1338 days)
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)
+
+────────────────────────────────────────────────────────────────────────
+QUICK STATS (IS only) — per asset
+────────────────────────────────────────────────────────────────────────
+  ES TrendChannel IS                 : n_days=943 nz= 321 total=$  +23,180 Sharpe=+0.41 PF=1.13 MaxDD=$ -19,775
+                                       pass30=3.6% (33/914)  pass45=3.9% (35/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST: ES
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: TrendChannel-ES
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=85.782     thr=20.000  
+  [✓] EV per day ($)                 obs=24.581     thr=0.000  
+  [✓] profit_factor                  obs=1.127      thr=1.000  
+  [✗] t_stat (IS)                    obs=0.791      thr=1.500  
+  [✓] sharpe_annual (IS)             obs=0.409      thr=0.300  
+  [✗] max_loss / avg_win             obs=4.247      thr=3.000  (lower is better)
+  NQ TrendChannel IS                 : n_days=943 nz= 293 total=$  +47,490 Sharpe=+0.51 PF=1.16 MaxDD=$ -29,970
+                                       pass30=0.4% (4/914)  pass45=0.4% (4/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST: NQ
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: TrendChannel-NQ
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=78.299     thr=20.000  
+  [✓] EV per day ($)                 obs=50.361     thr=0.000  
+  [✓] profit_factor                  obs=1.164      thr=1.000  
+  [✗] t_stat (IS)                    obs=0.992      thr=1.500  
+  [✓] sharpe_annual (IS)             obs=0.513      thr=0.300  
+  [✗] max_loss / avg_win             obs=4.213      thr=3.000  (lower is better)
+  GC TrendChannel IS                 : n_days=943 nz= 281 total=$   +9,500 Sharpe=+0.25 PF=1.08 MaxDD=$ -13,985
+                                       pass30=6.6% (60/914)  pass45=7.7% (69/899)
+
+────────────────────────────────────────────────────────────────────────
+GATE-BY-GATE CHECKLIST: GC
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+STRATEGY CHECKLIST: TrendChannel-GC
+IS=943d  OOS=405d  outcome=>>> RETIRED <<<
+========================================================================
+
+Gate 2 IS basic health:
+  [✓] trades_per_year                obs=75.092     thr=20.000  
+  [✓] EV per day ($)                 obs=10.074     thr=0.000  
+  [✓] profit_factor                  obs=1.081      thr=1.000  
+  [✗] t_stat (IS)                    obs=0.476      thr=1.500  
+  [✗] sharpe_annual (IS)             obs=0.246      thr=0.300  
+  [✗] max_loss / avg_win             obs=5.039      thr=3.000  (lower is better)
+
+────────────────────────────────────────────────────────────────────────
+OOS STANDALONE STATS (reference)
+────────────────────────────────────────────────────────────────────────
+  ES TrendChannel OOS                : n_days=405 nz= 131 total=$  -20,812 Sharpe=-0.54 PF=0.83 MaxDD=$ -42,018
+                                       pass30=14.1% (53/376)  pass45=14.7% (53/361)
+  NQ TrendChannel OOS                : n_days=405 nz= 127 total=$  -84,805 Sharpe=-1.45 PF=0.63 MaxDD=$-104,760
+                                       pass30=0.3% (1/376)  pass45=0.3% (1/361)
+  GC TrendChannel OOS                : n_days=405 nz= 131 total=$  -33,970 Sharpe=-0.58 PF=0.82 MaxDD=$ -46,925
+                                       pass30=0.0% (0/376)  pass45=0.0% (0/361)
+
+────────────────────────────────────────────────────────────────────────
+DSR TRIAL ACCOUNTING
+────────────────────────────────────────────────────────────────────────
+  Trials added this evaluation: 3 (ES + NQ + GC, single variant each)
+  Cumulative project trials: ~35 + 3 = 38
+
+========================================================================
+VERDICT
+========================================================================
+  TrendChannel-ES : RETIRED
+  TrendChannel-NQ : RETIRED
+  TrendChannel-GC : RETIRED

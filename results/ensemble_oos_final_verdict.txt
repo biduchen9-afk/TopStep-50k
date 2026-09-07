@@ -1,0 +1,97 @@
+========================================================================
+ONE-TOUCH OOS EVALUATION: 9-STREAM REGIME-GATED ENSEMBLE
+Gate 4 — OOS validity (final verdict, run ONCE only)
+========================================================================
+
+IS reference: Sharpe=0.73  pass30=15.6%  n=943d
+Gate 4 thresholds:
+  HARD: OOS EV > 0
+  HARD: OOS Sharpe ≥ 0.365  (0.5 × IS Sharpe 0.73)
+  adv.: OOS pass30 ≥ 7.8%  (0.5 × IS pass30 15.6%)
+  adv.: OOS MLL rate ≤ 1.5× IS MLL rate
+
+Loading ES bars...
+  1,522,612 bars in 18.9s
+
+Loading NQ bars...
+  1,406,058 bars in 18.0s
+
+Loading GC bars...
+  1,510,120 bars in 19.3s
+
+Running 9 streams...
+  ES: 3 streams in 31.2s
+  NQ: 3 streams in 26.7s
+  GC: 3 streams in 26.0s
+
+IS : 2021-12-31 -> 2025-01-07 (943 d)
+OOS: 2025-01-08 -> 2026-04-24 (405 d)  ← EVALUATING NOW
+
+────────────────────────────────────────────────────────────────────────
+IS PASS-RATE-AWARE WEIGHTS (IS only, used for OOS combination)
+────────────────────────────────────────────────────────────────────────
+  ES/ORB           : IS-pass30=25.7%  weight=0.289
+  GC/OD            : IS-pass30=18.7%  weight=0.210
+  GC/ORB           : IS-pass30=14.8%  weight=0.166
+  ES/OD            : IS-pass30=13.1%  weight=0.147
+  NQ/ORB           : IS-pass30=10.5%  weight=0.118
+  NQ/OD            : IS-pass30=4.6%  weight=0.052
+  ES/MeanRev       : IS-pass30=0.9%  weight=0.010
+  NQ/MeanRev       : IS-pass30=0.8%  weight=0.009
+  GC/MeanRev       : IS-pass30=0.0%  weight=0.000
+
+────────────────────────────────────────────────────────────────────────
+IS SUMMARY (reference, not re-derived from this run)
+────────────────────────────────────────────────────────────────────────
+  IS total=$   +19,831  Sharpe=+0.73  EV=$ +21.03/d  PF=1.14  MaxDD=$ -12,382
+  IS pass30=15.6% (143/914)  pass45=29.8% (268/899)
+
+────────────────────────────────────────────────────────────────────────
+OOS RESULTS
+────────────────────────────────────────────────────────────────────────
+  OOS total=$   +36,904  Sharpe=+1.44  EV=$ +91.12/d  PF=1.36  MaxDD=$ -16,308
+  OOS pass30=37.2% (140/376)  pass45=48.5% (175/361)
+
+  Per-stream OOS breakdown:
+    ES/ORB           : total=$   +5,650  Sharpe=+0.21  OOS-pass30=16.2%  w=0.289
+    GC/OD            : total=$ +104,912  Sharpe=+1.21  OOS-pass30=3.7%  w=0.210
+    GC/ORB           : total=$   -9,440  Sharpe=-0.21  OOS-pass30=6.9%  w=0.166
+    ES/OD            : total=$  +27,358  Sharpe=+0.77  OOS-pass30=25.5%  w=0.147
+    NQ/ORB           : total=$  +77,375  Sharpe=+1.53  OOS-pass30=6.9%  w=0.118
+    NQ/OD            : total=$  +31,815  Sharpe=+0.48  OOS-pass30=4.3%  w=0.052
+    ES/MeanRev       : total=$     +220  Sharpe=+0.05  OOS-pass30=0.0%  w=0.010
+    NQ/MeanRev       : total=$     -305  Sharpe=-0.05  OOS-pass30=0.0%  w=0.009
+    GC/MeanRev       : total=$   -3,015  Sharpe=-0.43  OOS-pass30=0.0%  w=0.000
+
+Computing MLL breach rates...
+  IS MLL breach rate  = 36.2%
+  OOS MLL breach rate = 31.6%  (0.1s)
+
+========================================================================
+GATE 4 — OOS VALIDITY
+========================================================================
+  [✓] (HARD) OOS EV > 0 ($)                      obs=91.1219    thr=0.0000  
+  [✓] (HARD) OOS Sharpe ≥ 0.5×IS                 obs=1.9792     thr=0.5000  OOS=1.445  IS=0.730
+  [✓] (adv.) OOS pass30 ≥ 0.5×IS pass30          obs=2.3868     thr=0.5000  OOS=37.2%  IS=15.6%
+  [✓] (adv.) OOS MLL rate ≤ 1.5×IS               obs=True       thr=True  IS=36.2%  OOS=31.6%
+
+────────────────────────────────────────────────────────────────────────
+  OUTCOME: >>> OOS_PROMOTED <<<
+  ENSEMBLE PASSES Gate 4 → OOS_PROMOTED
+  Advisory gates passed: 2/2
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+FULL CAMPAIGN SUMMARY
+========================================================================
+  IS  period: 2021-12-31  →  2025-01-07  (943 d)
+  OOS period: 2025-01-08 →  2026-04-24 (405 d)
+  IS  pass30=15.6%  pass45=29.8%  Sharpe=+0.73
+  OOS pass30=37.2%  pass45=48.5%  Sharpe=+1.44
+  OOS/IS Sharpe ratio = 1.98  (≥0.50 required)
+  OOS/IS pass30 ratio = 2.39  (≥0.50 advisory)
+  IS MLL rate=36.2%  OOS MLL rate=31.6%
+
+  FINAL VERDICT: OOS_PROMOTED
+  DSR trial count: ~40 trials used in Phase A + Phase B search
+========================================================================
