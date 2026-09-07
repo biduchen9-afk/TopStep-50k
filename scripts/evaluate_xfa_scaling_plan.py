@@ -64,6 +64,14 @@ CONSERVATIVE_XFA = replace(XFA, scaling_plan=(
     ScalingStep(Decimal("500"), 2),
     ScalingStep(Decimal("1000"), 3),
 ))
+# Much lower still -- pinned close to the $150 winning-day threshold
+# itself, to check whether ANY threshold this edge could realistically
+# reach within a year makes the scaling mechanism actually engage.
+VERY_LOW_XFA = replace(XFA, scaling_plan=(
+    ScalingStep(Decimal("0"), 1),
+    ScalingStep(Decimal("150"), 2),
+    ScalingStep(Decimal("300"), 3),
+))
 
 
 def main():
@@ -106,6 +114,7 @@ def main():
         ("flat 2 micro",                    constant_scale(0.2)),
         ("Topstep plan (2/3/5 @ $0/1.5k/2k)", scaling_plan_micros(XFA, BASE_UNIT_K)),
         ("conservative plan (1/2/3 @ $0/500/1k)", scaling_plan_micros(CONSERVATIVE_XFA, BASE_UNIT_K)),
+        ("very-low plan (1/2/3 @ $0/150/300)", scaling_plan_micros(VERY_LOW_XFA, BASE_UNIT_K)),
     ]
 
     print(f"\n{'='*96}\nRESULTS  [{N_SIMS} sims each]\n{'='*96}")
