@@ -20,6 +20,7 @@ from real_engine import MICRO_PER_MINI, Stream, costs_from_config
 DEV_END = np.datetime64("2022-12-31")
 _CTX: Dict[str, dict] = {}
 _EX: Dict[str, dict] = {}
+_XS: Dict[str, dict] = {}
 
 
 @dataclass
@@ -38,7 +39,12 @@ def make_sleeve(market: str, sleeve: str, params: dict, gate: Optional[dict] = N
     if market not in _CTX:
         _CTX[market] = ac.context(sess)
     ctx = _CTX[market]
-    if sleeve.startswith("vv_"):
+    if sleeve.startswith("xs_"):
+        import xs_sleeves as xsm
+        if market not in _XS:
+            _XS[market] = xsm.xs_context(sess)
+        d = xsm.run_xs(sess, sleeve, costs or costs_from_config(load_config()), ctx, _XS[market], **params, **(gate or {}))
+    elif sleeve.startswith("vv_"):
         import vwap_variants as vv
         if market not in _EX:
             _EX[market] = vv.extra_context(sess)

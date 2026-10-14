@@ -32,6 +32,10 @@ from pricing_config import load_config
 PATH = "no_activation_dll"
 FINAL = dict(R=9600.0, a1=1.2, a2=0.8, t1=2000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
 # Speed presets (pre-registration 5): faster first payout costs value and recent-start robustness, see FINDINGS.md section 15. Use farm_from(stream, start, **PRESETS["balanced"]).
+# Lists for the five funded slots (pre-registration 6): sizing preset + components. ONE open Combine at a time overall; the next Combine goes to the list with the most empty slots.
+TIERS = {"big risk": dict(slots=1, preset="fast", components=["nq_gap30"]),
+         "moderate": dict(slots=2, preset="balanced", components=["nq_noise", "nq_vwap", "nq_gap30"]),
+         "conservative": dict(slots=2, preset="safe", components=["nq_noise", "nq_vwap", "nq_gap30"])}
 PRESETS = {"safe": dict(a1=0.4, t1=4000.0),                 # slowest, most robust
            "balanced": dict(a1=1.2, t1=2000.0),             # THE DEFAULT (set by the user): ~4x faster per account, ~63% of funded accounts reach a payout, 3x the fees of safe
            "fast": dict(a1=2.4, t1=6000.0)}                 # fastest per account, only a third of funded accounts are paid, 4x the fees, highest variance

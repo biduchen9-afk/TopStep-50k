@@ -28,3 +28,8 @@ Combine risk R = 9,600, post-payout size 0.8 for every list. Each list has its o
 Comparisons (same Topstep rules and fees, no_activation_dll): (i) all five slots balanced on the NQ basket with one-at-a-time buying (the new default), (ii) the three lists together.
 Metrics: dev 3-year farms (start years 2011..2020): mean, worst, number of green start years, fees, correlation of the lists' monthly net; months with at least one payout; days from first Combine to first payout; and seen starts 2021, 2023, 2025 and the full history (descriptive).
 Classification of what the current NQ strategy is: by outcome at each sizing preset - conservative if >= 75% of funded accounts get paid, moderate if 50-75%, big risk if < 50% - plus the worst 3-year farm.
+
+## Amendment (written after a first run that gave each list its own Combine queue, and BEFORE the global-queue run)
+The user's buying rule is one open Combine at a time overall. The first run let each list buy its own Combine (up to three open at once), which is a different rule, so it is reported only as a labelled extra row.
+The main version uses ONE global queue: a new Combine may be bought only when no Combine is open anywhere; it is assigned to the list with the most empty funded slots (ties in the order: moderate, conservative, big risk).
+Everything else in Part B is unchanged.

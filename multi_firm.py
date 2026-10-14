@@ -40,6 +40,7 @@ class Policy:
     k0: int = 1                     # lead-firm evaluations open at once before the first payout
     reserve_cycles: float = 3.0     # None -> no cash gating at all (unconstrained, used to test against run_farm)
     sequential_unlock: bool = True
+    global_one_eval: bool = False   # at most ONE open evaluation across ALL firms/lists; the next purchase goes to the list with the most empty funded slots (ties: list order)
     stagger_gap: int = 0            # minimum sessions between two evaluation purchases of the same firm (decorrelates attempts that share one market path)
     unlock_cash: float = 0.0        # a non-lead firm may buy only when cash >= unlock_cash + price + reserve ('only once our payouts are enough')
     single_pipeline: bool = True   # before the first payout the lead firm runs ONE account at a time (Combine -> pass -> funded), as in 'out of pocket only for the first account'
@@ -127,9 +128,19 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                     still.append((si, since, t_start))
             f["waiting"] = still
         # ---- purchases
+        pick = None
+        if pol.global_one_eval:
+            if any(g["evals"] for g in F):
+                pick = -1
+            else:
+                vac = [(g["fp"].spec.max_funded - (len(g["funded"]) + len(g["waiting"])), -gi) for gi, g in enumerate(F)]
+                best = max(vac)
+                pick = -best[1] if best[0] > 0 else -1
         burn = sum(len(g["evals"]) * g["fp"].spec.eval_fee for g in F if g["fp"].spec.eval_monthly)
         for fi, f in enumerate(F):
             fp, spec = f["fp"], f["fp"].spec
+            if pick is not None and fi != pick:
+                continue
             if gated:
                 if fi > 0:
                     if not first_payout_received:

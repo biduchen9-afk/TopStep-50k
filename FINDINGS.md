@@ -178,3 +178,26 @@ Topstep's 1-3 business-day approval is not included.
 - **What did not help:** buying several Combines at once (k0 = 2-8) or spacing them 5-21 sessions apart did not shorten the wait (all accounts share one market path); changing the lead firm was not faster (dev median days to first payout: Topstep 342, FTMO Growth 430, FundedNext 552, Take Profit Trader 576); the Topstep consistency path was slower.
 - **Under the single-account out-of-pocket rule** the faster presets cost more up front (out-of-pocket median $1.0k safe, $1.8k balanced, $2.4k fast; worst case $2.0k / $6.2k / $8.0k).
 - **Conclusion:** the wait can be cut about 4x per account (about 60 days) and about 2x for the farm, but only by accepting more fees, less reliable payouts and worse recent starts. There is no setting that is fast, cheap and robust at once with a Sharpe near 1 edge. The default stays "safe"; `PRESETS` in `final_strategy.py` hold the other two.
+
+## 16. ES / GC components, one-at-a-time buying, and the big / moderate / conservative lists (`docs/PREREGISTRATION_6.md`, committed before running)
+Balanced is now the default preset (`final_strategy.py`). Code: `xs_sleeves.py`, `run_es_gc_search.py`, `run_tiers.py`, `multi_firm.py` (`Policy.global_one_eval`).
+
+**ES and GC: nothing found.** 60 pre-declared trials (ports of the NQ ideas plus prior-day-range breakout, overnight-range breakout, COMEX-open opening-range breakout, gap fade), realistic costs, selection on 2010-2022. **No trial reached the acceptance bar** (dev Sharpe >= 0.5, >= 60% positive dev years, hold-out Sharpe > 0): the best dev Sharpe was 0.39 (ES gap-filtered VWAP; 0.17 on 2023+), the median trial was -0.61, and about 0.65 is what the best of 60 pure-noise trials would show. So the pool for the lists stays NQ-only; ES/GC give no usable component on this data. Full list: `results/es_gc_trials.csv`.
+
+**One Combine at a time overall (your rule), simple results.** Fees fall, but so does everything else, because a funded slot fills slowly (about 5 Combines per pass at 20% pass rate, one after another). Balanced on all five slots, buying one at a time: full-history net +$41k (payouts $107k, fees $65k) vs +$130k with the earlier multi-Combine rule (fees $111k). So the "no extra fees" rule saves about $46k of fees and gives up about $88k of net.
+
+**The three lists** (1 big risk on NQ gap-VWAP at the "fast" sizing, 2 moderate on the NQ basket at "balanced", 2 conservative on the NQ basket at "safe"; one Combine at a time overall, the next one goes to the list with the most empty slots):
+| Case | dev mean 3-yr farm | worst | green | first payout (median days) | seen starts 2021 / 2023 / 2025-01 / 2025-07 | full-history net (fees) | months with a payout | most out of pocket |
+|---|---|---|---|---|---|---|---|---|
+| 5 slots safe | $5.8k | -$5.2k | 5/10 | 364 | $60k / $23k / $2k / -$3k | $77k ($42k) | 24% | $3.0k |
+| 5 slots balanced (default) | $4.4k | -$6.9k | 7/10 | 218 | $29k / $11k / $2k / -$4k | $41k ($65k) | 26% | $6.7k |
+| 5 slots fast | $9.6k | -$8.5k | 7/10 | 371 | $47k / $11k / $7k / -$4k | $61k ($66k) | 20% | $5.5k |
+| **3 lists 1 / 2 / 2** | $3.3k | -$11.7k | 6/10 | 218 | $112k / $13k / $5k / -$4k | **$111k ($61k)** | **32%** | **$2.7k** |
+| 3 lists, no big | $3.5k | -$9.9k | 5/10 | 218 | $33k / $15k / $2k / -$4k | $47k ($62k) | 26% | $10.7k |
+| (exploratory) conservative adds ES VWAP | $2.1k | -$11.9k | 6/10 | 218 | $101k / $4k / $2k / -$4k | $33k ($58k) | 24% | $1.7k |
+| (extra rule) each list buys its own Combine, 3 open at once | $21.8k | -$15.3k | 6/10 | 218 | $73k / $12k / $5k / -$11k | $154k ($82k) | 40% | $8.0k |
+- Monthly net correlation between the lists: big vs moderate 0.10, big vs conservative 0.13, moderate vs conservative 0.31 (low, because of different sizing, different components for the big list and different timing). Full-history net by list: big $62k, moderate $34k, conservative $16k.
+- On the full history and the seen starts the 3 lists beat 5 balanced slots (+$111k vs +$41k, payouts in 32% of months vs 26%, less out of pocket), but on the pre-registered dev metric (3-year farms from a cold start) they do not (dev mean $3.3k vs $4.4k, worst -$11.7k vs -$6.9k). A one-at-a-time farm needs 2-3 years just to fill its slots, so the 3-year dev farms understate it; the full-history advantage is partly the seen years. Treat the improvement as plausible, not proven. The gain mostly comes from the big list at "fast" sizing and from mixing sizes, not from new markets.
+- Allowing three Combines open at once (one per list) gives +$154k, but that is a different rule from the one you asked for.
+
+**What the current NQ strategy is, by the pre-registered rule** (conservative if >= 75% of funded accounts are paid, moderate if 50-75%, big risk if < 50%): at "safe" sizing 82% -> **conservative**, at "balanced" (the default) 63% -> **moderate**, at "fast" 34% -> **big risk**. The strategy itself (NQ only, one trend/momentum family, positively skewed, regime dependent) is a single risk factor: even the conservative list is only conservative about how fast the account is pushed, not about what it trades.
