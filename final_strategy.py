@@ -11,9 +11,9 @@ SIGNALS - three NQ sleeves, all long/short, all flat by 15:55 ET, signals read a
             30-minute move (09:30-10:00) agree on; signals start at 10:00 ET; otherwise no trade that day.
 PORTFOLIO - 1-micro baskets with long-only mean-variance weights fitted on 2010-2022 only (shrunk 50% to equal weights); static (no switching).
 SIZING - Combine: micros = round(R / ATR$ per micro) with R = 9,600 ($ per ATR unit; 12,800 scored slightly higher but sits next to a cliff - R >= 16,000 collapses); funded: micros = a * (balance - MLL floor) / ATR$ with a1 = 0.4 before the first
-         payout and a2 = 1.6 afterwards (0.4 pays more often at similar dev net; see the monthly-payout study), capped by the XFA scaling ladder.
+         payout and a2 = 0.8 afterwards (pre-registration 3 winner; 1.6 was the earlier choice), capped by the XFA scaling ladder.
 FARM   - up to 5 funded accounts; new Combines only when expected funded accounts < 5; "hyst" refill (once full, open nothing until 3 slots have emptied);
-         first payout at balance >= $3,000 with 5 winning days of >= $150 (Standard path), then every eligible payout at 50% of balance (cap $5,000).
+         first payout at balance >= $4,000 (pre-registration 3; a fast alternative is t1=1,500, a1=0.8, a2=0.8) with 5 winning days of >= $150 (Standard path), then every eligible payout at 50% of balance (cap $5,000).
 FEES   - no_activation_dll path: $199 per 21 sessions per Combine, no activation fee, -$3,000 daily loss limit.
 
 Run `python final_strategy.py` (needs the Databento NQ/ES/GC 1-minute data in /home/user/data_raw; see README) to rebuild the stream and re-run the farm.
@@ -30,7 +30,7 @@ from real_engine import FundedPlan, Stream, costs_from_config, rules_from_config
 from pricing_config import load_config
 
 PATH = "no_activation_dll"
-FINAL = dict(R=9600.0, a1=0.4, a2=1.6, t1=3000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
+FINAL = dict(R=9600.0, a1=0.4, a2=0.8, t1=4000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
 
 
 def build_stream() -> Stream:

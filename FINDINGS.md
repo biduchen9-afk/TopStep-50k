@@ -101,3 +101,23 @@ Scripts: `combine_policy.py` (state-dependent Combine sizing; neutral policy che
 - Consistency path (3 days, 40% rule) was slower and less reliable (47% of funded accounts paid vs 71% on the standard path).
 
 **Part B - turn-of-month long sleeve (NQ, ES; 770 active days each).** Rejected under the pre-registered rule: dev Sharpe on TOM days -0.8 (NQ) / -0.9 (ES), -0.35 / -0.38 over all days; correlation with the basket about -0.03 / -0.05 (a diversifier, but without an edge on dev). It looked strong on 2023+ (Sharpe about 2.0 on TOM days), but adopting it because of that would be selecting on the hold-out, so it is not used.
+
+## 13. Pre-registration 3: first-payout balance, scaling, "green in all years" (`docs/PREREGISTRATION_3.md`, `run_payout_scaling.py`, `diag/`)
+**What "Combine to payout" time means here:** days from buying the Combine to the first payout becoming eligible = days to pass the Combine (median about 22 sessions, roughly 30 calendar days) + days from activation to the first payout. Topstep's own 1-3 business-day approval and transfer time is not included.
+
+**Does waiting make the payout bigger and safer?** Half true. Averaged over the grid (dev farms 2011-2020 starts):
+| first-payout balance | first payout | paid per funded account | accounts with a 2nd payout | P(funded account ever paid) | median days start to payout |
+|---|---|---|---|---|---|
+| $1,500 | $1.0k | $2.3k | 56% | 90% | 134 |
+| $3,000 | $1.6k | $4.0k | 80% | 84% | 210 |
+| $4,000 | $2.0k | $4.4k | 80% | 81% | 251 |
+| $6,000 | $2.9k | $5.5k | 91% | 73% | 367 |
+| $8,000 | $3.9k | $6.5k | 89% | 72% | 490 |
+Waiting gives a bigger first payout, a bigger cushion and more follow-up payouts, but fewer funded accounts ever get a first payout (more time to die first). Net rises up to about $3-4k then flattens while the worst years get worse.
+
+**Pre-registered selection (84 configs, robust "green" objective, dev only):** first-payout balance $4,000, pre-payout size 0.4, post-payout size 0.8 (the rule was: highest 25th percentile of net across ten 3-year dev farms, subject to mean >= $10k and >= 6 of 10 green). Dev: mean +$20.1k, 7 of 10 start years green, worst -$7.0k; it beat the old baseline (3000/0.4/1.6: mean +$13.0k, p25 -$3.7k). Red start years: 2013, 2014, 2015 (the low-volatility years). **No configuration is green in all years**; what holds in every year is a bounded downside (worst 3-year farm about -$7k) against +$30-70k in good regimes.
+- Full history: net +$134k (payouts $173k, fees $39k). Seen starts: 2021 +$100k, 2023 +$41k, 2024 +$28k, 2025-01 +$12k, 2025-07 +$5.7k.
+- **Fast alternative** (balance $1,500, size 0.8/0.8): median 88 days on dev (under the 90 day goal), mean +$15.3k, 7 of 10 green, but only 75% of funded accounts get paid, paid per funded account $2.2k, and seen starts are weaker (2023 +$6k, 2025-01 +$0.4k, 2025-07 -$6.4k). Its placebos are less clean (reversed trades roughly break even on dev), so it depends less on the edge and more on volatility.
+- **Placebos behave** (`diag/placebo_payout_configs.py`): with the strategy's dev-fitted mean edge removed, the winner loses (dev mean -$7.6k, 2 of 10 green); with every trade flipped it also loses (-$6.8k, 1 of 10 green; 2021/2023/2025 starts -$45k/-$26k/-$11k). So the profit is the edge, not an artefact of the rules. The coin-flip control is not a fair null (it is far more volatile than the strategy and makes money with the winner config from seen starts); the edge-removed version is the one to quote. A "shift P&L by one session" check turned out to be uninformative (a near-iid daily series is unchanged by shifting) and is not used.
+- **Independent leakage audit** (separate reviewer, new code only): gap30 filter, noise-area and VWAP signal timing, dev-only weights (rebuilt from data truncated at 2022-12-30: identical), farm bookkeeping, and the Combine policy (identical to the engine, 0 mismatches over about 1,300 starts) were all CLEAN. The reviewer re-derived the farm net with its own loop on the reference engine and matched exactly: 2015-01-02 start -$6,169 (zero payouts, $6,169 of fees), 2023-01-03 start +$41,068.
+- Caveats the reviewer could not close: the sleeve parameters (k=0.3, s=0.2, the gap30 filter) cannot be proven to have been chosen on dev data only, the dev-fitted weights collapse to a corner (noise 0.5, vwap 0.5, gap30 2.0), and the roll-day skip uses hindsight (not exploitable). 2023+ is still not a clean hold-out, and the 2013-15 and 2025-26 results show the regime risk.
