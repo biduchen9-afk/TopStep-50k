@@ -21,6 +21,7 @@ DEV_END = np.datetime64("2022-12-31")
 _CTX: Dict[str, dict] = {}
 _EX: Dict[str, dict] = {}
 _XS: Dict[str, dict] = {}
+_EXT: Dict[str, tuple] = {}
 
 
 @dataclass
@@ -39,7 +40,13 @@ def make_sleeve(market: str, sleeve: str, params: dict, gate: Optional[dict] = N
     if market not in _CTX:
         _CTX[market] = ac.context(sess)
     ctx = _CTX[market]
-    if sleeve.startswith("lt_"):
+    if sleeve.startswith("ex_"):
+        import sleeves_ext as sx, daily_features as dfm
+        if market not in _EXT:
+            _EXT[market] = (dfm.build_daily(sess, ctx["ranges"]), sx.prepass(sess), sx.hourly_state(sess))
+        Fd, PP, HS = _EXT[market]
+        d = sx.run_ext(sess, sleeve[3:], costs or costs_from_config(load_config()), ctx, Fd, PP, HS, **params)
+    elif sleeve.startswith("lt_"):
         import lit_sleeves as lit
         d = lit.run_lit(sess, sleeve, costs or costs_from_config(load_config()), ctx, **params)
     elif sleeve.startswith("xs_"):

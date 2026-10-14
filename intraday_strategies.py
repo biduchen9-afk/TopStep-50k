@@ -102,7 +102,7 @@ def _exit_long_short(direction, price, stop_dist, e, o, h, l, c, vw, end):
     return c[end - 1], end - 1
 
 
-def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max_trades=3, allow=0):
+def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max_trades=3, allow=0, blackout=None):
     """Momentum: trade in the direction of price leaving an 18:00-anchored VWAP by k*ATR.
 
     Long when close > VWAP + k*ATR, short when close < VWAP - k*ATR (fresh crossings after the first
@@ -122,6 +122,10 @@ def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max
         dn = np.zeros_like(dn)
     elif allow < 0:
         up = np.zeros_like(up)
+    for b0, b1 in (blackout or ()):
+        bm = (smin >= b0) & (smin < b1)
+        up = up & ~bm
+        dn = dn & ~bm
     up_edge = up & ~np.r_[False, up[:-1]]
     dn_edge = dn & ~np.r_[False, dn[:-1]]
     t = int(np.searchsorted(smin, start_min))

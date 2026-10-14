@@ -103,7 +103,7 @@ def intraday_mom_session(o, h, l, c, v, smin, prev_close, atr, cost_pts, thr=0.0
     return net, min(worst - cost_pts, net, 0.0), 1
 
 
-def noise_area_session(o, h, l, c, v, smin, prev_close, sigma, cost_pts, allow=0, max_trades=3):
+def noise_area_session(o, h, l, c, v, smin, prev_close, sigma, cost_pts, allow=0, max_trades=3, blackout=None):
     """Zarattini-Aziz-Barbon style: Noise Area = [min(open, prev_close)*(1-sigma_t), max(open, prev_close)*(1+sigma_t)]
     where sigma_t is the 14-day average |move from the open| at the same time of day. Every 30 minutes: flat and price above
     the upper edge -> long, below the lower edge -> short; exit when price falls back through max(upper, VWAP)
@@ -142,7 +142,7 @@ def noise_area_session(o, h, l, c, v, smin, prev_close, sigma, cost_pts, allow=0
         px = c[idx - 1]
         vwap = vw[idx - 1 - a0] if idx - 1 >= a0 else op
         ub, lb = hi_b * (1 + sg), lo_b * (1 - sg)
-        if pos == 0 and trades < max_trades:
+        if pos == 0 and trades < max_trades and not any(b0 <= t < b1 for b0, b1 in (blackout or ())):
             if px > ub and allow >= 0:
                 pos, entry, e_idx, trades = 1, o[idx], idx, trades + 1
             elif px < lb and allow <= 0:
