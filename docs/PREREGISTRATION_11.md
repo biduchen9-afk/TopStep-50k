@@ -24,3 +24,8 @@ Edge-removed placebo for the chosen cell (or the closest if none qualifies); the
 
 ## Honest limits
 30 cells of a grid on overlapping dev windows; the paid share of a cell is a dev estimate; recent years (2023+) have been seen many times; a lower pre-payout size lengthens the wait for the first payout (section 15) and that is the price to report, not hide.
+
+## Part C - added AFTER Part B was seen (declared here, committed before it is run)
+Part B result in one line: no cell of the 30 qualified (the best cell with account-level paid share >= 80% kept 59% of the current dev mean). The paid share counts only the FIRST payout, and in Part B it rose as the first-payout balance fell at every size (a1 = 1.2: 62% at $2,000, 57% at $3,000, 50% at $4,000), so the obvious lever not in the grid is a smaller first payout: a lower balance trigger and/or a smaller withdrawn share w1 (more cushion left in the account afterwards). Because this extension follows the results of Part B it is a post-hoc idea and is reported as such.
+Grid (18 cells; a2 = 0.8 fixed): a1 in {0.8, 1.0, 1.2} x first-payout balance t1 in {$1,000, $1,500, $2,000} x first-payout share w1 in {0.3, 0.5} (w1 = 0.5 and t1 = $2,000 at a1 = 1.2 is the current setting; later payouts keep 50%). Engine: `FundedPlan.w1` already exists; the 5-winning-days rule and the $125 minimum payout still apply.
+Same metrics and the SAME selection rule as Part B (qualifying = account-level paid share >= 80%, dev mean >= 85% of current, p25 not lower than current minus $1,000, worst farm not > 25% deeper; highest dev mean among qualifying; otherwise the frontier). The Part B and Part C cells together are 48 declared looks; reported as such.
