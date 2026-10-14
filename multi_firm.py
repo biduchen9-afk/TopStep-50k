@@ -40,6 +40,9 @@ class Policy:
     k0: int = 1                     # lead-firm evaluations open at once before the first payout
     reserve_cycles: float = 3.0     # None -> no cash gating at all (unconstrained, used to test against run_farm)
     sequential_unlock: bool = True
+    unlock_cash: float = 0.0        # a non-lead firm may buy only when cash >= unlock_cash + price + reserve ('only once our payouts are enough')
+    single_pipeline: bool = True   # before the first payout the lead firm runs ONE account at a time (Combine -> pass -> funded), as in 'out of pocket only for the first account'
+    maintenance: bool = True        # lead firm keeps `k0` evaluation(s) running whenever cash >= price (no reserve); the reserve only gates EXPANSION
     payout_delay_sessions: int = 2
 
 
@@ -69,6 +72,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
     first_payout_received = False
     min_cash = 0.0
     shortfall_days = 0
+    ruined_t = None
     events: List[tuple] = []
     daily = []
     gated = pol.reserve_cycles is not None
@@ -80,6 +84,8 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
             if amt > 0:
                 first_payout_received = True
         min_cash = min(min_cash, cash)
+        if gated and first_payout_received and ruined_t is None and not (F[0]['evals'] or F[0]['funded'] or F[0]['waiting']) and cash < F[0]['fp'].spec.eval_fee:
+            ruined_t = t
         if cash < 0:
             shortfall_days += 1
         for fi, f in enumerate(F):
@@ -135,6 +141,8 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
             else:
                 cap = spec.max_evals
             occupied = len(f["funded"]) + len(f["waiting"])
+            if gated and fi == 0 and not first_payout_received and pol.single_pipeline and (f["evals"] or f["funded"] or f["waiting"]):
+                continue
             if fp.refill == "hyst":
                 if occupied >= spec.max_funded:
                     f["refill_on"] = False
@@ -152,7 +160,9 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                         if cash < price:                          # out of pocket: top up exactly what is missing
                             oop += price - cash
                             cash = price
-                    elif cash < price + reserve:
+                    elif pol.maintenance and fi == 0 and len(f["evals"]) < pol.k0 and cash >= price:
+                        pass                                         # maintenance slot: self-funded, reserve not required
+                    elif cash < price + reserve + (pol.unlock_cash if fi > 0 else 0.0):
                         break
                 f["counter"] += 1
                 status, tau = run_eval_firm(spec.eval_phases, f["X"][si], f["L"][si], f["ND"][si], t)
@@ -174,7 +184,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                 started += 1
         if log:
             daily.append((t, cash, tuple((len(g["evals"]), len(g["funded"])) for g in F)))
-    out = dict(oop_total=oop, min_cash=min_cash, shortfall_days=shortfall_days, sessions=max(n_end - 5 - i0, 1), end_cash=cash,
+    out = dict(ruined_t=ruined_t, oop_total=oop, min_cash=min_cash, shortfall_days=shortfall_days, sessions=max(n_end - 5 - i0, 1), end_cash=cash,
                fees=sum(f["fees"] for f in F), payouts=sum(f["payouts"] for f in F))
     out["net"] = out["payouts"] - out["fees"]
     out["firms"] = {f["fp"].spec.name: dict(fees=f["fees"], payouts=f["payouts"], net=f["payouts"] - f["fees"], n_evals=f["n_evals"], n_passed=f["n_passed"],

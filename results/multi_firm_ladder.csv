@@ -1,0 +1,55 @@
+mix,scope,start,kind,case,net,payouts,fees,oop,min_cash,shortfall_days,end_cash,ruined,days_to_first_payout,firms_started,net[Topstep],net[FundedNext],net[FTMO],net[Take],net[Alpha]
+A same basket,ladder (all firms),2012,dev 3y,ladder (all firms),-1224.5552499999912,3459.4447500000088,4684.0,1393.0,0.0,0,168.44475000000875,False,290.0,2,275.44475000000875,-1500.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2013,dev 3y,ladder (all firms),-1592.0,0.0,1592.0,1592.0,-199.0,7,0.0,False,,1,-1592.0,0.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2014,dev 3y,ladder (all firms),-398.0,0.0,398.0,398.0,0.0,0,0.0,False,,1,-398.0,0.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2015,dev 3y,ladder (all firms),-1393.0,0.0,1393.0,1393.0,0.0,0,0.0,False,,1,-1393.0,0.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2016,dev 3y,ladder (all firms),1439.4205535714004,3781.4205535714004,2342.0,796.0,-199.0,691,530.9551071428386,False,1024.0,2,2189.4205535714004,-750.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2017,dev 3y,ladder (all firms),8621.160698660686,17290.160698660686,8669.0,2189.0,-398.0,143,10810.160698660686,False,364.0,2,11121.160698660686,-2500.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2018,dev 3y,ladder (all firms),850.1958549107221,11116.195854910722,10266.0,199.0,0.0,0,1049.1958549107221,False,289.0,2,4350.195854910722,-3500.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2019,dev 3y,ladder (all firms),4534.624459821425,13555.624459821425,9021.0,2587.0,-43.42789285712297,50,7121.624459821423,False,644.0,2,7784.624459821425,-3250.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2020,dev 3y,ladder (all firms),57418.39482142836,94545.39482142836,37127.0,1393.0,-280.39321428571066,56,58811.394821428345,False,245.0,5,39138.107410714205,14876.021571428519,4820.4892678571105,1724.7765714285197,-3141.0
+A same basket,ladder (all firms),2021,seen to end,ladder (all firms),-188.40035714286296,4495.599642857137,4684.0,199.0,-597.0,99,10.599642857136814,True,164.0,2,1311.599642857137,-1500.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2023,seen to end,ladder (all firms),4983.8696964287155,48068.869696428716,43085.0,597.0,-636.0011607142214,53,5580.869696428727,False,429.0,4,17442.410482142936,4998.077714285775,-2926.6184999999923,-14530.0,0.0
+A same basket,ladder (all firms),2025,seen to end,ladder (all firms),-614.0225357142826,3069.9774642857174,3684.0,796.0,-199.0,21,181.9774642857176,True,109.0,2,-114.02253571428264,-500.0,0.0,0.0,0.0
+A same basket,ladder (all firms),2010,full history,ladder (all firms),-2253.018125000012,3175.981874999988,5429.0,2388.0,-597.0,953,134.98187499998812,True,1471.0,2,-1003.0181250000119,-1250.0,0.0,0.0,0.0
+A same basket,"Topstep only, same cash rule",2012,dev 3y,"Topstep only, same cash rule",-1316.5552499999912,3459.4447500000088,4776.0,1393.0,0.0,0,76.44475000000875,False,290.0,1,-1316.5552499999912,,,,
+A same basket,"Topstep only, same cash rule",2013,dev 3y,"Topstep only, same cash rule",-1592.0,0.0,1592.0,1592.0,-199.0,7,0.0,False,,1,-1592.0,,,,
+A same basket,"Topstep only, same cash rule",2014,dev 3y,"Topstep only, same cash rule",-398.0,0.0,398.0,398.0,0.0,0,0.0,False,,1,-398.0,,,,
+A same basket,"Topstep only, same cash rule",2015,dev 3y,"Topstep only, same cash rule",-1393.0,0.0,1393.0,1393.0,0.0,0,0.0,False,,1,-1393.0,,,,
+A same basket,"Topstep only, same cash rule",2016,dev 3y,"Topstep only, same cash rule",1990.4205535714004,3781.4205535714004,1791.0,796.0,-199.0,691,1081.9551071428386,False,1024.0,1,1990.4205535714004,,,,
+A same basket,"Topstep only, same cash rule",2017,dev 3y,"Topstep only, same cash rule",9728.160698660686,17290.160698660686,7562.0,2189.0,-398.0,143,11917.160698660686,False,364.0,1,9728.160698660686,,,,
+A same basket,"Topstep only, same cash rule",2018,dev 3y,"Topstep only, same cash rule",20592.662756696467,25567.662756696467,4975.0,199.0,0.0,0,20791.66275669647,False,289.0,1,20592.662756696467,,,,
+A same basket,"Topstep only, same cash rule",2019,dev 3y,"Topstep only, same cash rule",9987.378334821413,16554.378334821413,6567.0,2587.0,0.0,0,11380.246281249985,False,644.0,1,9987.378334821413,,,,
+A same basket,"Topstep only, same cash rule",2020,dev 3y,"Topstep only, same cash rule",43096.5962187499,51653.5962187499,8557.0,1393.0,-199.0,8,44489.596218749895,False,245.0,1,43096.5962187499,,,,
+A same basket,"Topstep only, same cash rule",2021,seen to end,"Topstep only, same cash rule",31548.47411272325,62990.47411272325,31442.0,199.0,-597.0,99,31747.474112723256,False,164.0,1,31548.47411272325,,,,
+A same basket,"Topstep only, same cash rule",2023,seen to end,"Topstep only, same cash rule",23229.59871428588,36363.59871428588,13134.0,597.0,0.0,0,23826.59871428588,False,429.0,1,23229.59871428588,,,,
+A same basket,"Topstep only, same cash rule",2025,seen to end,"Topstep only, same cash rule",369.15346428572957,4946.15346428573,4577.0,796.0,-313.0225357142824,183,1165.1534642857298,False,109.0,1,369.15346428572957,,,,
+A same basket,"Topstep only, same cash rule",2010,full history,"Topstep only, same cash rule",113573.59795033475,142627.59795033475,29054.0,2388.0,-597.0,953,115961.5979503348,False,1471.0,1,113573.59795033475,,,,
+A same basket,"Topstep only, NO cash rule (old farm)",2010,full history,old,137732.86645033487,176338.86645033487,38606.0,0.0,-12338.0,619,137732.86645033484,False,402.0,1,137732.86645033487,,,,
+B different sleeves,ladder (all firms),2012,dev 3y,ladder (all firms),-1529.9572678571403,2705.0427321428597,4235.0,1592.0,0.0,0,62.04273214285968,True,139.0,2,-279.9572678571403,-1250.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2013,dev 3y,ladder (all firms),-3781.0,0.0,3781.0,3781.0,-1393.0,144,0.0,False,,1,-3781.0,0.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2014,dev 3y,ladder (all firms),-291.9722857142822,1402.0277142857178,1694.0,398.0,0.0,0,106.02771428571782,True,197.0,2,208.02771428571782,-500.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2015,dev 3y,ladder (all firms),-3184.0,0.0,3184.0,3184.0,-1393.0,144,0.0,False,,1,-3184.0,0.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2016,dev 3y,ladder (all firms),-1592.0,0.0,1592.0,1592.0,-398.0,134,0.0,False,,1,-1592.0,0.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2017,dev 3y,ladder (all firms),8853.415244140575,28636.415244140575,19783.0,1990.0,-199.0,208,10843.41524414058,False,448.0,3,15302.99238699775,878.4228571428257,-7328.0,0.0,0.0
+B different sleeves,ladder (all firms),2018,dev 3y,ladder (all firms),22232.09673465402,57955.09673465402,35723.0,199.0,0.0,0,22791.096734654002,False,84.0,4,33661.14202036831,2474.3474285713983,-6183.392714285686,-7720.0,0.0
+B different sleeves,ladder (all firms),2019,dev 3y,ladder (all firms),-787.4273482142817,11274.572651785718,12062.0,1592.0,0.0,0,804.5726517857183,False,649.0,2,3712.5726517857183,-4500.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2020,dev 3y,ladder (all firms),-296.08685714285343,1846.9131428571466,2143.0,199.0,-199.0,676,-97.08685714285343,True,60.0,2,453.91314285714657,-750.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2021,seen to end,ladder (all firms),134591.99371205355,224009.99371205355,89418.0,796.0,-385.13760714286013,167,135946.99371205363,False,164.0,5,53872.9668080359,13251.642857142873,-2467.1605245537976,72028.54457142857,-2094.0
+B different sleeves,ladder (all firms),2023,seen to end,ladder (all firms),22016.35454073675,72336.35454073675,50320.0,1194.0,-199.0,48,24129.354540736756,False,163.0,4,41900.39621037956,-917.7885714285308,-836.253098214278,-18130.0,0.0
+B different sleeves,ladder (all firms),2025,seen to end,ladder (all firms),-4577.0,0.0,4577.0,2786.0,-1791.0,277,-1791.0,False,,1,-4577.0,0.0,0.0,0.0,0.0
+B different sleeves,ladder (all firms),2010,full history,ladder (all firms),-3519.9572678571403,2705.0427321428597,6225.0,3582.0,-199.0,9,62.04273214285968,True,693.0,2,-2269.9572678571403,-1250.0,0.0,0.0,0.0
+B different sleeves,"Topstep only, same cash rule",2012,dev 3y,"Topstep only, same cash rule",-1672.9572678571403,2705.0427321428597,4378.0,1592.0,-80.95726785714032,539,-80.95726785714032,True,139.0,1,-1672.9572678571403,,,,
+B different sleeves,"Topstep only, same cash rule",2013,dev 3y,"Topstep only, same cash rule",-3781.0,0.0,3781.0,3781.0,-1393.0,144,0.0,False,,1,-3781.0,,,,
+B different sleeves,"Topstep only, same cash rule",2014,dev 3y,"Topstep only, same cash rule",-388.9722857142822,1402.0277142857178,1791.0,398.0,0.0,0,9.02771428571782,True,197.0,1,-388.9722857142822,,,,
+B different sleeves,"Topstep only, same cash rule",2015,dev 3y,"Topstep only, same cash rule",-3184.0,0.0,3184.0,3184.0,-1393.0,144,0.0,False,,1,-3184.0,,,,
+B different sleeves,"Topstep only, same cash rule",2016,dev 3y,"Topstep only, same cash rule",-1592.0,0.0,1592.0,1592.0,-398.0,134,0.0,False,,1,-1592.0,,,,
+B different sleeves,"Topstep only, same cash rule",2017,dev 3y,"Topstep only, same cash rule",14904.99238699775,24257.99238699775,9353.0,1990.0,-199.0,208,16894.99238699775,False,448.0,1,14904.99238699775,,,,
+B different sleeves,"Topstep only, same cash rule",2018,dev 3y,"Topstep only, same cash rule",33462.14202036831,47193.14202036831,13731.0,199.0,0.0,0,33661.142020368294,False,84.0,1,33462.14202036831,,,,
+B different sleeves,"Topstep only, same cash rule",2019,dev 3y,"Topstep only, same cash rule",5112.49684821429,14067.49684821429,8955.0,1592.0,0.0,0,6704.49684821429,False,649.0,1,5112.49684821429,,,,
+B different sleeves,"Topstep only, same cash rule",2020,dev 3y,"Topstep only, same cash rule",-143.08685714285343,1846.9131428571466,1990.0,199.0,-199.0,23,55.91314285714657,True,60.0,1,-143.08685714285343,,,,
+B different sleeves,"Topstep only, same cash rule",2021,seen to end,"Topstep only, same cash rule",60214.36915513412,93646.36915513412,33432.0,796.0,-199.0,77,61209.3691551341,False,164.0,1,60214.36915513412,,,,
+B different sleeves,"Topstep only, same cash rule",2023,seen to end,"Topstep only, same cash rule",9760.635171875096,30854.635171875096,21094.0,1194.0,-199.0,48,11153.6351718751,False,163.0,1,9760.635171875096,,,,
+B different sleeves,"Topstep only, same cash rule",2025,seen to end,"Topstep only, same cash rule",-4577.0,0.0,4577.0,2786.0,-1791.0,277,-1791.0,False,,1,-4577.0,,,,
+B different sleeves,"Topstep only, same cash rule",2010,full history,"Topstep only, same cash rule",-3662.9572678571403,2705.0427321428597,6368.0,3582.0,-199.0,3524,-80.95726785714032,True,693.0,1,-3662.9572678571403,,,,
+B different sleeves,"Topstep only, NO cash rule (old farm)",2010,full history,old,83810.38148828145,173758.38148828145,89948.0,0.0,-21323.62448214282,2572,84009.38148828148,False,386.0,1,83810.38148828145,,,,

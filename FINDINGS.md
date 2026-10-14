@@ -121,3 +121,45 @@ Waiting gives a bigger first payout, a bigger cushion and more follow-up payouts
 - **Placebos behave** (`diag/placebo_payout_configs.py`): with the strategy's dev-fitted mean edge removed, the winner loses (dev mean -$7.6k, 2 of 10 green); with every trade flipped it also loses (-$6.8k, 1 of 10 green; 2021/2023/2025 starts -$45k/-$26k/-$11k). So the profit is the edge, not an artefact of the rules. The coin-flip control is not a fair null (it is far more volatile than the strategy and makes money with the winner config from seen starts); the edge-removed version is the one to quote. A "shift P&L by one session" check turned out to be uninformative (a near-iid daily series is unchanged by shifting) and is not used.
 - **Independent leakage audit** (separate reviewer, new code only): gap30 filter, noise-area and VWAP signal timing, dev-only weights (rebuilt from data truncated at 2022-12-30: identical), farm bookkeeping, and the Combine policy (identical to the engine, 0 mismatches over about 1,300 starts) were all CLEAN. The reviewer re-derived the farm net with its own loop on the reference engine and matched exactly: 2015-01-02 start -$6,169 (zero payouts, $6,169 of fees), 2023-01-03 start +$41,068.
 - Caveats the reviewer could not close: the sleeve parameters (k=0.3, s=0.2, the gap30 filter) cannot be proven to have been chosen on dev data only, the dev-fitted weights collapse to a corner (noise 0.5, vwap 0.5, gap30 2.0), and the roll-day skip uses hindsight (not exploitable). 2023+ is still not a clean hold-out, and the 2013-15 and 2025-26 results show the regime risk.
+
+## 14. Engine check, pass vs payout time, other prop firms, and a self-funded multi-firm ladder
+Pre-registered in `docs/PREREGISTRATION_4.md` (committed before the runs). Code: `firm_engine.py` (rule-parameterised eval/funded engine; the Topstep spec reproduces `real_engine` exactly, `test_firm_engine.py`),
+`firm_specs.py`, `multi_firm.py` (cash-gated multi-firm simulator, `test_multi_firm.py`), `run_firm_comparison.py`, `run_multi_firm_ladder.py`, `run_ladder_unlock.py`, `test_farm_caps.py`, `diag/pass_and_payout_times.py`.
+
+**Engine check.** The farm never exceeds 5 funded accounts (`max_funded=5`, enforced and tested over 24 randomised farms with every refill rule: `test_farm_caps.py`). A Combine that passes while all 5 slots are busy waits up to 21 sessions and is then wasted (an assumption: Topstep's real rule for a passed Combine with no free XFA slot is unverified).
+
+**Time to pass and time to payout, separately (Topstep, final config, starts every 3 sessions):**
+| Period | Combine pass rate | Calendar days start to pass (median, 25-75%) | Funded accounts ever paid | Days activation to first payout (median, 25-75%) | Start to first payout, paid accounts |
+|---|---|---|---|---|---|
+| 2011-2022 | 22% | 32 (20-56) | 83% | 210 (113-382) | 261 (192-470) |
+| 2023-2026 (seen) | 27% | 34 (21-60) | 100% | 117 (103-259) | 165 (134-288) |
+Topstep's 1-3 business-day approval is not included.
+
+**Other firms - rules found by web search (2026-10-14).** Every number comes from search snippets and third-party reviews; WebFetch to the firms' own pages was blocked, so **nothing is verified against the firm itself**. Assumptions are listed in `firm_specs.py`. Rule risks the simulation cannot enforce:
+- FundedNext Futures: the official help article bans copying between FundedNext accounts, even your own; micro-scalping rule (trades under 10 s); bank-transfer payouts unavailable for Cambodia (crypto/Rise only); account ends after the 5th payout; current price not found (used $250 one-time).
+- FTMO Futures: Beta (launched Aug-Sep 2026), max 3 sim-funded accounts, automation policy conflicting; Pro has a hard $2,000 daily loss limit.
+- Alpha Futures: **bots/EAs/AI banned on all plans**; counterparty risk (the NinjaTrader/Tradovate contract was terminated in July 2026, Premium accounts closed, payouts in batches); delisted by a comparison site.
+- Take Profit Trader: copy trading banned on PRO, automation banned or restricted (uncertain), a $4,500 buffer must stay in the account after every payout, 80/10 split, list price $360/month.
+- Cambodia eligibility was not found for any firm; get it in writing.
+
+**Standalone results per firm (same NQ basket at every firm; selection by the pre-registered rule on ten 3-year dev farms, 2011-2020 starts; costs are Topstep's for all firms):**
+| Firm | chosen R / a1 / a2 / first-payout balance | dev mean net (3y farm) | worst | green start-years | net per fee $ | pass rate | days start to pass | P(funded ever paid) | days activation to first payout | full-history net | seen starts 2021 / 2023 / 2025 | edge-removed placebo (dev mean) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Topstep 150K | 12800 / 0.4 / 0.8 / $4000 | $18,644 | $-7,363 | 7/10 | 2.00 | 17% | 27 | 78% | 211 | $137,733 | [91892, 32212, 6149] | $-9,832 |
+| FTMO Growth 150K | 9600 / 0.8 / 0.4 / $3000 | $11,319 | $-19,236 | 6/10 | 1.00 | 23% | 54 | 70% | 27 | $66,024 | [30207, 10561, -3385] | $-12,088 |
+| FTMO Pro 150K | 6400 / 0.4 / 0.4 / $4000 | $2,784 | $-10,619 | 4/10 | 0.19 | 13% | 41 | 100% | 945 | $38,906 | [15671, -1061, 6358] | $-11,467 |
+| FundedNext Flex 150K | 6400 / 0.4 / 0.4 / $3000 | $11,592 | $-8,619 | 5/10 | 1.34 | 25% | 60 | 77% | 210 | $110,993 | [63669, 24962, 2901] | $-7,591 |
+| Alpha Advanced 150K | 12800 / 0.4 / 0.8 / $4000 | $2,029 | $-34,408 | 4/10 | 0.12 | 20% | 52 | 80% | 209 | $39,231 | [47672, 10463, 3278] | $-24,972 |
+| Alpha Standard 150K | 6400 / 0.4 / 0.4 / $3000 | $4,673 | $-13,960 | 6/10 | 0.68 | 31% | 49 | 80% | 246 | $72,600 | [62603, 12436, -37] | $-15,463 |
+| Take Profit Trader PRO 150K | 6400 / 0.4 / 1.6 / $7000 | $10,981 | $-24,340 | 5/10 | 0.68 | 31% | 49 | 74% | 429 | $98,401 | [19615, -3549, -5677] | $-31,394 |
+- Every firm is profitable on the dev farms and every edge-removed placebo loses, so the money comes from the strategy's edge. None beats Topstep on dev (best net per fee dollar: Topstep 2.0, FundedNext 1.3, FTMO Growth 1.0, Alpha Standard and Take Profit Trader 0.7, FTMO Pro 0.2, Alpha Advanced 0.1).
+- Topstep's selected risk here is R=12,800 (the pre-registered rule; the earlier cliff at R>=16,000 means 9,600 is the safer choice).
+- 2023+ starts (seen): pass rates 10-52%, days to pass 25-119, days from activation to first payout 41-216. FTMO Growth is the quickest to a first payout (41 days) but pays out less reliably (70% ever paid on dev).
+
+**Self-funded ladder (`run_multi_firm_ladder.py`, `run_ladder_unlock.py`).** Rule implemented as you described: out-of-pocket money only for the first Topstep account, running ONE account at a time (Combine, pass, funded) until the first payout arrives; after that no new money, a purchase needs cash >= price + 3 billing cycles of monthly fees (+ a cash threshold before a further firm is added); one Combine at a time is always kept running while cash allows.
+- **Out of pocket: median about $1.4k, worst about $2.6-3.8k** across the dev farms (about 5 Combines at ~$300 each until one passes, plus waiting).
+- **Time to the first payout from the first Combine is long in quiet regimes:** 109-429 days on seen starts, but 1,471 days (4 years) from a 2010 start.
+- Topstep alone on this rule from 2010: net +$114k from $2.4k out of pocket (vs +$138k unconstrained). Adding the other firms immediately (no cash threshold) hurt: the extra purchases drain the bankroll in droughts and the farm can run out of cash with nothing alive ("ruined"; 2 of 3 seen starts for the same-basket mix).
+- With a cash threshold of $3-6k before adding firms: same-basket ladder improves on Topstep-only over long dev horizons (about $86-98k vs $47k, 4 runs) and on 3-year dev farms ($9.6-10.0k vs $9.0k), but is worse on seen starts (2021: $17-26k vs $31.5k; 2023: $17-18k vs $23.2k). Different-sleeves mix: better on the 2021 start ($148k vs $60k), worse on 2023, ruined in 3 of 9 dev 3-year farms.
+- **Read this as: scaling to more firms adds variance, not a reliable gain.** All accounts trade the same signals, so their drawdowns and droughts coincide, the other firms cost more per payout than Topstep, and the self-funding rule has an absorbing state (cash below one fee with nothing running).
+- Recommended order if you ever scale (by dev net per fee dollar, rules permitting): Topstep, FundedNext, FTMO Growth. Alpha (bot ban, counterparty risk) and Take Profit Trader (copy/automation limits, high fee, buffer) look worst.
