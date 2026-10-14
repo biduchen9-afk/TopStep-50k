@@ -83,8 +83,30 @@ def _floor_after(bal: float, peak: float, trail: bool, dd: float, lock: bool, lo
     return f
 
 
-def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float], nd: List[int], i0: int) -> Tuple[int, int]:
-    """Return (status, tau): 1 pass, 0 breach, -1 data ran out/time limit; tau = sessions used (1-based). `nd` = desired micros per session."""
+def _eval_factor(scale: tuple, bal: float, age: int, hist: List[float]) -> float:
+    """Multiplier on the Combine's desired micros as a function of the account's own state (balance, sessions since the stage started, its realised daily P&L); causal."""
+    kind = scale[0]
+    if kind == "const":
+        return scale[1]
+    if kind == "ladder":                               # f of the highest balance milestone the CURRENT balance has reached (1.0 below the first)
+        f = 1.0
+        for m, fm in scale[1]:
+            if bal >= m:
+                f = fm
+        return f
+    if kind == "perf":                                 # ("perf", L, f_up, f_down)
+        L = scale[1]
+        if len(hist) < L:
+            return 1.0
+        return scale[2] if sum(hist[-L:]) > 0 else scale[3]
+    if kind == "ramp":                                 # ("ramp", d, f_start): linear from f_start to 1.0 over the first d sessions
+        d, f0 = scale[1], scale[2]
+        return f0 + (1.0 - f0) * min(1.0, age / d)
+    raise ValueError(kind)
+
+
+def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float], nd: List[int], i0: int, scale: Optional[tuple] = None) -> Tuple[int, int]:
+    """Return (status, tau): 1 pass, 0 breach, -1 data ran out/time limit; tau = sessions used (1-based). `nd` = desired micros per session; `scale` optionally scales them (see `_eval_factor`)."""
     n = len(x)
     t = i0
     total_cap = sum(ph.max_days for ph in phases)
@@ -93,8 +115,9 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
         floor = -ph.dd
         days = 0
         stage_start = t
+        hist: List[float] = []
         while t < min(n, stage_start + ph.max_days):
-            k = min(nd[t], ph.max_micros)
+            k = min(nd[t], ph.max_micros) if scale is None else min(max(1, int(round(nd[t] * _eval_factor(scale, bal, t - stage_start, hist)))), ph.max_micros)
             p, w = x[t] * k, lo[t] * k
             lim = floor - bal
             if ph.dd_type == "intraday" or ph.dll is not None:
@@ -111,6 +134,7 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
             if ph.day_cap is not None and p > ph.day_cap:
                 p = ph.day_cap
             bal += p
+            hist.append(p)
             if ph.dd_type == "eod" and bal <= floor:
                 return 0, t - i0 + 1
             if p != 0.0:
@@ -129,7 +153,7 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
     return 1, t - i0
 
 
-def _scaled_a(scale: tuple, a1: float, bal: float, age: int, hist: List[float]) -> float:
+def _scaled_a(scale: tuple, a1: float, bal: float, age: int, hist: List[float], npay: int = 0) -> float:
     """Size multiple before the first payout as a function of the account's own state (balance, sessions since activation, its realised daily P&L); causal."""
     kind = scale[0]
     if kind == "ladder":                               # start at a1; use the `a` of the highest milestone the CURRENT balance has reached
@@ -146,6 +170,12 @@ def _scaled_a(scale: tuple, a1: float, bal: float, age: int, hist: List[float]) 
     if kind == "ramp":                                 # ("ramp", d, a_start): linear from a_start to a1 over the first d sessions
         d, a0 = scale[1], scale[2]
         return a0 + (a1 - a0) * min(1.0, age / d)
+    if kind == "npay":                                 # ("npay", ((n, a), ...)): `a` of the highest payout count reached (after-payout stage)
+        a = a1
+        for m, am in scale[1]:
+            if npay >= m:
+                a = am
+        return a
     raise ValueError(kind)
 
 
@@ -161,6 +191,7 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
     last_pay_t = -10 ** 9
     pays: List[float] = []
     hist: List[float] = []              # daily P&L of this account since activation (only used by scale = ("perf", ...))
+    hist_ps = 0                         # index in `hist` where the current post-payout cycle started
     n = len(x)
     for t in range(i0, n):
         if plan.a1 is None:
@@ -171,6 +202,8 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
             a = plan.a1 if (stage == 1 or plan.a2 is None) else plan.a2
             if stage == 1 and plan.scale is not None:
                 a = _scaled_a(plan.scale, plan.a1, bal, t - i0, hist)
+            elif stage == 2 and plan.scale2 is not None:     # after the first payout: age / history counted from the LAST payout
+                a = _scaled_a(plan.scale2, a, bal, t - last_pay_t, hist[hist_ps:], len(pays))
             k = 1 if not (a_t > 0) else max(1, int(round(a * max(bal - floor, 250.0) / a_t)))
         k = min(k, xfa_micro_cap(bal, spec.ladder))
         p, w = x[t] * k, lo[t] * k
@@ -220,6 +253,7 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
                 wins = tdays = 0
                 prof = best = 0.0
                 last_pay_t = t
+                hist_ps = len(hist)
                 pays.append(spec.split * gross)
                 if times is not None:
                     times.append(t)

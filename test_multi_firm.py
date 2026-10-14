@@ -109,3 +109,32 @@ def test_scaled_a_is_causal_and_follows_the_definitions():
     assert _scaled_a(("perf", 3, 1.5, 0.5), 1.0, 0.0, 3, [5.0, -1.0, -1.0]) == 1.5
     assert _scaled_a(("perf", 3, 1.5, 0.5), 1.0, 0.0, 3, [9.0, -5.0, -5.0, -5.0]) == 0.5   # only the last 3 sessions count
     assert _scaled_a(("ramp", 10, 0.4), 1.2, 0.0, 0, []) == 0.4 and abs(_scaled_a(("ramp", 10, 0.4), 1.2, 0.0, 5, []) - 0.8) < 1e-12 and _scaled_a(("ramp", 10, 0.4), 1.2, 0.0, 99, []) == 1.2
+
+
+def test_combine_and_after_payout_scaling_are_neutral_by_default_and_follow_definitions():
+    from firm_engine import _eval_factor, _scaled_a, run_eval_firm, run_funded_firm, topstep_150k
+    from real_engine import FundedPlan
+    rng = np.random.default_rng(9)
+    n = 600
+    x = rng.normal(6.0, 40.0, n).tolist(); lo = (np.minimum(np.array(x), 0.0) - 5.0).tolist(); nd = [8] * n; atr = [300.0] * n
+    ts = topstep_150k()
+    base = run_eval_firm(ts.eval_phases, x, lo, nd, 0)
+    assert run_eval_firm(ts.eval_phases, x, lo, nd, 0, ("const", 1.0)) == base
+    assert run_eval_firm(ts.eval_phases, x, lo, nd, 0, ("ladder", ((1e9, 3.0),))) == base
+    assert run_eval_firm(ts.eval_phases, x, lo, nd, 0, ("perf", 3, 1.0, 1.0)) == base
+    assert run_eval_firm(ts.eval_phases, x, lo, nd, 0, ("ramp", 10, 1.0)) == base
+    assert run_eval_firm(ts.eval_phases, x, lo, nd, 0, ("const", 0.25)) != base
+    assert _eval_factor(("ladder", ((3000.0, 0.5), (6000.0, 0.25))), 2999.0, 4, []) == 1.0 and _eval_factor(("ladder", ((3000.0, 0.5), (6000.0, 0.25))), 6500.0, 4, []) == 0.25
+    assert _eval_factor(("perf", 3, 1.5, 0.5), 0.0, 3, [1.0, -2.0, -2.0]) == 0.5 and _eval_factor(("perf", 3, 1.5, 0.5), 0.0, 2, [5.0, 5.0]) == 1.0
+    assert _eval_factor(("ramp", 10, 0.5), 0.0, 0, []) == 0.5 and abs(_eval_factor(("ramp", 10, 0.5), 0.0, 5, []) - 0.75) < 1e-12
+    spec = ts.funded
+    plan = FundedPlan("p", "x", 800.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8)
+    b = run_funded_firm(spec, x, lo, nd, 0, plan, atr)
+    for sc2 in (("ladder", ((1e9, 5.0),)), ("perf", 3, 1.0, 1.0), ("ramp", 10, 0.8), ("npay", ((99, 5.0),))):
+        assert run_funded_firm(spec, x, lo, nd, 0, FundedPlan("p", "x", 800.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8, None, sc2), atr) == b, sc2
+    assert run_funded_firm(spec, x, lo, nd, 0, FundedPlan("p", "x", 800.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8, None, ("ramp", 10, 0.1)), atr) != b
+    t1, t2 = [], []
+    p1 = run_funded_firm(spec, x, lo, nd, 0, plan, atr, t1)
+    p2 = run_funded_firm(spec, x, lo, nd, 0, FundedPlan("p", "x", 800.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8, None, ("ramp", 10, 0.1)), atr, t2)
+    assert t1[0] == t2[0] and p1[0][0] == p2[0][0]                    # nothing changes up to and including the first payout
+    assert _scaled_a(("npay", ((2, 1.2), (4, 1.6))), 0.8, 0.0, 3, [], 1) == 0.8 and _scaled_a(("npay", ((2, 1.2), (4, 1.6))), 0.8, 0.0, 3, [], 3) == 1.2 and _scaled_a(("npay", ((2, 1.2), (4, 1.6))), 0.8, 0.0, 3, [], 5) == 1.6

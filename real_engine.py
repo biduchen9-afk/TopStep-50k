@@ -187,6 +187,7 @@ class FundedPlan:
     a1: Optional[float] = None         # dynamic sizing: risk = a1 x cushion (balance - MLL floor) before the first payout
     a2: Optional[float] = None         # ... and a2 x cushion after it (None -> a1). None = use the fixed-size `nd` list
     scale: Optional[tuple] = None      # scaling of `a1` BEFORE the first payout (firm_engine.run_funded_firm only): ("ladder", ((balance, a), ...)) | ("perf", L, f_up, f_down) | ("ramp", d, a_start); None = constant a1
+    scale2: Optional[tuple] = None     # scaling of `a2` AFTER the first payout (firm_engine.run_funded_firm only): ("ladder", ((balance, a), ...)) | ("perf", L, f_up, f_down) | ("ramp", d, a_start) | ("npay", ((n, a), ...)); None = constant a2
 
 
 def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,

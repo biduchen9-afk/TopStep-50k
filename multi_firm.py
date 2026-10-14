@@ -33,6 +33,7 @@ class FirmPlan:
     refill_dead: int = 3
     max_wait: int = 21
     starts_per_day: int = 1
+    eval_scale: Optional[tuple] = None   # scaling of the Combine contracts (firm_engine._eval_factor); None = constant R
     funded_atr2: Optional[Sequence[np.ndarray]] = None  # per stream: sizing unit used in the funded stage AFTER the first payout (hybrid); None = same unit as before the payout
     funded_atr: Optional[Sequence[np.ndarray]] = None   # per stream: replaces atr_usd in the FUNDED sizing rule only (Combine sizing keeps the stream's own ATR), e.g. Kelly-equivalent unit
     firm: Optional[str] = None      # several entries (account groups) can belong to one firm; None = the entry is its own firm
@@ -183,7 +184,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                 if gated and firm_of[fi] == lead and not first_payout_received and cash < price:
                     oop += price - cash; cash = price
                 si = f["counter"] % len(fp.streams); f["counter"] += 1
-                status, tau = run_eval_firm(spec.eval_phases, f["X"][si], f["L"][si], f["ND"][si], t)
+                status, tau = run_eval_firm(spec.eval_phases, f["X"][si], f["L"][si], f["ND"][si], t, fp.eval_scale)
                 bills = (1 + (max(tau, 1) - 1) // spec.cycle) if spec.eval_monthly else 1
                 f["fees"] += bills * price; full_fees += bills * price; cash -= price
                 for b in range(1, bills):
@@ -239,7 +240,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                     elif cash < price + reserve + (pol.unlock_cash if fi > 0 else 0.0):
                         break
                 f["counter"] += 1
-                status, tau = run_eval_firm(spec.eval_phases, f["X"][si], f["L"][si], f["ND"][si], t)
+                status, tau = run_eval_firm(spec.eval_phases, f["X"][si], f["L"][si], f["ND"][si], t, fp.eval_scale)
                 bills = (1 + (max(tau, 1) - 1) // spec.cycle) if spec.eval_monthly else 1
                 f["fees"] += bills * price; full_fees += bills * price
                 cash -= price
