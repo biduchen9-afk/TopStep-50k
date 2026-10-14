@@ -18,3 +18,17 @@ Cost_funded, EV_attempt, EV_cycle, mu_ext*, breakeven Sharpe).
 `sharpe_annual` is the strategy's **gross** Sharpe; friction ($7/day by default)
 is subtracted inside the simulation. XFA payout mechanics are not in the spec,
 so they are explicit assumptions in the `xfa:` block of `config.yaml`.
+
+## Real-data study (NQ / ES / GC 1-minute Databento bars, 2010-2026)
+
+Raw files are not in git. Download the three `*_databento.txt` assets from the `v1.0.0` release into
+`/home/user/data_raw` (or set `TOPSTEP_RAW_DIR`). The clock in the files is US Eastern.
+
+| File | Purpose |
+|---|---|
+| `market_data.py` | Loads bars; builds 18:00 ET -> 16:00 ET sessions (VWAP anchor = 18:00 ET); flags contract-roll sessions and skips them. Session maths is tz-aware, so a bot in Asia/Phnom_Penh stays correct through US DST (open = 05:00 or 06:00 ICT). |
+| `intraday_strategies.py` | No-edge control, VWAP+ATR momentum, opening-range breakout. Signals on bar close, fills next open. |
+| `real_engine.py` | Combine and funded-account rules replayed on real daily P&L, with cushion/payout variants. |
+| `run_real_study.py` / `run_decoupled_study.py` | Sweeps -> `results/*.csv`. The decoupled study sizes the Combine and funded phases separately. |
+
+Everything is measured from every historical start date; CIs resample whole calendar years.

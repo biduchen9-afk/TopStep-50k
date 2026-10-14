@@ -104,3 +104,52 @@ def test_lifecycle_billing_clock_when_nothing_happens():
     r = simulate_lifecycle(cfg, "standard", 50, np.random.default_rng(0))
     assert np.all(r.fees == 36 * 199.0)
     assert np.all(r.total_pnl == -36 * 199.0) and np.all(r.n_funded == 0)
+
+
+# --- Real-data engine ----------------------------------------------------------------------
+
+def test_session_open_follows_us_dst_in_phnom_penh():
+    """18:00 ET is 05:00 ICT in US summer time and 06:00 ICT in winter: never hard-code a local hour."""
+    from datetime import datetime
+    from market_data import session_open_phnom_penh
+    assert session_open_phnom_penh(datetime(2024, 7, 10)).strftime("%H:%M") == "05:00"
+    assert session_open_phnom_penh(datetime(2024, 12, 10)).strftime("%H:%M") == "06:00"
+
+
+def test_combine_consistency_and_breach():
+    from real_engine import run_combine
+    zeros = [0.0] * 3
+    # a $5,000 day inside a $9,500 total breaks the 50% rule; one more green day then passes it
+    assert run_combine([5000, 4500, 1000], zeros, 0, None, 9000, 4500, 0.5) == (1, 3)
+    assert run_combine([5000, 4500], [0.0, 0.0], 0, None, 9000, 4500, 0.5) == (-1, 2)
+    # trailing MLL: +3000 then -4500 from the peak breaches on day 2
+    assert run_combine([3000, -4500], [0.0, 0.0], 0, None, 9000, 4500, 0.5) == (0, 2)
+
+
+def test_combine_dll_liquidates_on_intraday_low():
+    from real_engine import run_combine
+    # the close is +100 but the intraday low touched -3,000: the day is booked at the DLL
+    status, tau = run_combine([100.0] * 3, [-3200.0, 0.0, 0.0], 0, -3000.0, 9000, 4500, 0.5)
+    assert (status, tau) == (-1, 3)
+
+
+def test_funded_cushion_payout_and_death():
+    from real_engine import FundedVariant, run_funded
+    v = FundedVariant("t", t1=2000, w1=0.5, t2=None, need_win_days=5)
+    # +300/day: balance 2,100 on day 7 with 7 winning days -> withdraw 50% = 1,050 gross, 945 net
+    p1, p2, days, state = run_funded([300.0] * 20, [0.0] * 20, 0, None, v, 4500, 0.9)
+    assert (round(p1, 6), p2, days, state) == (945.0, 0.0, 7, 2)
+    # five -1,000 days: floor is -4,500 (peak 0), breached on day 5 -> dead, no payout
+    assert run_funded([-1000.0] * 6, [0.0] * 6, 0, None, v, 4500, 0.9) == (0.0, 0.0, 5, 1)
+    # the winning-day rule delays a payout even when the balance is already high
+    big = FundedVariant("b", t1=2000, w1=0.5, t2=None, need_win_days=5)
+    p1, _, days, _ = run_funded([2500.0, 0.0, 0.0, 0.0, 0.0, 200.0, 200.0, 200.0, 200.0], [0.0] * 9, 0, None, big, 4500, 0.9)
+    assert days == 9 and p1 > 0   # waits for the 5th winning day (day 9), not day 1
+
+
+def test_second_stage_uses_remaining_cushion():
+    from real_engine import FundedVariant, run_funded
+    v = FundedVariant("c", t1=2000, w1=0.5, t2=2000, w2=1.0, size2=1.0, need_win_days=0)
+    # +2,000 -> take 1,000 (net 900), keep 1,000; +1,000 more -> balance 2,000, take it ALL (net 1,800)
+    p1, p2, days, state = run_funded([2000.0, 1000.0, 1000.0], [0.0] * 3, 0, None, v, 4500, 0.9)
+    assert (p1, p2, state) == (900.0, 1800.0, 2)
