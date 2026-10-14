@@ -10,7 +10,7 @@ SIGNALS - three NQ sleeves, all long/short, all flat by 15:55 ET, signals read a
   nq_gap30  the same VWAP+ATR entry (k=0.3, s=0.2) but only in the direction that BOTH the overnight gap (09:30 open vs previous close) and the first
             30-minute move (09:30-10:00) agree on; signals start at 10:00 ET; otherwise no trade that day.
 PORTFOLIO - 1-micro baskets with long-only mean-variance weights fitted on 2010-2022 only (shrunk 50% to equal weights); static (no switching).
-SIZING - Combine: micros = round(R / ATR$ per micro) with R = 9,600 ($ per ATR unit); funded: micros = a * (balance - MLL floor) / ATR$ with a1 = 0.4 before the first
+SIZING - Combine: micros = round(R / ATR$ per micro) with R = 9,600 ($ per ATR unit; 12,800 scored slightly higher but sits next to a cliff - R >= 16,000 collapses); funded: micros = a * (balance - MLL floor) / ATR$ with a1 = 0.4 before the first
          payout and a2 = 1.6 afterwards (0.4 pays more often at similar dev net; see the monthly-payout study), capped by the XFA scaling ladder.
 FARM   - up to 5 funded accounts; new Combines only when expected funded accounts < 5; "hyst" refill (once full, open nothing until 3 slots have emptied);
          first payout at balance >= $3,000 with 5 winning days of >= $150 (Standard path), then every eligible payout at 50% of balance (cap $5,000).

@@ -14,6 +14,7 @@ import numpy as np
 
 from contract_eval import CombineSizing
 from pricing_config import EngineConfig
+from combine_policy import CombinePolicy, run_combine_policy
 from real_engine import FundedPlan, RuleSet, Stream, run_combine, run_funded_detail, _lists
 
 
@@ -35,6 +36,7 @@ class FarmSpec:
     th_window: int = 126          # sessions of resolved Combines to look at
     th_min: int = 4               # fewer resolved than this (after warm-up) -> probe mode
     probe_gap: int = 21           # probe mode: one Combine at a time, at least this many sessions apart
+    combine_policy: Optional[CombinePolicy] = None   # state-dependent Combine sizing; None = the fixed-risk Combine from `sizing`
 
 
 def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], plan: FundedPlan, cfg: EngineConfig, rules: RuleSet,
@@ -110,7 +112,10 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
                and occupied + spec.p_est * len(evals) < spec.max_funded):
             si = counter % K
             counter += 1
-            status, tau = run_combine(X[si], L[si], NDc[si], t, rules, dyn, A[si])
+            if spec.combine_policy is not None:
+                status, tau = run_combine_policy(X[si], L[si], A[si], t, rules, spec.combine_policy)
+            else:
+                status, tau = run_combine(X[si], L[si], NDc[si], t, rules, dyn, A[si])
             out["fees"] += (1 + (max(tau, 1) - 1) // cyc) * sub
             out["n_evals"] += 1
             if log:
