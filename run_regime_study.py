@@ -84,7 +84,7 @@ def main() -> None:
     print(f"{len(g)} configurations evaluated on 12 DEV windows")
     print(g.sort_values("obj", ascending=False).head(15).round(0).to_string(index=False))
     for col in ("set", "rule", "unit", "R", "a1", "a2", "refill", "pause"):
-        print(f"\nmean dev objective by {col}:"); print(g.groupby(col).obj.mean().round(0).to_string())
+        print(f"\nmean dev objective by {col}:"); print(g.groupby(col)["obj"].mean().round(0).to_string())
 
 
 if __name__ == "__main__":
