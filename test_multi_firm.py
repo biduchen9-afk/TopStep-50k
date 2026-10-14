@@ -63,3 +63,21 @@ def test_kelly_unit_is_causal_and_matches_formula():
     y = x.copy(); y[250:] = 1e6                      # changing the present and future must not move the estimate at t=250
     assert abs(kelly_unit(y, window=100, min_obs=50)[250] - u[250]) < 1e-9
     assert (kelly_unit(-np.abs(x), window=100, min_obs=50) == HUGE).all()
+
+
+def test_stage2_unit_changes_only_post_payout_sizing():
+    from firm_engine import run_funded_firm, topstep_150k
+    from real_engine import FundedPlan
+    rng = np.random.default_rng(11)
+    n = 400
+    x = (rng.normal(8.0, 40.0, n)).tolist(); lo = (np.minimum(np.array(x), 0.0) - 5.0).tolist(); nd = [3] * n
+    atr = [60.0] * n
+    spec = topstep_150k().funded
+    plan = FundedPlan("p", "x", 800.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8)
+    t1, t2, t3 = [], [], []
+    base = run_funded_firm(spec, x, lo, nd, 0, plan, atr, t1)
+    same = run_funded_firm(spec, x, lo, nd, 0, plan, atr, t2, list(atr))          # stage-2 unit identical -> identical result
+    assert base == same and t1 == t2
+    other = run_funded_firm(spec, x, lo, nd, 0, plan, atr, t3, [15.0] * n)       # 4x bigger post-payout size
+    assert t3[0] == t1[0] and other[0][0] == base[0][0]                             # up to and including the first payout nothing changes
+    assert other != base

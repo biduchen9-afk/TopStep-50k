@@ -130,7 +130,7 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
 
 
 def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[int], i0: int, plan: FundedPlan,
-                    atr: Optional[List[float]] = None, times: Optional[list] = None) -> Tuple[List[float], int, int, float]:
+                    atr: Optional[List[float]] = None, times: Optional[list] = None, atr2: Optional[List[float]] = None) -> Tuple[List[float], int, int, float]:
     """Return (net payouts in order, sessions, end_state, balance): end_state 1 dead, 2 closed by plan, 0 data end."""
     bal = peak = 0.0
     floor = -spec.dd
@@ -146,7 +146,7 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
             mult = plan.r1 if stage == 1 else plan.r2
             k = max(1, int(round(nd[t] * mult)))
         else:
-            a_t = atr[t]
+            a_t = atr[t] if (stage == 1 or atr2 is None) else atr2[t]      # atr2: optional sizing unit used after the first payout (hybrid sizing)
             a = plan.a1 if (stage == 1 or plan.a2 is None) else plan.a2
             k = 1 if not (a_t > 0) else max(1, int(round(a * max(bal - floor, 250.0) / a_t)))
         k = min(k, xfa_micro_cap(bal, spec.ladder))

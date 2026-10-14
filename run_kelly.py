@@ -33,12 +33,12 @@ def plans(ST, a1, a2, kelly, placebo=None):
 def evaluate(fps, ref, n_dev, n):
     idx = lambda dt: int(np.searchsorted(ref.dates, np.datetime64(dt)))
     pol = Policy(reserve_cycles=None, global_one_eval=True)
-    nets, nf, npaid, ndied, pay = [], 0, 0, 0, 0.0
+    nets, nf, npaid, ndied, pay, npay = [], 0, 0, 0, 0.0, 0
     d1 = []
     for y in range(2011, 2021):
         i0 = idx(f"{y}-01-01"); r = run_multifirm(fps, pol, i0, min(i0 + 756, n_dev)); nets.append(r["net"])
         for v in r["firms"].values():
-            nf += v["n_funded"]; npaid += v["n_paid_accts"]; ndied += v["died"]; pay += v["payouts"]
+            nf += v["n_funded"]; npaid += v["n_paid_accts"]; ndied += v["died"]; pay += v["payouts"]; npay += v["n_payouts"]
         fb = [v["first_buy_t"] for v in r["firms"].values() if v["first_buy_t"] is not None]; fp_ = [v["first_payout_t"] for v in r["firms"].values() if v["first_payout_t"] is not None]
         if fb and fp_:
             d1.append((pd.DatetimeIndex(ref.dates)[min(min(fp_), n - 1)] - pd.DatetimeIndex(ref.dates)[min(fb)]).days)
@@ -46,7 +46,7 @@ def evaluate(fps, ref, n_dev, n):
     seen = [round(run_multifirm(fps, pol, idx(x))["net"]) for x in ("2021-01-04", "2023-01-02", "2025-01-02", "2025-07-01")]
     full = run_multifirm(fps, pol, int(np.flatnonzero(ref.ok)[0]))
     return dict(dev_mean=nets.mean(), dev_p25=np.percentile(nets, 25), dev_worst=nets.min(), green=int((nets > 0).sum()), paid_share=npaid / max(nf, 1), died_share=ndied / max(nf, 1),
-                pay_per_paid=pay / max(npaid, 1), days_first_payout=float(np.median(d1)) if d1 else np.nan, seen=str(seen), full_net=full["net"])
+                pay_per_paid=pay / max(npaid, 1), n_pay_per_paid=npay / max(npaid, 1), days_first_payout=float(np.median(d1)) if d1 else np.nan, seen=str(seen), full_net=full["net"])
 
 
 def main() -> None:

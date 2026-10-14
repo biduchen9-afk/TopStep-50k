@@ -33,6 +33,7 @@ class FirmPlan:
     refill_dead: int = 3
     max_wait: int = 21
     starts_per_day: int = 1
+    funded_atr2: Optional[Sequence[np.ndarray]] = None  # per stream: sizing unit used in the funded stage AFTER the first payout (hybrid); None = same unit as before the payout
     funded_atr: Optional[Sequence[np.ndarray]] = None   # per stream: replaces atr_usd in the FUNDED sizing rule only (Combine sizing keeps the stream's own ATR), e.g. Kelly-equivalent unit
     firm: Optional[str] = None      # several entries (account groups) can belong to one firm; None = the entry is its own firm
 
@@ -69,7 +70,8 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
         L = [s.low[:n_end].tolist() for s in fp.streams]
         A = [(fp.funded_atr[k] if fp.funded_atr is not None else s.atr_usd)[:n_end].tolist() for k, s in enumerate(fp.streams)]
         ND = [s.desired_micros(fp.R)[:n_end] for s in fp.streams]
-        F.append(dict(fp=fp, X=X, L=L, A=A, ND=ND, evals=[], funded=[], waiting=[], counter=0, refill_on=True, n_paid_events=0, first_payout_t=None,
+        A2 = [x_[:n_end].tolist() for x_ in fp.funded_atr2] if fp.funded_atr2 is not None else None
+        F.append(dict(fp=fp, X=X, L=L, A=A, A2=A2, ND=ND, evals=[], funded=[], waiting=[], counter=0, refill_on=True, n_paid_events=0, first_payout_t=None,
                       fees=0.0, payouts=0.0, n_paid_accts=0, n_evals=0, n_passed=0, n_funded=0, n_payouts=0, died=0, wasted=0, first_buy_t=None, first_pass_t=None, first_pass_start=None))
     cash_events: List[tuple] = []          # (t, amount) heap: payouts arriving and scheduled fee debits (negative)
     cash = 0.0
@@ -116,7 +118,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                     f["fees"] += fee; full_fees += fee; cash -= fee
                     f["n_funded"] += 1
                     tm: list = []
-                    pays, days, state, _ = run_funded_firm(spec.funded, f["X"][si], f["L"][si], f["ND"][si], t, fp.plan, f["A"][si], tm)
+                    pays, days, state, _ = run_funded_firm(spec.funded, f["X"][si], f["L"][si], f["ND"][si], t, fp.plan, f["A"][si], tm, f["A2"][si] if f["A2"] is not None else None)
                     for pt, pv in zip(tm, pays):
                         heapq.heappush(cash_events, (pt + pol.payout_delay_sessions, pv))
                         if f["first_payout_t"] is None:

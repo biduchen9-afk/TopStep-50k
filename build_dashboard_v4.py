@@ -124,6 +124,11 @@ def main() -> None:
         return "Passes" if not why else "Rejected: " + ", ".join(why)
     krows = [dict(config=r.config, kind="Volatility rule" if r.kind == "atr" else "Kelly multiple", pre_payout=r.f1, post_payout=r.f2, dev_mean=round(r.dev_mean), dev_p25=round(r.dev_p25), dev_worst=round(r.dev_worst), green=int(r.green), paid_share=round(r.paid_share, 3), died_share=round(r.died_share, 3),
                    pay_per_paid=round(r.pay_per_paid), median_days_first_payout=None if pd.isna(r.days_first_payout) else round(r.days_first_payout), seen_2021=json.loads(r.seen)[0], seen_2023=json.loads(r.seen)[1], seen_2025=json.loads(r.seen)[2], full_net=round(r.full_net), verdict=verdict(i, r)) for i, r in enumerate(Kd.itertuples())]
+    Hd = pd.read_csv("results/hybrid_study.csv")                    # pre-registration 10: volatility rule before the first payout, Kelly after it
+    for r in Hd.iloc[1:].itertuples():
+        seen = json.loads(r.seen)
+        krows.append(dict(config=r.config, kind="Hybrid", pre_payout=1.2, post_payout=r.f2, dev_mean=round(r.dev_mean), dev_p25=round(r.dev_p25), dev_worst=round(r.dev_worst), green=int(r.green), paid_share=round(r.paid_share, 3), died_share=round(r.died_share, 3),
+                          pay_per_paid=round(r.pay_per_paid), median_days_first_payout=round(r.days_first_payout), seen_2021=seen[0], seen_2023=seen[1], seen_2025=seen[2], full_net=round(r.full_net), verdict=r.verdict))
     json.dump(krows, open(f"{OUT}/kelly.json", "w"))
     Pa = pd.read_csv("results/days_to_payout_accounts.csv"); Pf = pd.read_csv("results/days_to_payout_farms.csv")
     drows = [dict(level="One account", version=r.version, period=("2010-22 starts" if r.period == "dev" else "2023+ starts"), sample=int(r.attempts), pass_rate=round(r.pass_rate, 3), paid_if_funded=round(r.p_paid_given_funded, 3), days_to_pass=r.days_to_pass_med, days_activation_to_payout=r.days_act_to_payout_med,
