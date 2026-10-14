@@ -39,7 +39,10 @@ def make_sleeve(market: str, sleeve: str, params: dict, gate: Optional[dict] = N
     if market not in _CTX:
         _CTX[market] = ac.context(sess)
     ctx = _CTX[market]
-    if sleeve.startswith("xs_"):
+    if sleeve.startswith("lt_"):
+        import lit_sleeves as lit
+        d = lit.run_lit(sess, sleeve, costs or costs_from_config(load_config()), ctx, **params)
+    elif sleeve.startswith("xs_"):
         import xs_sleeves as xsm
         if market not in _XS:
             _XS[market] = xsm.xs_context(sess)
