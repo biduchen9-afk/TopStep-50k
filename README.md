@@ -91,3 +91,19 @@ Independent reviews covered the signals, the account/payout engine, placebo/nega
   payouts are assumed approved instantly; accounts share one market path; 34 distinct funding dates make the statistics look stronger
   than they are. A clean test needs data after the end of this history with a frozen config and kill criteria set in advance.
 - **Dashboard:** `build_dashboard_data.py` writes `results/dashboard_data.json` (monthly payouts, fees, reinvestment, accounts open).
+
+## Regime study (why the edge faded in 2025-26, and what we tried)
+
+Scripts: `diag/regime_diag.py`, `diag/sizing_diag.py`, `vwap_variants.py` + `run_vwap_variants.py`, `switching.py`, `risk_units.py`,
+`run_regime_study.py` (dev grid), `run_regime_ext.py` (boundary check), `run_regime_rank.py` (dev-vs-hold-out rank check),
+`run_regime_holdout.py`, `run_regime_walkforward.py`, `build_dashboard_v2.py`. Farm rules added to `farm_real.FarmSpec`: `refill` (all / hyst / buffer) and a trailing pass-rate throttle (`pause_below`).
+
+- **Why 2023-24 held and 2025-26 did not:** in dollars per micro the NQ noise-area edge was about the same in 2025 as in 2024, but daily dispersion roughly doubled and 2025 profit came from a handful of days (the 5 best days exceed the year's total). Trailing variance ratio, autocorrelation and range had no predictive power for the next day's return, so the fade could not be forecast.
+- **Sizing:** scaling by trailing strategy P&L std instead of ATR did not help on dev data; larger Combine risk (R up to ~9,600 per ATR unit) helped at the farm level because Combines resolve faster.
+- **VWAP variants (156 trials logged in `results/vwap_variant_trials.csv`):** gap-and-first-30-minutes filtered VWAP on NQ was the only clear winner (dev 0.89, hold-out 0.87, neighbours 0.74-0.89); band-fade blends and multi-anchor VWAP did not work; ES/GC variants were weak.
+- **Switching:** gating or tilting sleeves by trailing Sharpe did not beat static dev weights on dev data (gates were worse).
+- **Farm rules:** the pass-rate throttle and the "buffer" refill rule cut fees and losses in weak periods but also give up payouts; the "hyst" rule (no new Combines once full, until 3 slots empty) is about neutral.
+- **Selection (dev only, 4,752 configs):** NQ noise + NQ VWAP + NQ gap30 sleeves, static weights, ATR sizing, Combine R=9,600, funded a1=0.4/a2=1.6, hyst refill, no throttle. Rank correlation between dev objective and hold-out net across all configs is only 0.16 (2023+) and 0.30 (2025+): selection adds modest value.
+- **Hold-out (not clean):** from 2023-01 the selected farm nets about $19k vs about $2k for the previous headline; from 2025-01 about $5k vs -$16k; a start in mid-2025 is slightly negative for both.
+- **Walk-forward (re-pick every year on earlier data, 3-year farms):** positive in 9 of 11 start years; mean $15.9k vs $18.8k for the previous headline across 2016-26, but +$4.7k vs -$6.1k for 2023-26 starts.
+- **No-edge control on the same rules** loses over the full history, so the gain is not purely rule structure.
