@@ -23,6 +23,12 @@ CASH_OPEN = 15 * 60 + 30      # 09:30 ET
 OR_END = CASH_OPEN + 30       # opening range 09:30-10:00 ET
 FLAT_BY = 22 * 60 - 5         # 15:55 ET
 ATR_LOOKBACK = 14
+TRACE = None            # set to a list to record (entry_smin, exit_smin) of every trade (used by audit_trade_hours.py)
+
+
+def _trace(smin, e, last):
+    if TRACE is not None:
+        TRACE.append((int(smin[e]), int(smin[last]) + 1))        # entry bar open .. close of the last bar held
 
 
 @dataclass
@@ -135,6 +141,7 @@ def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max
         price = o[e]
         px, last = _exit_long_short(direction, price, stop_d, e, o, h, l, c, vw, end)
         last = max(last, e)
+        _trace(smin, e, last)
         if direction > 0:
             worst = l[e:last + 1].min() - price
             pnl_pts = px - price
@@ -182,6 +189,7 @@ def orb_session(o, h, l, c, v, smin, atr, buf, s, cost_pts, or_min=30, allow=0):
         last = j
     else:
         px, last = c[end - 1], end - 1
+    _trace(smin, e, last)
     if direction > 0:
         worst, pnl_pts = l[e:last + 1].min() - price, px - price
     else:
@@ -230,6 +238,7 @@ def gap_session(o, h, l, c, v, smin, atr, thr, s, mode, cost_pts, allow=0):
         last = j
     else:
         px, last = c[end - 1], end - 1
+    _trace(smin, a, last)
     if direction > 0:
         worst, pnl_pts = l[a:last + 1].min() - price, px - price
     else:

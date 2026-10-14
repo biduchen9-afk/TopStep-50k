@@ -53,6 +53,7 @@ def _breakout(o, h, l, c, smin, atr, up_lvl, dn_lvl, buf, s, cp, start_min, end)
         last = j
     else:
         px, last = c[end - 1], end - 1
+    st._trace(smin, e, last)
     if direction > 0:
         worst, pnl = l[e:last + 1].min() - price, px - price
     else:
@@ -62,6 +63,8 @@ def _breakout(o, h, l, c, smin, atr, up_lvl, dn_lvl, buf, s, cp, start_min, end)
 
 
 def run_xs(sess: Sessions, name: str, costs: Costs, ctx: dict, xs: dict, anchor: int = CASH_OPEN, **p) -> DailySeries:
+    if anchor < CASH_OPEN:
+        raise ValueError('prop firms do not allow overnight / pre-market trading: entries must be at or after 09:30 ET (anchor >= %d)' % CASH_OPEN)
     n = len(sess)
     cp = costs.points(sess)
     atr = st.trailing_atr(ctx["ranges"], sess.roll)

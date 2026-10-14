@@ -94,6 +94,7 @@ def intraday_mom_session(o, h, l, c, v, smin, prev_close, atr, cost_pts, thr=0.0
     if end - a < 10:
         return 0.0, 0.0, 0
     price, px = o[a], c[end - 1]
+    st._trace(smin, a, end - 1)
     if direction > 0:
         worst, pnl = l[a:end].min() - price, px - price
     else:
@@ -121,6 +122,7 @@ def noise_area_session(o, h, l, c, v, smin, prev_close, sigma, cost_pts, allow=0
 
     def close_out(exit_px, last_idx):
         nonlocal realized, minp, pos
+        st._trace(smin, e_idx, last_idx)
         if pos > 0:
             worst, pnl = l[e_idx:last_idx + 1].min() - entry, exit_px - entry
         else:
@@ -199,6 +201,7 @@ def vwap_fade_session(o, h, l, c, v, smin, atr, k, s, cost_pts, allow=0, max_tra
         else:
             px, last = c[end - 1], end - 1
         last = max(last, e)
+        st._trace(smin, e, last)
         if direction > 0:
             worst, pnl = l[e:last + 1].min() - price, px - price
         else:
