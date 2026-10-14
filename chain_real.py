@@ -23,7 +23,7 @@ POLICIES = ("cancel_and_reopen", "immediate_reset", "immediate_reset_keep", "wai
 
 
 def combine_chain(xc, lc, ndc, t0: int, n_end: int, rules: RuleSet, cfg: EngineConfig, path_key: str,
-                  policy: str) -> Tuple[Optional[int], float, int, int]:
+                  policy: str, dyn_a=None, atr_c=None) -> Tuple[Optional[int], float, int, int]:
     """Run attempts back to back from session t0 until one passes or the data ends.
 
     Returns (pass_session or None, fees, attempts, last_session_used).
@@ -51,7 +51,7 @@ def combine_chain(xc, lc, ndc, t0: int, n_end: int, rules: RuleSet, cfg: EngineC
         else:
             fees += sub
             c0 = t
-        status, tau = run_combine(xc, lc, ndc, t, rules)
+        status, tau = run_combine(xc, lc, ndc, t, rules, dyn_a, atr_c)
         end = t + tau                               # first session after the attempt
         if keep_clock or wait:
             lo_s = t + 1
@@ -86,18 +86,19 @@ def policy_stats(comb: Stream, Rc: float, cfg: EngineConfig, path_key: str, rule
 
 def replay_detail(comb: Stream, Rc: float, fund: Stream, Rf: float, plan: FundedPlan, cfg: EngineConfig,
                   rules: RuleSet, path_key: str, i0: int, max_sessions: Optional[int] = None,
-                  policy: str = "cancel_and_reopen") -> Dict[str, float]:
+                  policy: str = "cancel_and_reopen", dyn_c: Optional[float] = None) -> Dict[str, float]:
     """One account at a time: Combine -> funded -> payouts -> close/die -> new Combine, to the horizon."""
     xc, lc = _lists(comb)
     xf, lf = _lists(fund)
     n_end = len(xc) if max_sessions is None else min(len(xc), i0 + max_sessions)
     xc, lc, xf, lf = xc[:n_end], lc[:n_end], xf[:n_end], lf[:n_end]
     ndc, ndf = comb.desired_micros(Rc)[:n_end], fund.desired_micros(Rf)[:n_end]
+    atr_c, atr_f = comb.atr_usd[:n_end].tolist(), fund.atr_usd[:n_end].tolist()
     t = i0
     out = dict(fees=0.0, payouts=0.0, attempts=0, funded=0, n_payouts=0, days_combine=0, days_funded=0,
                left_on_table=0.0, died=0, closed=0, no_payout_deaths=0)
     while t < n_end - 5:
-        sp, fees, att, last = combine_chain(xc, lc, ndc, t, n_end, rules, cfg, path_key, policy)
+        sp, fees, att, last = combine_chain(xc, lc, ndc, t, n_end, rules, cfg, path_key, policy, dyn_c, atr_c)
         out["fees"] += fees
         out["attempts"] += att
         out["days_combine"] += (sp + 1 - t) if sp is not None else (n_end - t)
@@ -107,7 +108,7 @@ def replay_detail(comb: Stream, Rc: float, fund: Stream, Rf: float, plan: Funded
         i_f = sp + 1
         if i_f >= n_end - 5:
             break
-        pays, days, state, bal = run_funded_detail(xf, lf, ndf, i_f, rules, plan)
+        pays, days, state, bal = run_funded_detail(xf, lf, ndf, i_f, rules, plan, atr_f)
         out["payouts"] += sum(pays)
         out["n_payouts"] += len(pays)
         out["days_funded"] += days

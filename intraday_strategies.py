@@ -96,7 +96,7 @@ def _exit_long_short(direction, price, stop_dist, e, o, h, l, c, vw, end):
     return c[end - 1], end - 1
 
 
-def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max_trades=3):
+def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max_trades=3, allow=0):
     """Momentum: trade in the direction of price leaving an 18:00-anchored VWAP by k*ATR.
 
     Long when close > VWAP + k*ATR, short when close < VWAP - k*ATR (fresh crossings after the first
@@ -112,6 +112,10 @@ def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max
     band, stop_d = k * atr, s * atr
     up = c > vw + band
     dn = c < vw - band
+    if allow > 0:
+        dn = np.zeros_like(dn)
+    elif allow < 0:
+        up = np.zeros_like(up)
     up_edge = up & ~np.r_[False, up[:-1]]
     dn_edge = dn & ~np.r_[False, dn[:-1]]
     t = int(np.searchsorted(smin, start_min))
@@ -144,7 +148,7 @@ def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max
     return realized, min(minp, realized), trades
 
 
-def orb_session(o, h, l, c, v, smin, atr, buf, s, cost_pts, or_min=30):
+def orb_session(o, h, l, c, v, smin, atr, buf, s, cost_pts, or_min=30, allow=0):
     """Opening-range breakout (range of the first `or_min` minutes after 09:30 ET), one trade, stop s*ATR,
     flat by 15:55 ET."""
     end = int(np.searchsorted(smin, FLAT_BY))
@@ -155,6 +159,10 @@ def orb_session(o, h, l, c, v, smin, atr, buf, s, cost_pts, or_min=30):
     bu = buf * atr
     iu = _first_true(c[b:end - 1] > hi + bu)
     idn = _first_true(c[b:end - 1] < lo - bu)
+    if allow > 0:
+        idn = -1
+    elif allow < 0:
+        iu = -1
     if iu < 0 and idn < 0:
         return 0.0, 0.0, 0
     if idn < 0 or (iu >= 0 and iu < idn):
@@ -196,7 +204,7 @@ def random_session(o, h, l, c, v, smin, direction, cost_pts):
     return net, min(worst - cost_pts, net, 0.0), 1
 
 
-def gap_session(o, h, l, c, v, smin, atr, thr, s, mode, cost_pts):
+def gap_session(o, h, l, c, v, smin, atr, thr, s, mode, cost_pts, allow=0):
     """Overnight-move momentum (mode=+1) or fade (mode=-1).
 
     The overnight move is close(09:29 ET) - open(18:00 ET). If |move| >= thr*ATR, trade at the 09:30 ET
@@ -209,6 +217,8 @@ def gap_session(o, h, l, c, v, smin, atr, thr, s, mode, cost_pts):
     if abs(move) < thr * atr:
         return 0.0, 0.0, 0
     direction = int(np.sign(move)) * mode
+    if allow != 0 and direction != allow:
+        return 0.0, 0.0, 0
     price, stop_d = o[a], s * atr
     if direction > 0:
         js = _first_true(l[a:end] <= price - stop_d)

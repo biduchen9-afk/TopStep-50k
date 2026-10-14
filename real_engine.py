@@ -111,14 +111,19 @@ def _lists(s: Stream) -> Tuple[List[float], List[float]]:
 # ----------------------------------------------------------------------------------------------
 # Combine
 # ----------------------------------------------------------------------------------------------
-def run_combine(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet) -> Tuple[int, int]:
+def run_combine(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
+                dyn_a: Optional[float] = None, atr: Optional[List[float]] = None) -> Tuple[int, int]:
     """Return (status, tau): 1 pass, 0 breach, -1 data ran out. tau is a 1-based day count."""
     bal = peak = best = 0.0
     floor = -r.mll
     n = len(x)
     dll = r.dll
     for t in range(i0, min(n, i0 + r.max_combine_days)):
-        k = min(nd[t], r.combine_micros)
+        if dyn_a is None:
+            k = min(nd[t], r.combine_micros)
+        else:                                   # risk = dyn_a x cushion above the MLL, in $ per ATR move
+            a_t = atr[t]
+            k = 1 if not (a_t > 0) else min(max(1, int(round(dyn_a * max(bal - floor, 500.0) / a_t))), r.combine_micros)
         p, w = x[t] * k, lo[t] * k
         lim = floor - bal                       # negative distance to the MLL
         if r.intraday_mll or dll is not None:
@@ -146,12 +151,12 @@ def run_combine(x: List[float], lo: List[float], nd: List[int], i0: int, r: Rule
 
 
 def combine_outcomes(x, lo, nd, cfg: EngineConfig, path_key: str, r: RuleSet,
-                     starts: np.ndarray) -> Dict[str, np.ndarray]:
+                     starts: np.ndarray, dyn_a: Optional[float] = None, atr=None) -> Dict[str, np.ndarray]:
     p = cfg.paths[path_key]
     status = np.empty(len(starts), dtype=np.int8)
     tau = np.empty(len(starts), dtype=np.int32)
     for k, i0 in enumerate(starts):
-        status[k], tau[k] = run_combine(x, lo, nd, int(i0), r)
+        status[k], tau[k] = run_combine(x, lo, nd, int(i0), r, dyn_a, atr)
     bills = 1 + (np.maximum(tau, 1) - 1) // cfg.billing_cycle_days
     fees = bills * p.monthly_cost + np.where(status == 1, p.activation_fee, 0.0)
     return {"status": status, "tau": tau, "fees": fees}
@@ -178,10 +183,12 @@ class FundedPlan:
     w2: float = 0.5
     r2: float = 1.0
     max_payouts: int = 2               # total payouts before the account is closed (>=2 needs t2)
+    a1: Optional[float] = None         # dynamic sizing: risk = a1 x cushion (balance - MLL floor) before the first payout
+    a2: Optional[float] = None         # ... and a2 x cushion after it (None -> a1). None = use the fixed-size `nd` list
 
 
 def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
-                      plan: FundedPlan) -> Tuple[List[float], int, int, float]:
+                      plan: FundedPlan, atr: Optional[List[float]] = None) -> Tuple[List[float], int, int, float]:
     """Return (net payouts in order, days, end_state, balance when it ended): end_state 1 dead, 2 closed by plan, 0 data end."""
     bal = peak = 0.0
     floor = -r.mll
@@ -194,8 +201,13 @@ def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r
     dll = r.dll
     cap_pay = r.cap_standard if plan.path == "standard" else r.cap_consistency
     for t in range(i0, n):
-        mult = plan.r1 if stage == 1 else plan.r2
-        k = max(1, int(round(nd[t] * mult)))
+        if plan.a1 is None:
+            mult = plan.r1 if stage == 1 else plan.r2
+            k = max(1, int(round(nd[t] * mult)))
+        else:
+            a_t = atr[t]
+            a = plan.a1 if (stage == 1 or plan.a2 is None) else plan.a2
+            k = 1 if not (a_t > 0) else max(1, int(round(a * max(bal - floor, 250.0) / a_t)))
         k = min(k, xfa_micro_cap(bal, r.ladder))
         p, w = x[t] * k, lo[t] * k
         lim = floor - bal
@@ -237,9 +249,9 @@ def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r
 
 
 def run_funded(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
-               plan: FundedPlan) -> Tuple[float, float, int, int]:
+               plan: FundedPlan, atr: Optional[List[float]] = None) -> Tuple[float, float, int, int]:
     """Compact form: (first payout, SUM of later payouts, days, end_state)."""
-    pays, days, state, _ = run_funded_detail(x, lo, nd, i0, r, plan)
+    pays, days, state, _ = run_funded_detail(x, lo, nd, i0, r, plan, atr)
     return (pays[0] if pays else 0.0), float(sum(pays[1:])), days, state
 
 

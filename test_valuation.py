@@ -229,3 +229,72 @@ def test_repeated_payouts_until_death():
     plan_inf = FundedPlan("m", "standard", t1=2000, w1=0.5, t2=1500, w2=0.5, max_payouts=99)
     pays, days, state, _ = run_funded_detail(x, lo, [1] * 41, 0, _rs(), plan_inf)
     assert len(pays) > 3 and state == 1         # keeps paying until the crash
+
+
+# --- Academic sleeves ---------------------------------------------------------------------
+
+def _day(prices_open, drift_after=0.0, n=1320):
+    """A synthetic session: flat at `prices_open` until 09:30 ET (minute 930), then drifting by drift_after per minute."""
+    import numpy as np
+    smin = np.arange(n)
+    c = np.full(n, prices_open, dtype=float)
+    c[930:] = prices_open + drift_after * (smin[930:] - 930)
+    o = np.r_[c[0], c[:-1]]
+    h, l = np.maximum(o, c) + 0.1, np.minimum(o, c) - 0.1
+    return o, h, l, c, np.full(n, 100.0), smin
+
+
+def test_intraday_momentum_trades_last_half_hour_in_direction_of_first_half_hour():
+    from academic_strategies import intraday_mom_session
+    o, h, l, c, v, m = _day(100.0, drift_after=0.01)        # rises after the open -> first half hour is positive vs prev close
+    pnl, low, trades = intraday_mom_session(o, h, l, c, v, m, prev_close=99.0, atr=2.0, cost_pts=0.0)
+    assert trades == 1 and pnl > 0                           # long into a still-rising last half hour
+    pnl2, _, t2 = intraday_mom_session(o, h, l, c, v, m, prev_close=99.0, atr=2.0, cost_pts=0.0, allow=-1)
+    assert t2 == 0 and pnl2 == 0                             # a short-only gate blocks a long signal
+
+
+def test_noise_area_breakout_long_and_gate():
+    import numpy as np
+    from academic_strategies import noise_area_session
+    o, h, l, c, v, m = _day(100.0, drift_after=0.02)
+    sigma = np.full(12, 0.001)                               # the usual noise is 0.1%; a steady drift breaks out of it
+    pnl, low, trades = noise_area_session(o, h, l, c, v, m, prev_close=100.0, sigma=sigma, cost_pts=0.0)
+    assert trades >= 1 and pnl > 0
+    assert noise_area_session(o, h, l, c, v, m, prev_close=100.0, sigma=sigma, cost_pts=0.0, allow=-1)[2] == 0
+
+
+# --- Dynamic (cushion-proportional) sizing -----------------------------------------------------
+
+def test_combine_dynamic_sizing_scales_with_cushion():
+    from real_engine import run_combine
+    n = 10
+    x, lo = [1.0] * n, [0.0] * n                  # +$1 per micro per day, no intraday dip
+    atr = [100.0] * n
+    # risk = 1.0 x 4,500 cushion at $100 per micro -> 45 micros; each day adds 45 x $1
+    status, tau = run_combine(x, lo, [1] * n, 0, _rs(profit_target=100.0), dyn_a=1.0, atr=atr)
+    assert (status, tau) == (1, 3)                # 45 + 45 + 45 = 135 >= 100 on day 3 (best day 45 <= 55% of 135)
+
+
+def test_funded_dynamic_risk_shrinks_after_payout():
+    from real_engine import FundedPlan, run_funded_detail
+    plan = FundedPlan("d", "standard", t1=500, w1=0.5, t2=0.0, w2=0.5, max_payouts=99, a1=0.2, a2=0.2)
+    n = 400
+    x = [1.0] * n                                   # +$1 per micro per day
+    pays, days, state, bal = run_funded_detail(x, [0.0] * n, [1] * n, 0, _rs(), plan, atr=[10.0] * n)
+    assert len(pays) >= 2 and state == 0            # keeps compounding small payouts; never dies on a steady series
+
+
+def test_farm_respects_account_caps():
+    import numpy as np
+    from pricing_config import load_config
+    from contract_eval import CombineSizing
+    from farm_real import FarmSpec, run_farm
+    from real_engine import FundedPlan, Stream, rules_from_config
+    cfg = load_config()
+    rng = np.random.default_rng(1)
+    n = 1500
+    pnl = rng.normal(0, 400, n)
+    s = Stream("rand", np.arange(n).astype("datetime64[D]"), pnl, np.minimum(pnl, 0) - 100, np.full(n, 500.0), np.ones(n, bool))
+    plan = FundedPlan("p", "standard", 1500, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 0.2, 0.2)
+    out = run_farm([s], CombineSizing("fixed", 3000), None, plan, cfg, rules_from_config(cfg, "no_activation_dll"), "no_activation_dll", 0, FarmSpec())
+    assert out["max_funded_seen"] <= 5 and out["max_evals_seen"] <= 20 and out["n_evals"] > 0

@@ -54,3 +54,21 @@ Results CSVs are in `results/`. Treat the hold-out as used: it has been run more
 After the first payout (50% of balance at trigger t1) every later payout is taken the moment it is eligible, at the
 maximum allowed; the account is traded until it dies; then a new Combine starts. Selection uses 2010-2022 only, the
 hold-out (2023-2026) uses fresh coin-flip seeds. See `results/contract_*.csv`.
+
+## Literature sleeves, portfolio, dynamic sizing and the account farm
+
+Sources (found by web search; SSRN/arXiv): Gao-Han-Li-Zhou "Market Intraday Momentum" (SSRN 2440866); Zarattini-Aziz-Barbon
+"Beat the Market" (SSRN 4824172); Zarattini-Barbon-Aziz "A Profitable Day Trading Strategy" (SSRN 4729284); Moskowitz-Ooi-Pedersen
+"Time Series Momentum" (SSRN 2089463). Caution: arXiv 2605.04004 argues OHLCV intraday momentum in MNQ has structural limits (not reviewed here).
+
+| Script / module | What it does |
+|---|---|
+| `academic_strategies.py` | intraday momentum (last half hour), noise-area momentum, VWAP fade, trend / volatility gates |
+| `run_sleeve_sweep.py` | 300 sleeve variants x ES/NQ/GC, dev vs hold-out |
+| `portfolio.py`, `run_portfolio.py` | micro-basket portfolios, dev-only weights, switching rules |
+| `contract_eval.py`, `run_dynamic_contract.py` | fixed vs cushion-proportional (dynamic) sizing, dev grid |
+| `run_dynamic_holdout.py` | frozen per-start + sequential + farm hold-out |
+| `farm_real.py`, `run_farm_dev.py`, `run_farm_scaling.py`, `run_farm_robustness.py` | up to 20 evals / 5 funded accounts on one market path |
+
+Dynamic sizing: risk per ATR move = a x (balance - MLL floor): a1 before the first payout, a2 after it (floor is $0 then), so a funded account
+starts carefully and fades slowly instead of dying outright.
