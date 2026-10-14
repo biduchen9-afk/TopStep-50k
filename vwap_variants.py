@@ -153,7 +153,7 @@ def run_variant(sess: Sessions, name: str, costs: Costs, ctx: dict, ex: dict, tr
             if allow != 0 and al in (-1, 1) and al != allow:
                 continue
             use = allow if al == 2 else al
-            r = st.vwap_atr_session(o, h, l, c, v, m, atr[i], k, s, cp, start_min=start, allow=use)
+            r = st.vwap_atr_session(o, h, l, c, v, m, atr[i], k, s, cp, start_min=start, allow=use, max_trades=p.get("max_trades", 3))
         elif name == "vv_blend":
             e10, med = ex["eff10"][i], ex["eff_med"][i]
             if not (np.isfinite(e10) and np.isfinite(med)):

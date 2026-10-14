@@ -71,11 +71,18 @@ def boot_p(x, n_boot=2000, mean_block=10, seed=0):
 
 
 def main() -> None:
+    import os, pickle
     T = trials(); assert len(T) == 144, len(T)
     F_nq = None; rows = []; series = {}
+    CK = '/home/user/data_raw/ext_checkpoint.pkl'
+    if os.path.exists(CK):
+        rows, series = pickle.load(open(CK, 'rb'))
+        print('resuming after', len(rows), 'trials')
     base_cache = {}
     sess_nq = build_sessions("nq")
     for k, t in enumerate(T):
+        if k < len(rows):
+            continue
         st.TRACE = []
         m, nm, kind, pr = t["market"], t["idea"], t["kind"], t["params"]
         if kind == "ex":
@@ -112,7 +119,11 @@ def main() -> None:
             from portfolio import costs_from_config
             A_ = np.where(np.isfinite(bs.atr), bs.atr * 1.0, np.nan)            # $ ATR per micro; only the ratio gap/ATR matters, so use points ATR from the sleeve
             pts_atr = st.trailing_atr(ctx["ranges"], sess_nq.roll)
-            gap = np.array([sess_nq.day(i)[0][np.searchsorted(sess_nq.day(i)[5], C)] - F["close"][i] if len(sess_nq.day(i)[0]) > 0 else np.nan for i in range(len(sess_nq))])
+            gap = np.full(len(sess_nq), np.nan)
+            for ii in range(len(sess_nq)):
+                oo, _h, _l, _c, _v, mm = sess_nq.day(ii); aa = int(np.searchsorted(mm, C))
+                if aa < len(oo):
+                    gap[ii] = oo[aa] - F["close"][ii]
             X = design(bs.dates, F, pts_atr, gap, ctx["volratio"])
             sl = meta_label(bs, X, pr["model"], pr["thr"])
         tr = np.array(st.TRACE) if st.TRACE else np.zeros((0, 2)); st.TRACE = None
@@ -122,6 +133,7 @@ def main() -> None:
         rows.append(dict(trial=k, market=m, idea=nm, kind=kind, params=str(pr), full=sharpe(r[ok]), dev=sharpe(x_dev), hold=sharpe(r[ok & ~dev]), pos_years=yearly_pos(r, ok, b.dates, dev),
                          n_trades=len(tr), rth_only=rth, T=int(len(x_dev)), skew=float(pd.Series(x_dev).skew()) if len(x_dev) > 10 else 0.0, kurt=float(pd.Series(x_dev).kurt() + 3) if len(x_dev) > 10 else 3.0))
         series[k] = x_dev
+        pickle.dump((rows, series), open(CK, 'wb'))
         if k % 12 == 11:
             print(k + 1, "of 144", flush=True)
     t = pd.DataFrame(rows)
@@ -130,7 +142,7 @@ def main() -> None:
     V = np.var(sr_d, ddof=1); N = len(t)
     sr0 = math.sqrt(V) * ((1 - EULER) * ND.inv_cdf(1 - 1 / N) + EULER * ND.inv_cdf(1 - 1 / (N * math.e)))
     dsr = []
-    for sr, s, sk, ku in zip(sr_d, t["T"], t.skew, t.kurt):
+    for sr, s, sk, ku in zip(sr_d, t["T"], t["skew"], t["kurt"]):
         den = math.sqrt(max(1e-9, 1 - sk * sr + (ku - 1) / 4 * sr ** 2))
         dsr.append(ND.cdf((sr - sr0) * math.sqrt(max(s - 1, 1)) / den))
     t["dsr"] = dsr; t["sr0_annual"] = sr0 * math.sqrt(252)

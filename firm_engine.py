@@ -28,6 +28,7 @@ class EvalPhase:
     min_days: int = 0                  # minimum trading days (days with a non-zero result) before a pass counts
     max_days: int = 252
     max_micros: int = 150
+    day_cap: Optional[float] = None    # overlay: flatten when the day's profit reaches this ($); modelled as p = min(p, cap)
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,7 @@ class FundedSpec:
     buffer: float = 0.0                # balance that must remain after a payout
     post_floor: float = 0.0            # floor level (profit terms) after a 'zero' payout (Topstep 0; FundedNext +100)
     min_cycle_profit: float = 0.0      # profit since the last payout needed to request one (FundedNext $500)
+    day_cap: Optional[float] = None    # overlay (see EvalPhase.day_cap)
 
 
 @dataclass(frozen=True)
@@ -106,6 +108,8 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
                     if ph.dll_hard:
                         return 0, t - i0 + 1
                     p = ph.dll
+            if ph.day_cap is not None and p > ph.day_cap:
+                p = ph.day_cap
             bal += p
             if ph.dd_type == "eod" and bal <= floor:
                 return 0, t - i0 + 1
@@ -159,6 +163,8 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
                 if spec.dll_hard:
                     return pays, t - i0 + 1, 1, floor
                 p = spec.dll
+        if spec.day_cap is not None and p > spec.day_cap:
+            p = spec.day_cap
         bal += p
         if spec.dd_type == "eod" and bal <= floor:
             return pays, t - i0 + 1, 1, bal

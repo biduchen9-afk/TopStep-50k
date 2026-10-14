@@ -237,7 +237,7 @@ def run_sleeve(sess: Sessions, name: str, costs: Costs = Costs(), ctx: Optional[
             continue
         o, h, l, c, v, m = sess.day(i)
         if name == "vwap_atr":
-            r = st.vwap_atr_session(o, h, l, c, v, m, atr[i], p["k"], p["s"], cp, start_min=p.get("start_min", CASH_OPEN), allow=allow)
+            r = st.vwap_atr_session(o, h, l, c, v, m, atr[i], p["k"], p["s"], cp, start_min=p.get("start_min", CASH_OPEN), allow=allow, max_trades=p.get("max_trades", 3))
         elif name == "orb":
             r = st.orb_session(o, h, l, c, v, m, atr[i], p["buf"], p["s"], cp, or_min=p.get("or_min", 30), allow=allow)
         elif name == "gap":
@@ -245,7 +245,7 @@ def run_sleeve(sess: Sessions, name: str, costs: Costs = Costs(), ctx: Optional[
         elif name == "intraday_mom":
             r = intraday_mom_session(o, h, l, c, v, m, ctx["prev_close"][i], atr[i], cp, thr=p.get("thr", 0.0), use_r12=p.get("use_r12", True), allow=allow)
         elif name == "noise_area":
-            r = noise_area_session(o, h, l, c, v, m, ctx["prev_close"][i], ctx["sigma"][i], cp, allow=allow)
+            r = noise_area_session(o, h, l, c, v, m, ctx["prev_close"][i], ctx["sigma"][i], cp, allow=allow, max_trades=p.get("max_trades", 3))
         elif name == "vwap_fade":
             r = vwap_fade_session(o, h, l, c, v, m, atr[i], p["k"], p["s"], cp, allow=allow)
         else:
