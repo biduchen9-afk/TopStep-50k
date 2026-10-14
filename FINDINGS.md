@@ -230,3 +230,26 @@ Code: `daily_features.py` (causal ADX, ER, Hurst, variance ratio, RSI, Bollinger
 | max 1 / 2 entries per sleeve per day | $30.9k / $33.9k | $14.6k / $10.6k | -$9.7k / -$1.4k | 9 / 9 | $71k / $58k on 2021 but $0.7k / -$14k on 2023 and -$14k on 2025-01 | $169k / $169k |
 - A daily profit cap (the "consistency cap") destroys the edge: the strategy is positively skewed and capping the big days removes most of the profit. Do not use it.
 - A tighter daily-loss breaker and an entry limiter improve the 3-year dev farms and the worst case, but both are weaker on the most recent starts (2023, 2025), so they are plausible, not proven; the entry limiter is the more convincing of the two (a mechanism: fewer re-entries after stop-outs, lower costs).
+
+## 19. Diversifying the strategies across funded accounts, and Combine pass rate by sleeve (`run_account_diversification.py`, `diag/pass_cost_and_placebo.py`)
+**Pass rate by sleeve (Topstep rules, dev starts every 3 sessions 2010-2022; 2023+ in brackets; median calendar days to pass; `results/pass_rate_by_sleeve.csv`).** Pass rate rises as risk R falls but takes much longer (one $199 bill per 21 sessions):
+| Sleeve | R=3,200 | R=6,400 | R=9,600 (default) | R=12,800 |
+|---|---|---|---|---|
+| gap-VWAP | 40% (42%), 133 d | 34% (25%), 46 d | 29% (17%), 36 d | 26% (14%), 33 d |
+| NQ basket | 35% (67%), 148 d | 26% (37%), 42 d | 21% (23%), 30 d | 16% (15%), 25 d |
+| noise-area | 29% (56%), 80 d | 22% (22%), 30 d | 19% (24%), 22 d | 16% (21%), 20 d |
+| VWAP+ATR | 20% (36%), 45 d | 18% (21%), 23 d | 15% (15%), 13 d | 13% (11%), 13 d |
+| ES VWAP (gated) / GC noise (gated) | 21% / 12% | 17% / 11% | 13% / 10% | 11% / 8% |
+**Combine fees per funded account** (the pass rate that matters; dev): gap-VWAP $1,022 at R=9,600 (best), noise-area $1,219 at 6,400, VWAP+ATR $1,256 at 6,400, NQ basket $1,274 at 6,400. The gap-VWAP sleeve has the best pass rate and the lowest cost per funded account on development data; its 2023+ pass rate at R=9,600 (17%) is below the noise-area sleeve's (24%).
+**Across firms** (section 14, each firm's own best configuration, dev): Alpha Standard and Take Profit Trader 31%, FundedNext 25%, FTMO Growth 23%, Topstep 17-22%; by net per fee dollar Topstep is still first.
+
+**Diversifying across accounts is possible and it helps on development data.** Instead of five accounts running the same 3-sleeve basket, each group of accounts runs ONE sleeve (so each account is a high-variance option, while the book is diversified). One Combine at a time, balanced sizing, ten 3-year dev farms:
+| Case | dev mean | worst | green | months with a payout | correlation between groups | full-history net (fees) | seen starts 2021 / 2023 / 2025-01 / 2025-07 |
+|---|---|---|---|---|---|---|---|
+| 5 accounts, same basket | $4.4k | -$6.9k | 7/10 | 26% | n/a | $41k ($65k) | $29k / $11k / $2k / -$4k |
+| 3 noise-area + 2 gap-VWAP accounts | $17.5k | -$12.4k | 7/10 | 48% | 0.08 | $233k ($69k) | $37k / $26k / -$6k / -$4k |
+| 2 noise-area + 1 VWAP + 2 gap-VWAP | $16.0k | -$10.1k | 6/10 | 47% | 0.04 | $209k ($73k) | $44k / $18k / -$6k / -$4k |
+With the other rule (each group buys its own Combine) the split gives dev mean $13-15k and full-history net $90-95k, with fees $88-132k.
+- Monthly net correlation between the groups is 0.04-0.08, payouts arrive in 47-48% of months instead of 26%, and the dev mean is about 4x higher. Mechanism: a single sleeve per account is more volatile than the basket, and a funded account is an option that gains from variance, while the groups are nearly uncorrelated with each other.
+- **Placebo:** with the strategy's edge removed the split still loses (dev mean -$2.7k and -$3.3k, against -$7.9k for the same-basket farm), so the profit is still the edge; the split just shrinks the losses without the edge.
+- Caveats: the split is a post-hoc comparison (three cases, two buying rules, six looks); the two most recent starts (2025) are slightly worse than the same-basket farm; the full-history gain includes seen years.
