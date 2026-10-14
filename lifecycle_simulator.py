@@ -22,10 +22,21 @@ HORIZON_DAYS_3Y = 3 * 252
 @dataclass(frozen=True)
 class PayoutRule:
     """When the funded account takes its first payout and closes (assumption, configurable)."""
-    trigger_profit: float = 3000.0   # request a payout once net profit reaches this
+    trigger_profit: float = 3000.0   # request a payout once eligible AND net profit reaches this
     payout_fraction: float = 0.50    # share of balance withdrawn
     max_payout: float = 5000.0       # gross cap per payout
     close_after_payout: bool = True
+    # Eligibility. Standard path: N winning days of >= winning_day_min.
+    # Consistency path: min_trading_days traded and best day <= consistency_ratio of profit.
+    min_winning_days: int = 5
+    winning_day_min: float = 150.0
+    consistency_ratio: Optional[float] = None
+    min_trading_days: int = 0
+
+
+STANDARD_PAYOUT = PayoutRule(max_payout=5000.0, min_winning_days=5, winning_day_min=150.0)
+CONSISTENCY_PAYOUT = PayoutRule(max_payout=6000.0, min_winning_days=0, consistency_ratio=0.40,
+                                min_trading_days=3)
 
 
 @dataclass
@@ -55,6 +66,8 @@ def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
     pnl = np.zeros(n)
     peak = np.zeros(n)
     max_day = np.zeros(n)
+    win_days = np.zeros(n, dtype=np.int64)  # XFA days with P&L >= winning_day_min
+    xfa_days = np.zeros(n, dtype=np.int64)
 
     fees = np.zeros(n)
     paid_out = np.zeros(n)
@@ -70,6 +83,8 @@ def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
         pnl[mask] = 0.0
         peak[mask] = 0.0
         max_day[mask] = 0.0
+        win_days[mask] = 0
+        xfa_days[mask] = 0
         n_comb[mask] += 1
 
     for _ in range(horizon):
@@ -83,13 +98,19 @@ def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
         peak = np.maximum(peak, pnl)
 
         # --- Combine ---
-        max_day[comb] = np.maximum(max_day[comb], x[comb])
+        max_day = np.maximum(max_day, x)
+        win_days += funded & (x >= payout.winning_day_min)
+        xfa_days += funded
         c_breach = comb & (pnl <= peak - rules.trailing_mll)
         c_pass = comb & ~c_breach & (pnl >= rules.profit_target) & \
                  (max_day <= rules.consistency_cap_ratio * pnl)
         # --- XFA ---
         f_breach = funded & (pnl <= np.minimum(peak - rules.trailing_mll, 0.0))
-        f_pay = funded & ~f_breach & (pnl >= payout.trigger_profit)
+        elig = win_days >= payout.min_winning_days
+        if payout.consistency_ratio is not None:
+            elig &= (xfa_days >= payout.min_trading_days) & (pnl > 0) & \
+                    (max_day <= payout.consistency_ratio * pnl)
+        f_pay = funded & ~f_breach & elig & (pnl >= payout.trigger_profit)
 
         fees[c_pass] += path.activation_fee
         n_fund[c_pass] += 1
@@ -108,6 +129,8 @@ def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
         pnl[to_xfa] = 0.0
         peak[to_xfa] = 0.0
         max_day[to_xfa] = 0.0
+        win_days[to_xfa] = 0
+        xfa_days[to_xfa] = 0
         restart(close)
 
     return LifecycleResult(total_pnl=paid_out - fees, fees=fees, payouts=paid_out,
