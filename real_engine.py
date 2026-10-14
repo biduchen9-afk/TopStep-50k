@@ -1,22 +1,28 @@
-"""Replay Topstep Combine and funded-account rules on REAL daily strategy P&L.
+"""Replay Topstep 150K Combine and Express Funded Account rules on REAL strategy P&L.
 
-Sizing: every day's P&L is expressed in session-ATR units (so 1 unit = the P&L of a position that
-gains one trailing-14-session range), then multiplied by a dollar risk unit R. R is chosen so the
-daily P&L standard deviation equals a target ("sigma_d"), which is the aggressiveness dial.
-Fractional contracts are allowed (micros make that realistic).
+Rules implemented (Topstep help-centre articles, checked October 2026 via web search; see README):
+  * Day trading only: every strategy is flat by 15:55 ET, before the 3:10 PM CT (4:10 PM ET) cutoff.
+  * Maximum Loss Limit (MLL) $4,500: set from the highest END-OF-DAY balance, trails up, and LOCKS
+    at the starting balance ($0) once reached. A breach is enforced in REAL TIME against realised +
+    unrealised P&L (intraday low), not just at the close. (`intraday_mll=False` gives the old EOD rule.)
+  * Combine: +$9,000 target; consistency = best day <= 55% of total profit (target rises to
+    best_day / 0.55 otherwise); max 15 minis (150 micros).
+  * Optional Daily Loss Limit (DLL): when the intraday low reaches it, positions are liquidated at the
+    DLL and the session is over (not a breach unless the MLL is closer).
+  * Express Funded Account: balance starts at $0; contract limit follows a balance ladder
+    (3/4/5/10/15 lots); payout paths:
+        standard    - 5 winning days of >= $150, up to 50% of balance, cap $5,000
+        consistency - >= 3 trading days and best day <= 40% of net profit, up to 50%, cap $6,000
+      minimum request $125. After EVERY payout the MLL resets to $0 permanently and the day counts restart.
+  * 90/10 profit split. Fees: see config.yaml (billing 21 trading days, activation only on pass).
 
-Outcomes are measured from EVERY historical start date, not one path, so each probability is an
-average over thousands of overlapping real windows. Confidence intervals bootstrap whole years.
-
-Account rules (from the project spec, Topstep 150K):
-  Combine: target $9,000, EOD trailing MLL $4,500 (trails continuously), consistency 50%,
-           optional intraday DLL -$3,000 (day is liquidated at the DLL when the intraday low hits it).
-  Funded:  balance starts at 0; floor = min(peak EOD balance - MLL, 0); withdrawals do not move the
-           floor (it depends on peak profit); payouts need N winning days since the last payout.
+Sizing: integer micro contracts (10 micros = 1 mini). A "risk unit" R is the dollar value of one
+trailing-14-session range; contracts = max(1, round(R / dollars-per-ATR-per-micro)), then capped.
+Outcomes are measured from EVERY historical start date; CIs resample whole calendar years.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -24,120 +30,196 @@ import numpy as np
 from intraday_strategies import DailySeries
 from pricing_config import EngineConfig
 
-WIN_DAY = 150.0   # a "winning day" for payout eligibility (Topstep standard path)
+MICRO_PER_MINI = 10
+# (minimum balance, lots) ladder for a 150K XFA, from third-party summaries of Topstep's scaling plan
+XFA_LADDER = ((0.0, 3), (1500.0, 4), (2000.0, 5), (3000.0, 10), (4500.0, 15))
+
+
+@dataclass(frozen=True)
+class RuleSet:
+    profit_target: float = 9000.0
+    mll: float = 4500.0
+    consistency_ratio: float = 0.55           # official Combine figure (spec said 0.50)
+    combine_mll_locks: bool = True            # MLL locks at $0 once reached (official), spec: trails forever
+    intraday_mll: bool = True                 # breach is real-time incl. open P&L
+    dll: Optional[float] = None
+    split: float = 0.90
+    win_day: float = 150.0
+    payout_min: float = 125.0
+    cap_standard: float = 5000.0
+    cap_consistency: float = 6000.0
+    consistency_xfa: float = 0.40
+    consistency_days: int = 3
+    standard_win_days: int = 5
+    combine_micros: int = 150
+    max_combine_days: int = 252               # an unresolved attempt is abandoned (counted as a failure) after a year
+
+
+def rules_from_config(cfg: EngineConfig, path_key: str, **overrides) -> RuleSet:
+    r = RuleSet(profit_target=cfg.combine_rules.profit_target, mll=cfg.combine_rules.trailing_mll,
+                dll=cfg.paths[path_key].intraday_dll, split=cfg.profit_split)
+    return replace(r, **overrides) if overrides else r
+
+
+def xfa_micro_cap(balance: float) -> int:
+    lots = XFA_LADDER[0][1]
+    for floor_bal, l in XFA_LADDER:
+        if balance >= floor_bal:
+            lots = l
+    return lots * MICRO_PER_MINI
 
 
 @dataclass(frozen=True)
 class Stream:
+    """Per-session P&L for ONE micro contract plus the dollar value of one ATR per micro."""
     name: str
     dates: np.ndarray
-    r_pnl: np.ndarray     # P&L in ATR units per session (0 on skipped sessions)
-    r_min: np.ndarray     # worst intraday MTM in ATR units (<= 0)
+    pnl: np.ndarray          # net $ per micro
+    low: np.ndarray          # worst intraday MTM $ per micro (<= 0)
+    atr_usd: np.ndarray      # $ value of the trailing-14-session range per micro (NaN if unavailable)
     ok: np.ndarray
 
     @staticmethod
     def from_series(name: str, s: DailySeries) -> "Stream":
-        denom = np.where(s.traded_ok, s.atr * s.mult, np.nan)
-        r = np.where(s.traded_ok, s.pnl / denom, 0.0)
-        m = np.where(s.traded_ok, s.minpnl / denom, 0.0)
-        return Stream(name, s.dates, r, m, s.traded_ok)
+        k = 1.0 / MICRO_PER_MINI
+        atr_usd = np.where(s.traded_ok, s.atr * s.mult * k, np.nan)
+        return Stream(name, s.dates, np.where(s.traded_ok, s.pnl * k, 0.0),
+                      np.where(s.traded_ok, s.minpnl * k, 0.0), atr_usd, s.traded_ok)
 
-    def risk_unit_for_sigma(self, sigma_d: float) -> float:
-        sd = self.r_pnl[self.ok].std(ddof=1)
-        return sigma_d / sd
+    def desired_micros(self, risk_unit: float) -> List[int]:
+        """Contracts a volatility-targeting bot would hold on each session (>= 1)."""
+        n = np.where(self.ok, np.maximum(1, np.rint(risk_unit / np.where(self.ok, self.atr_usd, 1.0))), 1)
+        return n.astype(int).tolist()
 
 
-def scale(stream: Stream, risk_unit: float) -> Tuple[List[float], List[float]]:
-    return (stream.r_pnl * risk_unit).tolist(), (stream.r_min * risk_unit).tolist()
+def _lists(s: Stream) -> Tuple[List[float], List[float]]:
+    return s.pnl.tolist(), s.low.tolist()
 
 
 # ----------------------------------------------------------------------------------------------
 # Combine
 # ----------------------------------------------------------------------------------------------
-def run_combine(x: List[float], m: List[float], i0: int, dll: Optional[float], target: float,
-                mll: float, cap: float) -> Tuple[int, int]:
-    """Return (status, tau): status 1 pass, 0 breach, -1 ran out of data. tau is 1-based days."""
-    bal = peak = maxd = 0.0
+def run_combine(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet) -> Tuple[int, int]:
+    """Return (status, tau): 1 pass, 0 breach, -1 data ran out. tau is a 1-based day count."""
+    bal = peak = best = 0.0
+    floor = -r.mll
     n = len(x)
-    for t in range(i0, n):
-        d = dll if (dll is not None and m[t] <= dll) else x[t]
-        bal += d
-        if d > maxd:
-            maxd = d
+    dll = r.dll
+    for t in range(i0, min(n, i0 + r.max_combine_days)):
+        k = min(nd[t], r.combine_micros)
+        p, w = x[t] * k, lo[t] * k
+        lim = floor - bal                       # negative distance to the MLL
+        if r.intraday_mll or dll is not None:
+            first = lim if dll is None else max(lim, dll)
+            if r.intraday_mll and w <= first:
+                if dll is not None and dll > lim:
+                    p = dll                     # DLL reached first: liquidate, day over
+                else:
+                    return 0, t - i0 + 1        # MLL touched in real time
+            elif dll is not None and w <= dll:
+                p = dll
+        bal += p
+        if not r.intraday_mll and bal <= floor:
+            return 0, t - i0 + 1
+        if p > best:
+            best = p
         if bal > peak:
             peak = bal
-        if bal <= peak - mll:
-            return 0, t - i0 + 1
-        if bal >= target and maxd <= cap * bal:
+            floor = peak - r.mll
+            if r.combine_mll_locks and floor > 0.0:
+                floor = 0.0
+        if bal >= r.profit_target and best <= r.consistency_ratio * bal:
             return 1, t - i0 + 1
-    return -1, n - i0
+    return -1, min(n, i0 + r.max_combine_days) - i0
 
 
-def combine_outcomes(x: List[float], m: List[float], cfg: EngineConfig, path_key: str,
+def combine_outcomes(x, lo, nd, cfg: EngineConfig, path_key: str, r: RuleSet,
                      starts: np.ndarray) -> Dict[str, np.ndarray]:
     p = cfg.paths[path_key]
-    r = cfg.combine_rules
     status = np.empty(len(starts), dtype=np.int8)
     tau = np.empty(len(starts), dtype=np.int32)
     for k, i0 in enumerate(starts):
-        status[k], tau[k] = run_combine(x, m, int(i0), p.intraday_dll, r.profit_target,
-                                        r.trailing_mll, r.consistency_cap_ratio)
+        status[k], tau[k] = run_combine(x, lo, nd, int(i0), r)
     bills = 1 + (np.maximum(tau, 1) - 1) // cfg.billing_cycle_days
     fees = bills * p.monthly_cost + np.where(status == 1, p.activation_fee, 0.0)
     return {"status": status, "tau": tau, "fees": fees}
 
 
 # ----------------------------------------------------------------------------------------------
-# Funded account variants
+# Funded account
 # ----------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
-class FundedVariant:
-    """A funded-account plan.
+class FundedPlan:
+    """Funded-account plan.
 
-    Stage 1 runs at `size1` until the balance reaches `t1`, then `w1` of the balance is withdrawn
-    (e.g. t1=2000, w1=0.5 -> take $1,000, keep $1,000). Stage 2 runs at `size2` until the balance
-    reaches `t2`, then `w2` of the balance is withdrawn and the account is closed. If `t2` is None
-    the account closes right after the first payout. `cap` is the gross cap per payout request.
+    Stage 1 trades at risk multiplier `r1` until a payout is possible and the balance >= `t1`; then
+    `w1` (<= 0.5 under Topstep's rule) of the balance is withdrawn. The MLL then resets to $0, so the
+    money left in the account is the only cushion. Stage 2 trades at multiplier `r2` until the balance
+    >= `t2` again, takes `w2` of it and the account is closed. `t2=None` closes after the first payout.
     """
     name: str
+    path: str = "standard"            # "standard" or "consistency"
     t1: float = 2000.0
     w1: float = 0.5
-    size1: float = 1.0
+    r1: float = 1.0
     t2: Optional[float] = None
     w2: float = 0.5
-    size2: float = 1.0
-    cap: float = 5000.0
-    need_win_days: int = 5
+    r2: float = 1.0
 
 
-def run_funded(x: List[float], m: List[float], i0: int, dll: Optional[float], v: FundedVariant,
-               mll: float, split: float) -> Tuple[float, float, int, int]:
-    """Return (payout1_net, payout2_net, days_alive, end_state) with end_state 1 dead, 2 closed, 0 data end."""
+def run_funded(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
+               plan: FundedPlan) -> Tuple[float, float, int, int]:
+    """Return (payout1_net, payout2_net, days, end_state): end_state 1 dead, 2 closed, 0 data end."""
     bal = peak = 0.0
-    wins = 0
+    floor = -r.mll
+    reset = False                       # True after the first payout: MLL fixed at $0
     stage = 1
+    wins = tdays = 0
+    prof = best = 0.0
     p1 = p2 = 0.0
     n = len(x)
+    dll = r.dll
+    cap_pay = r.cap_standard if plan.path == "standard" else r.cap_consistency
     for t in range(i0, n):
-        k = v.size1 if stage == 1 else v.size2
-        d = dll if (dll is not None and m[t] * k <= dll) else x[t] * k
-        bal += d
-        if d >= WIN_DAY:
-            wins += 1
-        if bal > peak:
-            peak = bal
-        if bal <= min(peak - mll, 0.0):
+        mult = plan.r1 if stage == 1 else plan.r2
+        k = max(1, int(round(nd[t] * mult)))
+        k = min(k, xfa_micro_cap(bal))
+        p, w = x[t] * k, lo[t] * k
+        lim = floor - bal
+        first = lim if dll is None else max(lim, dll)
+        if w <= first:
+            if dll is not None and dll > lim:
+                p = dll
+            elif r.intraday_mll:
+                return p1, p2, t - i0 + 1, 1
+        bal += p
+        if not r.intraday_mll and bal <= floor:
             return p1, p2, t - i0 + 1, 1
-        if wins >= v.need_win_days:
-            trig, frac = (v.t1, v.w1) if stage == 1 else (v.t2, v.w2)
-            if bal >= trig:
-                gross = min(frac * bal, v.cap)
-                net = split * gross
+        tdays += 1
+        prof += p
+        if p >= r.win_day:
+            wins += 1
+        if p > best:
+            best = p
+        if not reset and bal > peak:
+            peak = bal
+            floor = min(peak - r.mll, 0.0)
+        if plan.path == "standard":
+            eligible = wins >= r.standard_win_days
+        else:
+            eligible = tdays >= r.consistency_days and prof > 0 and best <= r.consistency_xfa * prof
+        trig, frac = (plan.t1, plan.w1) if stage == 1 else (plan.t2, plan.w2)
+        if eligible and bal >= trig:
+            gross = min(min(frac, 0.5) * bal, cap_pay)
+            if gross >= r.payout_min:
+                net = r.split * gross
                 bal -= gross
-                wins = 0
+                floor, reset = 0.0, True
+                wins = tdays = 0
+                prof = best = 0.0
                 if stage == 1:
                     p1 = net
-                    if v.t2 is None:
+                    if plan.t2 is None:
                         return p1, p2, t - i0 + 1, 2
                     stage = 2
                 else:
@@ -146,23 +228,9 @@ def run_funded(x: List[float], m: List[float], i0: int, dll: Optional[float], v:
     return p1, p2, n - i0, 0
 
 
-def funded_outcomes(x: List[float], m: List[float], cfg: EngineConfig, path_key: str,
-                    v: FundedVariant, starts: np.ndarray) -> Dict[str, np.ndarray]:
-    p = cfg.paths[path_key]
-    out = {k: np.empty(len(starts)) for k in ("p1", "p2", "days", "state")}
-    for k, i0 in enumerate(starts):
-        a, b, d, s = run_funded(x, m, int(i0), p.intraday_dll, v, cfg.combine_rules.trailing_mll,
-                                cfg.profit_split)
-        out["p1"][k], out["p2"][k], out["days"][k], out["state"][k] = a, b, d, s
-    return out
-
-
-# ----------------------------------------------------------------------------------------------
-# Summary statistics with a year-block bootstrap
-# ----------------------------------------------------------------------------------------------
 def year_bootstrap(values: np.ndarray, years: np.ndarray, stat, n_boot: int = 300,
                    seed: int = 1) -> Tuple[float, float, float]:
-    """(point, lo5, hi95) of stat(values) resampling whole calendar years."""
+    """(point, lo5, hi95) of stat(values), resampling whole calendar years."""
     rng = np.random.default_rng(seed)
     uy = np.unique(years)
     groups = [values[years == y] for y in uy]
