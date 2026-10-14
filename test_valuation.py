@@ -190,3 +190,42 @@ def test_scaling_ladder_and_micro_caps():
 def test_unresolved_combine_is_abandoned_after_a_year():
     from real_engine import run_combine
     assert run_combine([0.0] * 400, [0.0] * 400, [1] * 400, 0, _rs()) == (-1, 252)
+
+
+def test_breach_policies_billing_clock():
+    from pricing_config import load_config
+    from chain_real import combine_chain
+    cfg = load_config()
+    rs = _rs()
+    # sessions 0 and 21 start attempts; session 0 breaches at once (low -4,500), 21-22 are two +5,000 days (pass)
+    n = 60
+    x, lo = [0.0] * n, [0.0] * n
+    lo[0] = -4500.0
+    x[21], x[22] = 5000.0, 5000.0
+    nd = [1] * n
+    sub = cfg.paths["standard"].monthly_cost
+    act = cfg.paths["standard"].activation_fee
+    # wait_for_rebill: idle 1..20, renewal on session 21 grants the reset -> two bills, attempt starts at 21
+    sp, fees, att, _ = combine_chain(x, lo, nd, 0, n, rs, cfg, "standard", "wait_for_rebill")
+    assert (sp, att, fees) == (22, 2, 2 * sub + act)
+    # cancel_and_reopen: new subscription on session 1; that attempt passes only if it sees +5,000 days -> shift the pass to 1-2
+    x2, lo2 = [0.0] * n, [0.0] * n
+    lo2[0] = -4500.0
+    x2[1], x2[2] = 5000.0, 5000.0
+    sp, fees, att, _ = combine_chain(x2, lo2, nd, 0, n, rs, cfg, "standard", "cancel_and_reopen")
+    assert (sp, att, fees) == (2, 2, 2 * sub + act)
+    # reset fee equals the subscription fee on every path, so 'immediate_reset' == cancel-and-reopen
+    assert combine_chain(x2, lo2, nd, 0, n, rs, cfg, "standard", "immediate_reset") == combine_chain(x2, lo2, nd, 0, n, rs, cfg, "standard", "cancel_and_reopen")
+
+
+def test_repeated_payouts_until_death():
+    from real_engine import FundedPlan, run_funded_detail
+    plan = FundedPlan("m", "standard", t1=2000, w1=0.5, t2=1500, w2=0.5, max_payouts=3)
+    # steady +300/day: payouts happen repeatedly, then a crash kills the account at the $0 floor
+    x = [300.0] * 40 + [-9000.0]
+    lo = [0.0] * 40 + [-9000.0]
+    pays, days, state, _ = run_funded_detail(x, lo, [1] * 41, 0, _rs(), plan)
+    assert len(pays) == 3 and state == 2        # closed by max_payouts before the crash
+    plan_inf = FundedPlan("m", "standard", t1=2000, w1=0.5, t2=1500, w2=0.5, max_payouts=99)
+    pays, days, state, _ = run_funded_detail(x, lo, [1] * 41, 0, _rs(), plan_inf)
+    assert len(pays) > 3 and state == 1         # keeps paying until the crash

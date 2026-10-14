@@ -32,3 +32,18 @@ Raw files are not in git. Download the three `*_databento.txt` assets from the `
 | `run_real_study.py` / `run_decoupled_study.py` | Sweeps -> `results/*.csv`. The decoupled study sizes the Combine and funded phases separately. |
 
 Everything is measured from every historical start date; CIs resample whole calendar years.
+
+## Hold-out and final checks (config-driven)
+
+`config.yaml` now drives the real-data engine: `topstep_official` (verified rules with toggles back to the
+spec's older assumptions), `friction.slippage_ticks_rt`, fee paths and billing cycle.
+
+| Script | What it does |
+|---|---|
+| `run_sweep.py` | 324 strategy variants (ES/NQ/GC), IS/OOS, rank stability, walk-forward, cost stress |
+| `run_holdout.py` | selects strategy, sizing and funded plan on data <= 2022, runs once on 2023-2026 |
+| `run_final_checks.py` | slippage stress, ES/GC, breach policies, spec table for the 3 fee paths, why-profit-is-low, improvements |
+| `chain_real.py` | sequential rinse-and-repeat with cancel_and_reopen / immediate_reset / wait_for_rebill billing clock |
+| `real_engine.py` | Combine + funded rules; funded plans with repeated payouts (`max_payouts`) |
+
+Results CSVs are in `results/`. Treat the hold-out as used: it has been run more than once.

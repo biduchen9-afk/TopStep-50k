@@ -53,17 +53,29 @@ class RuleSet:
     standard_win_days: int = 5
     combine_micros: int = 150
     max_combine_days: int = 252               # an unresolved attempt is abandoned (counted as a failure) after a year
+    ladder: tuple = XFA_LADDER
 
 
 def rules_from_config(cfg: EngineConfig, path_key: str, **overrides) -> RuleSet:
+    o = cfg.official
     r = RuleSet(profit_target=cfg.combine_rules.profit_target, mll=cfg.combine_rules.trailing_mll,
-                dll=cfg.paths[path_key].intraday_dll, split=cfg.profit_split)
+                consistency_ratio=o.consistency_ratio, combine_mll_locks=o.combine_mll_locks,
+                intraday_mll=o.intraday_mll, dll=cfg.paths[path_key].intraday_dll, split=cfg.profit_split,
+                win_day=o.win_day, payout_min=o.payout_min, cap_standard=o.cap_standard,
+                cap_consistency=o.cap_consistency, consistency_xfa=o.consistency_xfa,
+                consistency_days=o.consistency_days, standard_win_days=o.standard_win_days,
+                combine_micros=o.combine_micros, max_combine_days=o.max_combine_days, ladder=o.xfa_ladder)
     return replace(r, **overrides) if overrides else r
 
 
-def xfa_micro_cap(balance: float) -> int:
-    lots = XFA_LADDER[0][1]
-    for floor_bal, l in XFA_LADDER:
+def costs_from_config(cfg: EngineConfig):
+    from intraday_strategies import Costs
+    return Costs(commission_rt=cfg.friction.round_turn_commission, slippage_ticks_rt=cfg.friction.slippage_ticks_rt)
+
+
+def xfa_micro_cap(balance: float, ladder: tuple = XFA_LADDER) -> int:
+    lots = ladder[0][1]
+    for floor_bal, l in ladder:
         if balance >= floor_bal:
             lots = l
     return lots * MICRO_PER_MINI
@@ -165,25 +177,26 @@ class FundedPlan:
     t2: Optional[float] = None
     w2: float = 0.5
     r2: float = 1.0
+    max_payouts: int = 2               # total payouts before the account is closed (>=2 needs t2)
 
 
-def run_funded(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
-               plan: FundedPlan) -> Tuple[float, float, int, int]:
-    """Return (payout1_net, payout2_net, days, end_state): end_state 1 dead, 2 closed, 0 data end."""
+def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
+                      plan: FundedPlan) -> Tuple[List[float], int, int, float]:
+    """Return (net payouts in order, days, end_state, balance when it ended): end_state 1 dead, 2 closed by plan, 0 data end."""
     bal = peak = 0.0
     floor = -r.mll
     reset = False                       # True after the first payout: MLL fixed at $0
     stage = 1
     wins = tdays = 0
     prof = best = 0.0
-    p1 = p2 = 0.0
+    pays: List[float] = []
     n = len(x)
     dll = r.dll
     cap_pay = r.cap_standard if plan.path == "standard" else r.cap_consistency
     for t in range(i0, n):
         mult = plan.r1 if stage == 1 else plan.r2
         k = max(1, int(round(nd[t] * mult)))
-        k = min(k, xfa_micro_cap(bal))
+        k = min(k, xfa_micro_cap(bal, r.ladder))
         p, w = x[t] * k, lo[t] * k
         lim = floor - bal
         first = lim if dll is None else max(lim, dll)
@@ -191,10 +204,10 @@ def run_funded(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleS
             if dll is not None and dll > lim:
                 p = dll
             elif r.intraday_mll:
-                return p1, p2, t - i0 + 1, 1
+                return pays, t - i0 + 1, 1, floor
         bal += p
         if not r.intraday_mll and bal <= floor:
-            return p1, p2, t - i0 + 1, 1
+            return pays, t - i0 + 1, 1, bal
         tdays += 1
         prof += p
         if p >= r.win_day:
@@ -212,20 +225,22 @@ def run_funded(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleS
         if eligible and bal >= trig:
             gross = min(min(frac, 0.5) * bal, cap_pay)
             if gross >= r.payout_min:
-                net = r.split * gross
                 bal -= gross
                 floor, reset = 0.0, True
                 wins = tdays = 0
                 prof = best = 0.0
-                if stage == 1:
-                    p1 = net
-                    if plan.t2 is None:
-                        return p1, p2, t - i0 + 1, 2
-                    stage = 2
-                else:
-                    p2 = net
-                    return p1, p2, t - i0 + 1, 2
-    return p1, p2, n - i0, 0
+                pays.append(r.split * gross)
+                stage = 2
+                if plan.t2 is None or len(pays) >= plan.max_payouts:
+                    return pays, t - i0 + 1, 2, bal
+    return pays, n - i0, 0, bal
+
+
+def run_funded(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
+               plan: FundedPlan) -> Tuple[float, float, int, int]:
+    """Compact form: (first payout, SUM of later payouts, days, end_state)."""
+    pays, days, state, _ = run_funded_detail(x, lo, nd, i0, r, plan)
+    return (pays[0] if pays else 0.0), float(sum(pays[1:])), days, state
 
 
 def year_bootstrap(values: np.ndarray, years: np.ndarray, stat, n_boot: int = 300,

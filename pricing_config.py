@@ -48,6 +48,7 @@ class Friction:
     round_turn_commission: float = 2.50
     slippage_per_rt: float = 1.00
     trades_per_day: int = 2
+    slippage_ticks_rt: float = 1.0
 
     @property
     def daily_cost(self) -> float:
@@ -86,6 +87,24 @@ class XFAModel:
 
 
 @dataclass(frozen=True)
+class OfficialRules:
+    """Topstep rules verified against the help centre; used by the real-data engine."""
+    consistency_ratio: float = 0.55
+    combine_mll_locks: bool = True
+    intraday_mll: bool = True
+    win_day: float = 150.0
+    payout_min: float = 125.0
+    cap_standard: float = 5000.0
+    cap_consistency: float = 6000.0
+    consistency_xfa: float = 0.40
+    consistency_days: int = 3
+    standard_win_days: int = 5
+    combine_micros: int = 150
+    max_combine_days: int = 252
+    xfa_ladder: tuple = ((0.0, 3), (1500.0, 4), (2000.0, 5), (3000.0, 10), (4500.0, 15))
+
+
+@dataclass(frozen=True)
 class FarmPolicy:
     breach_action: str = "cancel_and_reopen"
     n_simulations: int = 10000
@@ -108,6 +127,7 @@ class EngineConfig:
     market_process: MarketProcess
     xfa: XFAModel
     farm_policy: FarmPolicy = field(default_factory=FarmPolicy)
+    official: OfficialRules = field(default_factory=OfficialRules)
 
     def with_market(self, **kwargs) -> "EngineConfig":
         return replace(self, market_process=replace(self.market_process, **kwargs))
@@ -129,4 +149,12 @@ def load_config(path: str | Path = Path(__file__).with_name("config.yaml")) -> E
         market_process=MarketProcess(**raw["market_process"]),
         xfa=XFAModel(**raw.get("xfa", {})),
         farm_policy=FarmPolicy(**raw.get("farm_policy", {})),
+        official=_official(raw.get("topstep_official", {})),
     )
+
+
+def _official(d: dict) -> OfficialRules:
+    d = dict(d)
+    if "xfa_ladder" in d:
+        d["xfa_ladder"] = tuple((float(b), int(l)) for b, l in d["xfa_ladder"])
+    return OfficialRules(**d)
