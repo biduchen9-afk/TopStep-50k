@@ -32,6 +32,9 @@ from pricing_config import load_config
 PATH = "no_activation_dll"
 FINAL = dict(R=9600.0, a1=1.2, a2=0.8, t1=2000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
 # Speed presets (pre-registration 5): faster first payout costs value and recent-start robustness, see FINDINGS.md section 15. Use farm_from(stream, start, **PRESETS["balanced"]).
+# DEFAULT ACCOUNT LAYOUT FOR TOPSTEP (user decision, pre-registration 9): each group of funded accounts runs ONE sleeve, balanced sizing, ONE Combine open at a time (the next one goes to the group
+# with the most empty slots). Groups are nearly uncorrelated (monthly net correlation ~0.08) and each account is a higher-variance option than the basket (FINDINGS section 19).
+ACCOUNT_GROUPS = [dict(name="noise-area", sleeves=["nq_noise"], slots=3), dict(name="gap-VWAP", sleeves=["nq_gap30"], slots=2)]
 # Lists for the five funded slots (pre-registration 6): sizing preset + components. ONE open Combine at a time overall; the next Combine goes to the list with the most empty slots.
 TIERS = {"big risk": dict(slots=1, preset="fast", components=["nq_gap30"]),
          "moderate": dict(slots=2, preset="balanced", components=["nq_noise", "nq_vwap", "nq_gap30"]),
