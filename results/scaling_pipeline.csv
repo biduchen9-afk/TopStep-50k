@@ -1,0 +1,120 @@
+case,unlock,kind,start,net,oop,ruined,min_cash,end_cash,days_first_payout,nets,firms_started
+Topstep only,,dev long,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,{'Topstep': -1857},1
+Topstep only,,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,{'Topstep': -2946},1
+Topstep only,,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,{'Topstep': -3388},1
+Topstep only,,dev long,2018,34784.38978571423,199.0,False,0.0,35182.38978571423,34.0,{'Topstep': 34784},1
+Topstep only,,dev 3y,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,{'Topstep': -1857},1
+Topstep only,,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,{'Topstep': -2722},1
+Topstep only,,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,{'Topstep': -2946},1
+Topstep only,,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,{'Topstep': -1354},1
+Topstep only,,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,{'Topstep': -3388},1
+Topstep only,,dev 3y,2017,8992.558397321423,1990.0,False,-597.0,10982.558397321427,458.0,{'Topstep': 8993},1
+Topstep only,,dev 3y,2018,19037.21200669642,199.0,False,0.0,19236.212006696423,34.0,{'Topstep': 19037},1
+Topstep only,,dev 3y,2019,7253.137813616049,2985.0,False,0.0,10238.137813616047,398.0,{'Topstep': 7253},1
+Topstep only,,dev 3y,2020,21484.833388392806,199.0,False,0.0,21683.8333883928,33.0,{'Topstep': 21485},1
+Topstep only,,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,{'Topstep': -549},1
+Topstep only,,seen,2023,22843.07134151795,398.0,False,0.0,23241.07134151795,143.0,{'Topstep': 22843},1
+Topstep only,,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,{'Topstep': -3781},1
+Topstep only,,full,2010,-3996.6872142857137,4179.0,True,-199.0,182.31278571428993,358.0,{'Topstep': -3997},1
+Topstep + FundedNext,3000.0,dev long,2012,-1935.1419285714437,1990.0,True,0.0,54.85807142855725,136.0,"{'Topstep': -685, 'FundedNext': -1250}",2
+Topstep + FundedNext,3000.0,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,dev long,2018,37438.02120982138,199.0,False,0.0,37836.02120982138,34.0,"{'Topstep': 22911, 'FundedNext': 14527}",2
+Topstep + FundedNext,3000.0,dev 3y,2012,-580.9889285714416,1990.0,False,0.0,1409.0110714285574,136.0,"{'Topstep': 669, 'FundedNext': -1250}",2
+Topstep + FundedNext,3000.0,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,"{'Topstep': -2722, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,"{'Topstep': -1354, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,dev 3y,2017,1652.3546428571353,1990.0,False,-597.0,3642.3546428571344,458.0,"{'Topstep': 653, 'FundedNext': 1000}",2
+Topstep + FundedNext,3000.0,dev 3y,2018,16516.823037946393,199.0,False,0.0,16715.8230379464,34.0,"{'Topstep': 10004, 'FundedNext': 6513}",2
+Topstep + FundedNext,3000.0,dev 3y,2019,4034.675813616048,2985.0,False,0.0,7019.675813616048,398.0,"{'Topstep': 5035, 'FundedNext': -1000}",2
+Topstep + FundedNext,3000.0,dev 3y,2020,22024.587316964233,199.0,False,0.0,22223.587316964233,33.0,"{'Topstep': 18286, 'FundedNext': 3738}",2
+Topstep + FundedNext,3000.0,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,"{'Topstep': -549, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,seen,2023,8821.149428571463,398.0,False,0.0,9219.149428571463,143.0,"{'Topstep': 8663, 'FundedNext': 158}",2
+Topstep + FundedNext,3000.0,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,"{'Topstep': -3781, 'FundedNext': 0}",1
+Topstep + FundedNext,3000.0,full,2010,-4066.709642857145,4179.0,True,-199.0,112.2903571428551,358.0,"{'Topstep': -3224, 'FundedNext': -842}",2
+Topstep + FundedNext,6000.0,dev long,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev long,2018,39006.65220982138,199.0,False,0.0,39205.65220982139,34.0,"{'Topstep': 28449, 'FundedNext': 10557}",2
+Topstep + FundedNext,6000.0,dev 3y,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,"{'Topstep': -2722, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,"{'Topstep': -1354, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,dev 3y,2017,11467.558397321423,1990.0,False,-597.0,13457.558397321427,458.0,"{'Topstep': 13968, 'FundedNext': -2500}",2
+Topstep + FundedNext,6000.0,dev 3y,2018,14188.24268080356,199.0,False,0.0,14387.242680803563,34.0,"{'Topstep': 11294, 'FundedNext': 2894}",2
+Topstep + FundedNext,6000.0,dev 3y,2019,9488.13781361605,2985.0,False,0.0,12473.137813616047,398.0,"{'Topstep': 10238, 'FundedNext': -750}",2
+Topstep + FundedNext,6000.0,dev 3y,2020,17991.548420758907,199.0,False,0.0,18190.548420758907,33.0,"{'Topstep': 15091, 'FundedNext': 2901}",2
+Topstep + FundedNext,6000.0,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,"{'Topstep': -549, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,seen,2023,20569.58521651795,398.0,False,0.0,20967.58521651795,143.0,"{'Topstep': 22570, 'FundedNext': -2000}",2
+Topstep + FundedNext,6000.0,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,"{'Topstep': -3781, 'FundedNext': 0}",1
+Topstep + FundedNext,6000.0,full,2010,64250.168640624965,4179.0,True,-199.0,68429.16864062496,358.0,"{'Topstep': 44364, 'FundedNext': 19886}",2
+Topstep + FundedNext,10000.0,dev long,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev long,2018,36024.6399720982,199.0,False,0.0,36223.639972098186,34.0,"{'Topstep': 29227, 'FundedNext': 6798}",2
+Topstep + FundedNext,10000.0,dev 3y,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,"{'Topstep': -2722, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,"{'Topstep': -1354, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,dev 3y,2017,11569.558397321423,1990.0,False,-597.0,13559.558397321427,458.0,"{'Topstep': 13570, 'FundedNext': -2000}",2
+Topstep + FundedNext,10000.0,dev 3y,2018,19712.761897321434,199.0,False,0.0,19911.761897321438,34.0,"{'Topstep': 19434, 'FundedNext': 279}",2
+Topstep + FundedNext,10000.0,dev 3y,2019,9289.13781361605,2985.0,False,0.0,12274.137813616047,398.0,"{'Topstep': 10039, 'FundedNext': -750}",2
+Topstep + FundedNext,10000.0,dev 3y,2020,17792.548420758907,199.0,False,0.0,17991.548420758907,33.0,"{'Topstep': 14892, 'FundedNext': 2901}",2
+Topstep + FundedNext,10000.0,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,"{'Topstep': -549, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,seen,2023,20620.58521651795,398.0,False,0.0,21018.58521651795,143.0,"{'Topstep': 22371, 'FundedNext': -1750}",2
+Topstep + FundedNext,10000.0,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,"{'Topstep': -3781, 'FundedNext': 0}",1
+Topstep + FundedNext,10000.0,full,2010,-3996.6872142857137,4179.0,True,-199.0,182.31278571428993,358.0,"{'Topstep': -3997, 'FundedNext': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev long,2012,-1935.1419285714437,1990.0,True,0.0,54.85807142855725,136.0,"{'Topstep': -685, 'FundedNext': -1250, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev long,2018,37438.02120982138,199.0,False,0.0,37836.02120982138,34.0,"{'Topstep': 22911, 'FundedNext': 14527, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2012,-580.9889285714416,1990.0,False,0.0,1409.0110714285574,136.0,"{'Topstep': 669, 'FundedNext': -1250, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,"{'Topstep': -2722, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,"{'Topstep': -1354, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2017,1652.3546428571353,1990.0,False,-597.0,3642.3546428571344,458.0,"{'Topstep': 653, 'FundedNext': 1000, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2018,16516.823037946393,199.0,False,0.0,16715.8230379464,34.0,"{'Topstep': 10004, 'FundedNext': 6513, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2019,4034.675813616048,2985.0,False,0.0,7019.675813616048,398.0,"{'Topstep': 5035, 'FundedNext': -1000, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,dev 3y,2020,22024.587316964233,199.0,False,0.0,22223.587316964233,33.0,"{'Topstep': 18286, 'FundedNext': 3738, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,"{'Topstep': -549, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,seen,2023,8821.149428571463,398.0,False,0.0,9219.149428571463,143.0,"{'Topstep': 8663, 'FundedNext': 158, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,3000.0,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,"{'Topstep': -3781, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,3000.0,full,2010,-4066.709642857145,4179.0,True,-199.0,112.2903571428551,358.0,"{'Topstep': -3224, 'FundedNext': -842, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,dev long,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev long,2018,39006.65220982138,199.0,False,0.0,39205.65220982139,34.0,"{'Topstep': 28449, 'FundedNext': 10557, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,"{'Topstep': -2722, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,"{'Topstep': -1354, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2017,11467.558397321423,1990.0,False,-597.0,13457.558397321427,458.0,"{'Topstep': 13968, 'FundedNext': -2500, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2018,14188.24268080356,199.0,False,0.0,14387.242680803563,34.0,"{'Topstep': 11294, 'FundedNext': 2894, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2019,9488.13781361605,2985.0,False,0.0,12473.137813616047,398.0,"{'Topstep': 10238, 'FundedNext': -750, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,dev 3y,2020,17991.548420758907,199.0,False,0.0,18190.548420758907,33.0,"{'Topstep': 15091, 'FundedNext': 2901, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,"{'Topstep': -549, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,seen,2023,20569.58521651795,398.0,False,0.0,20967.58521651795,143.0,"{'Topstep': 22570, 'FundedNext': -2000, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,6000.0,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,"{'Topstep': -3781, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,6000.0,full,2010,63584.168640624965,4179.0,True,-199.0,67763.16864062496,358.0,"{'Topstep': 44364, 'FundedNext': 20136, 'FTMO': -916}",3
+Topstep + FundedNext + FTMO,10000.0,dev long,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev long,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev long,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev long,2018,36024.6399720982,199.0,False,0.0,36223.639972098186,34.0,"{'Topstep': 29227, 'FundedNext': 6798, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2012,-1857.433214285731,1990.0,True,0.0,132.56678571426914,136.0,"{'Topstep': -1857, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2013,-2722.453499999999,2587.0,True,-199.0,-135.4534999999994,377.0,"{'Topstep': -2722, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2014,-2946.1530000000002,2985.0,True,0.0,38.84699999999981,459.0,"{'Topstep': -2946, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2015,-1354.1530000000002,1393.0,True,0.0,38.84699999999981,94.0,"{'Topstep': -1354, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2016,-3388.216,3582.0,True,-199.0,193.784,338.0,"{'Topstep': -3388, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2017,11569.558397321423,1990.0,False,-597.0,13559.558397321427,458.0,"{'Topstep': 13570, 'FundedNext': -2000, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2018,19712.761897321434,199.0,False,0.0,19911.761897321438,34.0,"{'Topstep': 19434, 'FundedNext': 279, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2019,9289.13781361605,2985.0,False,0.0,12274.137813616047,398.0,"{'Topstep': 10039, 'FundedNext': -750, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,10000.0,dev 3y,2020,17792.548420758907,199.0,False,0.0,17991.548420758907,33.0,"{'Topstep': 14892, 'FundedNext': 2901, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,10000.0,seen,2021,-549.0820000000001,597.0,True,0.0,47.91799999999989,179.0,"{'Topstep': -549, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,seen,2023,20620.58521651795,398.0,False,0.0,21018.58521651795,143.0,"{'Topstep': 22371, 'FundedNext': -1750, 'FTMO': 0}",2
+Topstep + FundedNext + FTMO,10000.0,seen,2025,-3781.0,3781.0,False,-597.0,0.0,,"{'Topstep': -3781, 'FundedNext': 0, 'FTMO': 0}",1
+Topstep + FundedNext + FTMO,10000.0,full,2010,-3996.6872142857137,4179.0,True,-199.0,182.31278571428993,358.0,"{'Topstep': -3997, 'FundedNext': 0, 'FTMO': 0}",1

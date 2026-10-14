@@ -1,0 +1,5 @@
+version,rule,farms,reached_payout,median,p25,p75,mean,min,max,<=90d
+old: same basket x5,"unconstrained (cash not gated, one Combine at a time)",10,10,217.5,177.75,314.75,253.5,108.0,562.0,0
+old: same basket x5,self-funded pipeline (one account until the first payout),10,10,217.5,177.75,323.0,331.7,108.0,1079.0,0
+new default: 3 noise + 2 gap,"unconstrained (cash not gated, one Combine at a time)",10,10,152.5,100.5,300.25,198.0,33.0,459.0,2
+new default: 3 noise + 2 gap,self-funded pipeline (one account until the first payout),10,10,253.5,104.5,392.75,249.6,33.0,459.0,2

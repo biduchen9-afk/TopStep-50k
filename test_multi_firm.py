@@ -36,3 +36,30 @@ def test_self_funding_never_injects_money_after_first_payout():
     assert out["oop_total"] > 0
     # the out-of-pocket money is spent entirely before the first payout is received
     assert out["firms"][spec.name]["first_payout_t"] is not None
+
+
+def test_group_aware_respects_caps_and_one_open_combine():
+    from dataclasses import replace
+    spec = topstep_150k("no_activation_dll")
+    plan = FundedPlan("p", "standard", 2000.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8)
+    s1, s2 = _stream(1), _stream(2)
+    fps = [FirmPlan(replace(spec, name="a", max_funded=3, max_evals=1), [s1], 9600.0, plan, firm="X", refill="all"), FirmPlan(replace(spec, name="b", max_funded=2, max_evals=1), [s2], 9600.0, plan, firm="X", refill="all")]
+    out = run_multifirm(fps, Policy(reserve_cycles=3.0, group_aware=True, global_one_eval=True), 0, log=True)
+    opens = [sum(e for e, _ in grp) for _, _, grp in out["daily"]]
+    funded = [tuple(f for _, f in grp) for _, _, grp in out["daily"]]
+    assert max(opens) <= 1
+    assert max(f[0] for f in funded) <= 3 and max(f[1] for f in funded) <= 2
+    assert out["oop_total"] > 0
+
+
+def test_kelly_unit_is_causal_and_matches_formula():
+    from kelly_sizing import HUGE, kelly_unit
+    rng = np.random.default_rng(3)
+    x = rng.normal(2.0, 30.0, 400)
+    u = kelly_unit(x, window=100, min_obs=50)
+    assert (u[:50] == HUGE).all()
+    w = x[150:250]; mu, var = w.mean(), w.var()
+    assert abs(u[250] - var / mu) < 1e-9
+    y = x.copy(); y[250:] = 1e6                      # changing the present and future must not move the estimate at t=250
+    assert abs(kelly_unit(y, window=100, min_obs=50)[250] - u[250]) < 1e-9
+    assert (kelly_unit(-np.abs(x), window=100, min_obs=50) == HUGE).all()
