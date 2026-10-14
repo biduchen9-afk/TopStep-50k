@@ -27,8 +27,11 @@ class FarmSpec:
 
 
 def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], plan: FundedPlan, cfg: EngineConfig, rules: RuleSet,
-             path: str, i0: int, spec: FarmSpec = FarmSpec(), n_end: Optional[int] = None) -> Dict[str, float]:
+             path: str, i0: int, spec: FarmSpec = FarmSpec(), n_end: Optional[int] = None, log: bool = False) -> Dict[str, float]:
     K = len(streams)
+    for s in streams[1:]:
+        if len(s.dates) != len(streams[0].dates) or not np.array_equal(s.dates, streams[0].dates):
+            raise ValueError('all farm streams must share the same session dates (align them first)')
     n_all = min(len(s.dates) for s in streams)
     n_end = n_all if n_end is None else min(n_all, n_end)
     X = [_lists(s)[0][:n_end] for s in streams]
@@ -43,6 +46,7 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
                evals_active_days=0.0, max_funded_seen=0, max_evals_seen=0, died=0)
     evals, funded, waiting = [], [], []
     counter = 0
+    events, daily = [], []
     for t in range(i0, n_end - 5):
         funded = [e for e in funded if e > t]
         keep = []
@@ -59,7 +63,12 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
             if len(funded) < spec.max_funded:
                 out["fees"] += act
                 out["n_funded"] += 1
-                pays, days, state, _ = run_funded_detail(X[si], L[si], NDf[si], t, rules, plan, A[si])
+                ptimes = [] if log else None
+                pays, days, state, _ = run_funded_detail(X[si], L[si], NDf[si], t, rules, plan, A[si], ptimes)
+                if log:
+                    events.append((t, 'activation', act))
+                    events.extend((pt, 'payout', pv) for pt, pv in zip(ptimes, pays))
+                    events.append((t + days, 'funded_died' if state == 1 else 'funded_closed', 0.0))
                 out["payouts"] += sum(pays)
                 out["n_payouts"] += len(pays)
                 out["died"] += int(state == 1)
@@ -77,8 +86,14 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
             status, tau = run_combine(X[si], L[si], NDc[si], t, rules, dyn, A[si])
             out["fees"] += (1 + (max(tau, 1) - 1) // cyc) * sub
             out["n_evals"] += 1
+            if log:
+                for b in range(1 + (max(tau, 1) - 1) // cyc):
+                    events.append((t + b * cyc, 'eval_fee', sub))
+                events.append((t + tau, 'eval_pass' if status == 1 else 'eval_fail', 0.0))
             evals.append((t + tau, status, si))
             started += 1
+        if log:
+            daily.append((t, len(evals), len(funded)))
         out["funded_active_days"] += len(funded)
         out["evals_active_days"] += len(evals)
         out["max_funded_seen"] = max(out["max_funded_seen"], len(funded))
@@ -88,4 +103,6 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
     out["avg_funded_active"] = out["funded_active_days"] / days
     out["avg_evals_active"] = out["evals_active_days"] / days
     out["sessions"] = days
+    if log:
+        out["events"], out["daily"] = events, daily
     return out

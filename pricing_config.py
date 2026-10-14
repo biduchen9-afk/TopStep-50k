@@ -49,6 +49,7 @@ class Friction:
     slippage_per_rt: float = 1.00
     trades_per_day: int = 2
     slippage_ticks_rt: float = 1.0
+    micro_round_turn_commission: float = 1.22
 
     @property
     def daily_cost(self) -> float:

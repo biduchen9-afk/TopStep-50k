@@ -30,6 +30,7 @@ friction:
   slippage_per_rt: 1.00         # $ per round turn, legacy synthetic engine only
   trades_per_day: 2             # legacy synthetic engine only
   slippage_ticks_rt: 1.0        # real-data engine: ticks lost per round turn (NQ tick = $5/mini)
+  micro_round_turn_commission: 1.22   # all-in $ per MICRO round turn (Topstep help-centre MNQ figure); the real-data engine trades micros
 
 # Rules verified against Topstep's own help-centre pages (web search, Oct 2026). These override the
 # spec's older assumptions in the real-data engine; set the toggles back to reproduce the spec.

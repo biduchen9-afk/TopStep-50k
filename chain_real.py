@@ -63,7 +63,8 @@ def combine_chain(xc, lc, ndc, t0: int, n_end: int, rules: RuleSet, cfg: EngineC
             return end - 1, fees + act, attempts, end - 1
         if wait:
             s = c0 + cyc * math.ceil((end - c0) / cyc)
-            fees += sub                             # renewal that grants the free reset
+            if s < n_end - 5:
+                fees += sub                         # renewal that grants the free reset (only if another attempt can start)
             t = s
         else:
             t = end

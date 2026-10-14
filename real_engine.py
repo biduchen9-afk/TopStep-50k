@@ -70,7 +70,8 @@ def rules_from_config(cfg: EngineConfig, path_key: str, **overrides) -> RuleSet:
 
 def costs_from_config(cfg: EngineConfig):
     from intraday_strategies import Costs
-    return Costs(commission_rt=cfg.friction.round_turn_commission, slippage_ticks_rt=cfg.friction.slippage_ticks_rt)
+    # sleeves are priced per MINI-equivalent and then divided by 10 to get one micro, so a micro's all-in fee is x10 here
+    return Costs(commission_rt=cfg.friction.micro_round_turn_commission * MICRO_PER_MINI, slippage_ticks_rt=cfg.friction.slippage_ticks_rt)
 
 
 def xfa_micro_cap(balance: float, ladder: tuple = XFA_LADDER) -> int:
@@ -188,7 +189,7 @@ class FundedPlan:
 
 
 def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r: RuleSet,
-                      plan: FundedPlan, atr: Optional[List[float]] = None) -> Tuple[List[float], int, int, float]:
+                      plan: FundedPlan, atr: Optional[List[float]] = None, times: Optional[list] = None) -> Tuple[List[float], int, int, float]:
     """Return (net payouts in order, days, end_state, balance when it ended): end_state 1 dead, 2 closed by plan, 0 data end."""
     bal = peak = 0.0
     floor = -r.mll
@@ -242,6 +243,8 @@ def run_funded_detail(x: List[float], lo: List[float], nd: List[int], i0: int, r
                 wins = tdays = 0
                 prof = best = 0.0
                 pays.append(r.split * gross)
+                if times is not None:
+                    times.append(t)
                 stage = 2
                 if plan.t2 is None or len(pays) >= plan.max_payouts:
                     return pays, t - i0 + 1, 2, bal

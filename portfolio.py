@@ -14,7 +14,8 @@ import pandas as pd
 import academic_strategies as ac
 import intraday_strategies as st
 from market_data import build_sessions
-from real_engine import MICRO_PER_MINI, Stream
+from pricing_config import load_config
+from real_engine import MICRO_PER_MINI, Stream, costs_from_config
 
 DEV_END = np.datetime64("2022-12-31")
 _CTX: Dict[str, dict] = {}
@@ -36,7 +37,7 @@ def make_sleeve(market: str, sleeve: str, params: dict, gate: Optional[dict] = N
     if market not in _CTX:
         _CTX[market] = ac.context(sess)
     ctx = _CTX[market]
-    d = ac.run_sleeve(sess, sleeve, costs=costs or st.Costs(), ctx=ctx, **params, **(gate or {}))
+    d = ac.run_sleeve(sess, sleeve, costs=costs or costs_from_config(load_config()), ctx=ctx, **params, **(gate or {}))
     k = 1.0 / MICRO_PER_MINI
     atr_usd = np.where(d.traded_ok, d.atr * d.mult * k, np.nan)
     return Sleeve(name or f"{market}_{sleeve}", d.dates, np.where(d.traded_ok, d.pnl * k, 0.0), np.where(d.traded_ok, d.minpnl * k, 0.0),

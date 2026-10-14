@@ -72,3 +72,22 @@ Sources (found by web search; SSRN/arXiv): Gao-Han-Li-Zhou "Market Intraday Mome
 
 Dynamic sizing: risk per ATR move = a x (balance - MLL floor): a1 before the first payout, a2 after it (floor is $0 then), so a funded account
 starts carefully and fades slowly instead of dying outright.
+
+## Audit (project-wide integrity review)
+
+Independent reviews covered the signals, the account/payout engine, placebo/negative controls and the hold-out protocol.
+
+- **No cheating found.** No look-ahead (signals use bar-close data and fill at the next open; perturbing future bars leaves earlier
+  signals unchanged), no rule bugs against `reference_impl.py` (an independent re-implementation, see `test_engine_audit.py`), and
+  mutation testing now catches all 37 injected bugs. The suite is 38 tests (`pytest`).
+- **Fixed during the audit:** costs were too light (micro round turn now $1.22 plus 1 tick slippage; NQ noise-area Sharpe 0.89 -> 0.56,
+  hold-out 1.21); renewal fee billed after the data ended; `farm_real` now rejects misaligned session dates; the basket Sharpe no longer
+  produces NaN when ATR is zero.
+- **Correction:** an earlier note said the coin-flip control loses under dynamic sizing. The placebo audit showed that is false for the
+  headline plan: the zero-edge control also earns money in the recent high-volatility era, because the rules cap losses at the fees
+  while payouts are uncapped. Judge any strategy by how far it sits above the control.
+- **Caveats that remain:** the hold-out was never clean (the a2=0.4 result of about $53k was picked after seeing 2023-26; the
+  pre-registered plan gave about $10.5k); profit is concentrated in 2018 and 2020-24; farms started in 2025 paid nothing for NQ;
+  payouts are assumed approved instantly; accounts share one market path; 34 distinct funding dates make the statistics look stronger
+  than they are. A clean test needs data after the end of this history with a frozen config and kill criteria set in advance.
+- **Dashboard:** `build_dashboard_data.py` writes `results/dashboard_data.json` (monthly payouts, fees, reinvestment, accounts open).

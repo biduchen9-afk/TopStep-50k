@@ -49,7 +49,7 @@ def main() -> None:
                              pct_time_funded=100 * reps.days_funded.mean() / reps.sessions.mean()))
         # farm scaling
         for (me, mf) in ((1, 1), (4, 2), (8, 3), (12, 5), (20, 5)):
-            res = [run_farm([s], sz, Rf, plan, cfg, RULES, PATH, o, FarmSpec(max_evals=me, max_funded=mf, p_est=max(m["p_pass"], 0.15))) for o in range(n_dev, n_dev + 60, 5)]
+            res = [run_farm([s], sz, Rf, plan, cfg, RULES, PATH, o, FarmSpec(max_evals=me, max_funded=mf, p_est=1.0)) for o in range(n_dev, n_dev + 60, 5)]
             r = pd.DataFrame(res)
             farm_rows.append(dict(stream=name, max_evals=me, max_funded=mf, net=r.net.mean(), per_year=r.net.mean() / yrs, worst=r.net.min(), best=r.net.max(),
                                   evals=r.n_evals.mean(), funded=r.n_funded.mean(), wasted_passes=r.n_wasted.mean(), payouts=r.payouts.mean(), fees=r.fees.mean(),

@@ -42,7 +42,6 @@ def main() -> None:
         add(f"switch: trailing-120d Sharpe > {thr} (4 sleeves)", basket(base, m, name=f"sw{thr}"))
     for hi_noise, thr in ((True, 1.0), (True, 0.9), (True, 1.1)):
         m = {"nq_noise": volratio_mask(S["nq_noise"], idx, True, thr), "es_noise": volratio_mask(S["es_noise"], idx, True, thr),
-             "nq_vwap": ~volratio_mask(S["nq_vwap"], idx, True, thr) | volratio_mask(S["nq_vwap"], idx, True, thr),
              "es_vwap_t250": np.ones(len(idx), bool)}
         add(f"switch: noise sleeves only when 5d/60d range ratio >= {thr}", basket(base, m, name="volsw"))
     res = pd.DataFrame(rows)
