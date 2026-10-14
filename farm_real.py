@@ -24,6 +24,17 @@ class FarmSpec:
     max_wait: int = 21
     starts_per_day: int = 1
     p_est: float = 0.4
+    # when to refill empty funded slots with new Combines: "all" = whenever the expected-funded test allows (original rule);
+    # "hyst" = once full (>= max_funded funded+waiting) open nothing until `refill_dead` slots have emptied, then refill to full;
+    # "buffer" = only open Combines for slots beyond the first `buffer` empty ones.
+    refill: str = "all"
+    refill_dead: int = 3
+    buffer: int = 2
+    # throttle on the farm's own recent Combine pass rate (uses only Combines already RESOLVED by day t): 0 = off.
+    pause_below: float = 0.0
+    th_window: int = 126          # sessions of resolved Combines to look at
+    th_min: int = 4               # fewer resolved than this (after warm-up) -> probe mode
+    probe_gap: int = 21           # probe mode: one Combine at a time, at least this many sessions apart
 
 
 def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], plan: FundedPlan, cfg: EngineConfig, rules: RuleSet,
@@ -47,6 +58,8 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
     evals, funded, waiting = [], [], []
     counter = 0
     events, daily = [], []
+    resolved: List[tuple] = []            # (end_t, passed) of every Combine started, for the throttle
+    refill_on, last_start = True, -10 ** 9
     for t in range(i0, n_end - 5):
         funded = [e for e in funded if e > t]
         keep = []
@@ -79,8 +92,22 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
                 still.append((si, since))
         waiting = still
         started = 0
-        while (len(evals) < spec.max_evals and started < spec.starts_per_day
-               and len(funded) + len(waiting) + spec.p_est * len(evals) < spec.max_funded):
+        cap = spec.max_evals
+        if spec.pause_below > 0:
+            done = [(e, ps) for (e, ps) in resolved if e <= t]
+            recent = [ps for (e, ps) in done if e > t - spec.th_window]
+            warm = len(done) < spec.th_min
+            if not warm and (len(recent) < spec.th_min or float(np.mean(recent)) < spec.pause_below):
+                cap = 1 if t - last_start >= spec.probe_gap else 0       # probe mode
+        occupied = len(funded) + len(waiting)
+        if spec.refill == "hyst":
+            if occupied >= spec.max_funded:
+                refill_on = False
+            elif occupied <= spec.max_funded - spec.refill_dead:
+                refill_on = True
+        gate = True if spec.refill != "buffer" else (spec.max_funded - (occupied + spec.p_est * len(evals)) > spec.buffer)
+        while (len(evals) < cap and started < spec.starts_per_day and refill_on and gate
+               and occupied + spec.p_est * len(evals) < spec.max_funded):
             si = counter % K
             counter += 1
             status, tau = run_combine(X[si], L[si], NDc[si], t, rules, dyn, A[si])
@@ -91,6 +118,8 @@ def run_farm(streams: List[Stream], sizing: CombineSizing, Rf: Optional[float], 
                     events.append((t + b * cyc, 'eval_fee', sub))
                 events.append((t + tau, 'eval_pass' if status == 1 else 'eval_fail', 0.0))
             evals.append((t + tau, status, si))
+            resolved.append((t + tau, float(status == 1)))
+            last_start = t
             started += 1
         if log:
             daily.append((t, len(evals), len(funded)))

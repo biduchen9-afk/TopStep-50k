@@ -19,6 +19,7 @@ from real_engine import MICRO_PER_MINI, Stream, costs_from_config
 
 DEV_END = np.datetime64("2022-12-31")
 _CTX: Dict[str, dict] = {}
+_EX: Dict[str, dict] = {}
 
 
 @dataclass
@@ -37,7 +38,13 @@ def make_sleeve(market: str, sleeve: str, params: dict, gate: Optional[dict] = N
     if market not in _CTX:
         _CTX[market] = ac.context(sess)
     ctx = _CTX[market]
-    d = ac.run_sleeve(sess, sleeve, costs=costs or costs_from_config(load_config()), ctx=ctx, **params, **(gate or {}))
+    if sleeve.startswith("vv_"):
+        import vwap_variants as vv
+        if market not in _EX:
+            _EX[market] = vv.extra_context(sess)
+        d = vv.run_variant(sess, sleeve, costs or costs_from_config(load_config()), ctx, _EX[market], **params, **(gate or {}))
+    else:
+        d = ac.run_sleeve(sess, sleeve, costs=costs or costs_from_config(load_config()), ctx=ctx, **params, **(gate or {}))
     k = 1.0 / MICRO_PER_MINI
     atr_usd = np.where(d.traded_ok, d.atr * d.mult * k, np.nan)
     return Sleeve(name or f"{market}_{sleeve}", d.dates, np.where(d.traded_ok, d.pnl * k, 0.0), np.where(d.traded_ok, d.minpnl * k, 0.0),
@@ -57,8 +64,9 @@ def _on(idx, s: Sleeve, arr, fill):
 
 
 def basket(sleeves: List[Sleeve], masks: Optional[Dict[str, np.ndarray]] = None, name: str = "basket",
-           weights: Optional[Dict[str, float]] = None) -> Stream:
-    """masks[name] is a bool array on the aligned date index: sleeve active on that day (default all)."""
+           weights: Optional[Dict[str, float]] = None, tvw: Optional[Dict[str, np.ndarray]] = None) -> Stream:
+    """masks[name] is a bool array on the aligned date index: sleeve active on that day (default all).
+    tvw[name] is an optional time-varying weight multiplier (float array on the aligned index, known BEFORE each day)."""
     idx = align(sleeves)
     n = len(idx)
     pnl, low, atr, cnt = np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n)
@@ -66,6 +74,9 @@ def basket(sleeves: List[Sleeve], masks: Optional[Dict[str, np.ndarray]] = None,
         ok = _on(idx, s, s.ok.astype(float), 0.0) > 0
         act = ok if masks is None or s.name not in masks else (ok & masks[s.name])
         w = 1.0 if weights is None else weights.get(s.name, 1.0)
+        if tvw is not None and s.name in tvw:
+            w = w * np.asarray(tvw[s.name], dtype=float)
+            act = act & (w > 0)
         pnl += w * np.where(act, _on(idx, s, s.pnl, 0.0), 0.0)
         low += w * np.where(act, _on(idx, s, s.low, 0.0), 0.0)
         atr += w * np.where(act, np.nan_to_num(_on(idx, s, s.atr, np.nan)), 0.0)
