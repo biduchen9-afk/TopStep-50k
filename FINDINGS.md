@@ -81,3 +81,6 @@ Topstep rules modelled: $9,000 target, $4,500 MLL (real-time, locks at $0), 55% 
 | Data (not in git) | `/home/user/data_raw` (Databento NQ/ES/GC; GitHub release v1.0.0) |
 
 Trial counts (so the amount of searching is visible): 156 VWAP-variant trials (`results/vwap_variant_trials.csv`), 300+ earlier sleeve variants (`results/sleeve_sweep.csv`), 4,752 farm configurations (`results/regime_dev_grid*.csv`), 4 switching rules, 2 risk units, 3 refill rules.
+
+## 10. Per-funded-account check (`diag/funded_payout_rate.py`, descriptive, includes seen data)
+Combine pass rate about 21%. Of funded accounts, about 86% reach at least one payout (82% for activations before 2023, all of them from 2023), median about 138 calendar days from activation to first payout, about 1.8 payouts per funded account ($3.3k paid on average) at post-payout size 1.6 and about 3.3 payouts ($3.8k) at 0.4. So the funded side mostly works; the cost side (about 4.7 Combines bought per funded account) and the regime are what decide the sign.
