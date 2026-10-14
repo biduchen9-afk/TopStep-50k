@@ -107,3 +107,7 @@ Scripts: `diag/regime_diag.py`, `diag/sizing_diag.py`, `vwap_variants.py` + `run
 - **Hold-out (not clean):** from 2023-01 the selected farm nets about $19k vs about $2k for the previous headline; from 2025-01 about $5k vs -$16k; a start in mid-2025 is slightly negative for both.
 - **Walk-forward (re-pick every year on earlier data, 3-year farms):** positive in 9 of 11 start years; mean $15.9k vs $18.8k for the previous headline across 2016-26, but +$4.7k vs -$6.1k for 2023-26 starts.
 - **No-edge control on the same rules** loses over the full history, so the gain is not purely rule structure.
+
+## Can the farm pay monthly? (`run_monthly_payout.py`, `run_monthly_diversified.py`)
+
+Not reliably. Payouts are lumpy because every account trades the same stream on one market path, so they become eligible in the same months. With the dev-selected stream (standard path, t1=3000, a2=1.6) only ~17% of months since 2012 contain a payout (longest gap 50 months). Lowering post-payout aggressiveness to a2=0.4 raises coverage to ~26% with similar dev net; lowering the payout trigger t1 barely helps and costs dev net; the consistency path pays less often (~7% of months). Mixing ES+GC accounts raises coverage to ~39% (longest gap 19 months) but turns dev net negative. Combine concurrency: with p_est=1.0 at most 5 Combines are ever open, and raising max_evals to 20 changes nothing; forcing more concurrent Combines (p_est 0.4 / 0.2) lowers dev mean from ~$22k to ~$9k / ~$0.7k because funded slots (5) are the bottleneck.
