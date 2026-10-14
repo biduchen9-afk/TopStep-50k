@@ -93,6 +93,7 @@ Independent reviews covered the signals, the account/payout engine, placebo/nega
   payouts are assumed approved instantly; accounts share one market path; 34 distinct funding dates make the statistics look stronger
   than they are. A clean test needs data after the end of this history with a frozen config and kill criteria set in advance.
 - **Dashboard:** `build_dashboard_data.py` writes `results/dashboard_data.json` (monthly payouts, fees, reinvestment, accounts open).
+- **Topstep default (section 20 of FINDINGS.md):** 3 noise-area accounts + 2 gap-VWAP accounts, balanced sizing (`final_strategy.ACCOUNT_GROUPS`); `multi_firm.py` is group-aware (`FirmPlan.firm`, `Policy.group_aware`), `kelly_sizing.py` holds the Kelly unit stream, and `build_dashboard_v4.py` writes the dashboard datasets (default variant, splits per firm, scaling pipeline month by month, Kelly and days-to-payout tables).
 
 ## Regime study (why the edge faded in 2025-26, and what we tried)
 

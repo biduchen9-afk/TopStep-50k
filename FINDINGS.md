@@ -253,3 +253,42 @@ With the other rule (each group buys its own Combine) the split gives dev mean $
 - Monthly net correlation between the groups is 0.04-0.08, payouts arrive in 47-48% of months instead of 26%, and the dev mean is about 4x higher. Mechanism: a single sleeve per account is more volatile than the basket, and a funded account is an option that gains from variance, while the groups are nearly uncorrelated with each other.
 - **Placebo:** with the strategy's edge removed the split still loses (dev mean -$2.7k and -$3.3k, against -$7.9k for the same-basket farm), so the profit is still the edge; the split just shrinks the losses without the edge.
 - Caveats: the split is a post-hoc comparison (three cases, two buying rules, six looks); the two most recent starts (2025) are slightly worse than the same-basket farm; the full-history gain includes seen years.
+
+## 20. Topstep default split, best split at FundedNext and FTMO, the scaling pipeline, Kelly sizing, days to payout (`docs/PREREGISTRATION_9.md`, committed before running; `run_firm_splits.py`, `run_scaling_pipeline.py`, `run_kelly.py`, `run_days_to_payout.py`, `build_dashboard_v4.py`)
+**Default.** The Topstep default is now 3 noise-area accounts + 2 gap-VWAP accounts, balanced sizing (`final_strategy.ACCOUNT_GROUPS`). The pre-registered rule would have picked "5 gap-VWAP" for Topstep (highest 25th-percentile farm); the split was fixed by the user instead.
+
+**Best split per firm (Part A; ten 3-year dev farms, one Combine at a time within the firm; `results/firm_splits.csv`).** Rule: highest 25th-percentile net among splits with a positive mean.
+| Firm | Rule's pick | dev mean | p25 | worst | other splits (dev mean) |
+|---|---|---|---|---|---|
+| Topstep (5 funded) | user's: 3 noise + 2 gap | $17.5k | -$1.6k | -$12.4k | same basket x5 $4.4k, 2 noise + 3 gap $16.1k, 5 gap $8.3k, 5 noise $6.2k |
+| FundedNext Flex (5, rules ignored by the user) | 5 gap | $1.9k | -$3.2k | -$4.8k | 5 noise $4.1k (p25 -$5.7k), 2 noise + 3 gap $3.6k, same basket $1.4k |
+| FTMO Growth (3) | 1 noise + 1 VWAP + 1 gap | $5.2k | -$5.6k | -$12.6k | 1 noise + 2 gap $3.5k, same basket $1.2k, 3 gap $0.7k |
+The firm effect dominates the split effect: the same strategies are worth $17.5k per 3-year farm at Topstep, $2-4k at FundedNext and $1-5k at FTMO. The FundedNext pick is weak (its mean is the lowest of the six candidates; the p25 rule favours the lowest-variance split), and splits differ less than the spread between farms.
+
+**Scaling pipeline (Part B; Topstep -> FundedNext -> FTMO, out of pocket only for the first Topstep account, one account at a time until its first payout, then every purchase from payouts with a 3-cycle reserve, one Combine open across everything, new firm unlocked when cash passes a threshold; `results/scaling_pipeline.csv`).**
+- Rule-chosen threshold: $3,000 (fewest ruins over four long dev runs and nine 3-year farms: 7, against 8 for $6,000 and $10,000; the means are within noise).
+- Topstep only, dev 3-year farms (starts 2012-2020): mean net $4.9k, 4 of 9 green, 5 of 9 end ruined after $1.4k-$3.6k put in; the four winners net $7.0k-$21.5k. Adding FundedNext and FTMO gives $3.7k / $4.5k / $5.1k for thresholds $3k / $6k / $10k: no reliable gain, because the next firm is reached only after the lead has already paid out and the FTMO rung is practically never reached (cash and the sequential unlock both have to be satisfied).
+- Full history from 2010: -$4.0k to -$4.1k for Topstep only and for thresholds $3k and $10k (ruined after the 2012-2016 weak years), but +$64k at $6k, a single path that survived to 2018. The same rule on 2018 and 2020 starts pays the first account in 33-34 days and then compounds ($65.7k from a 2018 start at $3k). This is a bimodal lottery on a $1.4k-$4.2k bankroll, not a stable edge; it is the same absorbing-ruin structure as in section 14.
+- Seen starts (Topstep only): 2021 -$0.5k (ruined), 2023 +$22.8k, 2025 -$3.8k (no payout yet by the end of the data).
+
+**Kelly sizing (Part C; funded stage only, Combine sizing unchanged; `results/kelly_study.csv`; `kelly_sizing.py`).** Contracts = f x cushion x (trailing 120-session mean) / (trailing variance), per micro, causal; 1 micro when the trailing mean is not positive.
+- The current balanced size is about 3-4x full Kelly before the first payout and 2-3x after it (median of the trailing estimates: noise-area 4.1x / 2.7x, gap-VWAP 3.0x / 2.0x). This is deliberate: a funded account that dies only costs fees, so the payoff is capped below and the useful size is far above Kelly.
+- No setting passed the pre-registered "not greedy" test (mean AND p25 up, worst farm no more than 25% deeper, share of funded accounts paid no more than 5 points lower). Current: mean $17.5k, p25 -$1.6k, 54% of funded accounts paid, farm's first payout after a median of 152 days.
+| Setting | dev mean | p25 | worst | accounts paid | median days to farm's 1st payout | verdict |
+|---|---|---|---|---|---|---|
+| ATR 1.8 / 0.8 | $20.0k | -$4.0k | -$14.9k | 33% | 169 | worse p25, fewer paid |
+| ATR 1.2 / 1.2 | $10.2k | -$7.3k | -$12.5k | 51% | 152 | worse mean and p25 |
+| Kelly 3x / 1x | $23.4k | +$0.1k | -$10.5k | 46% | 346 | fewer paid (-8 pts) |
+| Kelly 4x / 1x | $19.9k | -$1.1k | -$11.8k | 37% | 345 | fewer paid |
+| Kelly 3x / 3x | $30.2k | -$4.9k | -$10.5k | 47% | 346 | worse p25 |
+(all other Kelly cells in the csv are rejected for a lower mean and/or worse p25.) The near misses (3x/1x, 4x/1x) raise the mean and shrink the worst farm but pay fewer accounts and delay the first payout by about six months (the trailing-mean gate keeps size at 1 micro in 26-39% of sessions), so Kelly is a tool for bigger payouts per paid account, not for earlier ones. With the edge removed, Kelly 3x/1x and 2x/1x still lose on dev (-$3.4k / -$3.6k, against -$2.7k for the current rule), so the Kelly gains on development data are edge, not rules.
+- A combination "volatility rule before the first payout, Kelly after it" was NOT tested (the funded engine takes one sizing unit for both stages and it was not in the pre-registered grid); it is the natural next candidate and would need its own pre-registration.
+
+**Days to payout (Part D; `results/days_to_payout_accounts.csv`, `results/days_to_payout_farms.csv`).**
+- One account (sequential Combine starts every 3 sessions, balanced, calendar days): pass takes a median 29-32 days, activation to first payout 24-35 days, so about 60-80 days from buying the Combine to the first payout for an account that gets there (old basket x5 62 days, new default 78 days; the gap-VWAP sleeve is slower, 116 days, because it trades only on gap days). 7 Combines are bought per paid account (pass rate 21-23%, 61-69% of funded accounts get paid).
+- Whole farm, one Combine at a time, calendar days from the first Combine to the first payout of any account (ten 3-year dev farms): old basket x5 median 218 days (none within 90 days); new default 152 days unconstrained, 254 days in the self-funded pipeline (2 of 10 within 90 days, range 33-459). So the per-account time is unchanged by the split, the farm's first payout is not reliably faster, and the < 90 days goal is not met in the typical case.
+- Fee check (ten 3-year dev farms of the default split): 551 Combines bought at $248 on average (Combine plus activation share), 112 funded, 60 of them ever paid; fees $2.3k per paid account against $5.2k paid out per paid account, so about $2.9k net per paid account. The first payout alone (about $1.8k) does not cover the fees; profit relies on the later payouts of the same account.
+
+**Dashboard.** Added: the Topstep default variant (and its edge-removed control) as the default view, the split table per firm, the month-by-month pipeline from six start dates, the Kelly table and the days-to-payout table. Full history of the default split in the unconstrained farm: net $232.7k (fees $68.9k, payouts $301.6k, funded accounts 59, deepest cash dip $5.2k); with the edge removed the same farm nets -$0.2k over the full history (dev placebo mean -$2.7k). Starts: 2012 $228k, 2015 $226k, 2018 $68k, 2019 $42k, 2021 $37k, 2023 $26k, 2024 $12k, 2025-01 -$6k, 2025-07 -$4k, a fade that matches the regime finding.
+
+**Caveats.** FundedNext and FTMO rules come from search snippets (the user chose to ignore FundedNext's own rules); the pipeline's cash gating means the low-bankroll ruin states dominate small samples (9 farms); the Part A pick for FundedNext is weak; everything after 2022 was seen before this section was run.
