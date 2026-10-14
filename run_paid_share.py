@@ -16,10 +16,10 @@ A1S, T1S, A2S = (0.4, 0.6, 0.8, 1.0, 1.2), (2000.0, 3000.0, 4000.0), (0.8, 1.2)
 CUR = (1.2, 2000.0, 0.8)
 
 
-def mk_plan(a1, t1, a2, w1=None):
+def mk_plan(a1, t1, a2, w1=None, scale=None):
     """Same as run_firm_comparison.mkplan, with an optional first-payout share w1 (default: the firm's maximum, 50%)."""
     sp = S["spec"].funded; frac = sp.payout_frac
-    return FundedPlan("p", "x", t1, frac if w1 is None else w1, 1.0, 0.0, frac, 1.0, S["max_payouts"], a1, a2)
+    return FundedPlan("p", "x", t1, frac if w1 is None else w1, 1.0, 0.0, frac, 1.0, S["max_payouts"], a1, a2, scale)
 
 
 class Acc:
@@ -30,8 +30,8 @@ class Acc:
         first = int(np.flatnonzero(s.ok)[0]) + 260; self.starts = list(range(first, n_dev - 400, 3)); self.d = pd.DatetimeIndex(s.dates)
         self.ev = [(i0,) + run_eval_firm(spec.eval_phases, self.x, self.lo, self.nd, i0) for i0 in self.starts]
 
-    def run(self, a1, t1, a2, w1=None):
-        plan = mk_plan(a1, t1, a2, w1); rows = []
+    def run(self, a1, t1, a2, w1=None, scale=None):
+        plan = mk_plan(a1, t1, a2, w1, scale); rows = []
         for i0, st, tau in self.ev:
             r = dict(start=self.d[i0], passed=st == 1, paid=False, d_total=np.nan, first=np.nan, total=0.0)
             if st == 1:
@@ -53,8 +53,8 @@ def summ(df):
     return dict(pass_rate=df.passed.mean(), funded=int(len(p)), paid_share=p.paid.mean() if len(p) else np.nan, days_start_to_payout=p[p.paid].d_total.median(), paid_per_funded=p.total.mean() if len(p) else np.nan)
 
 
-def plans_g(ST, groups, a1, t1, a2, w1=None):
-    return [FirmPlan(replace(S["spec"], name=g, max_funded=k, max_evals=1), [ST[g]], R, mk_plan(a1, t1, a2, w1), p_est=1.0, refill="all") for g, k in groups]
+def plans_g(ST, groups, a1, t1, a2, w1=None, scale=None):
+    return [FirmPlan(replace(S["spec"], name=g, max_funded=k, max_evals=1), [ST[g]], R, mk_plan(a1, t1, a2, w1, scale), p_est=1.0, refill="all") for g, k in groups]
 
 
 def main() -> None:

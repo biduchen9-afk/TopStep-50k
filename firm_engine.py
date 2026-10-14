@@ -129,6 +129,26 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
     return 1, t - i0
 
 
+def _scaled_a(scale: tuple, a1: float, bal: float, age: int, hist: List[float]) -> float:
+    """Size multiple before the first payout as a function of the account's own state (balance, sessions since activation, its realised daily P&L); causal."""
+    kind = scale[0]
+    if kind == "ladder":                               # start at a1; use the `a` of the highest milestone the CURRENT balance has reached
+        a = a1
+        for m, am in scale[1]:
+            if bal >= m:
+                a = am
+        return a
+    if kind == "perf":                                 # ("perf", L, f_up, f_down): last L sessions of the account's P&L > 0 -> a1 x f_up, else a1 x f_down
+        L = scale[1]
+        if len(hist) < L:
+            return a1
+        return a1 * (scale[2] if sum(hist[-L:]) > 0 else scale[3])
+    if kind == "ramp":                                 # ("ramp", d, a_start): linear from a_start to a1 over the first d sessions
+        d, a0 = scale[1], scale[2]
+        return a0 + (a1 - a0) * min(1.0, age / d)
+    raise ValueError(kind)
+
+
 def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[int], i0: int, plan: FundedPlan,
                     atr: Optional[List[float]] = None, times: Optional[list] = None, atr2: Optional[List[float]] = None) -> Tuple[List[float], int, int, float]:
     """Return (net payouts in order, sessions, end_state, balance): end_state 1 dead, 2 closed by plan, 0 data end."""
@@ -140,6 +160,7 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
     prof = best = 0.0
     last_pay_t = -10 ** 9
     pays: List[float] = []
+    hist: List[float] = []              # daily P&L of this account since activation (only used by scale = ("perf", ...))
     n = len(x)
     for t in range(i0, n):
         if plan.a1 is None:
@@ -148,6 +169,8 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
         else:
             a_t = atr[t] if (stage == 1 or atr2 is None) else atr2[t]      # atr2: optional sizing unit used after the first payout (hybrid sizing)
             a = plan.a1 if (stage == 1 or plan.a2 is None) else plan.a2
+            if stage == 1 and plan.scale is not None:
+                a = _scaled_a(plan.scale, plan.a1, bal, t - i0, hist)
             k = 1 if not (a_t > 0) else max(1, int(round(a * max(bal - floor, 250.0) / a_t)))
         k = min(k, xfa_micro_cap(bal, spec.ladder))
         p, w = x[t] * k, lo[t] * k
@@ -166,6 +189,7 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
         if spec.day_cap is not None and p > spec.day_cap:
             p = spec.day_cap
         bal += p
+        hist.append(p)
         if spec.dd_type == "eod" and bal <= floor:
             return pays, t - i0 + 1, 1, bal
         if p != 0.0:

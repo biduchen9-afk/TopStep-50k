@@ -81,3 +81,31 @@ def test_stage2_unit_changes_only_post_payout_sizing():
     other = run_funded_firm(spec, x, lo, nd, 0, plan, atr, t3, [15.0] * n)       # 4x bigger post-payout size
     assert t3[0] == t1[0] and other[0][0] == base[0][0]                             # up to and including the first payout nothing changes
     assert other != base
+
+
+def test_scale_none_and_neutral_schemes_reproduce_the_constant_size():
+    from firm_engine import run_funded_firm, topstep_150k
+    from real_engine import FundedPlan
+    rng = np.random.default_rng(5)
+    n = 500
+    x = rng.normal(8.0, 40.0, n).tolist(); lo = (np.minimum(np.array(x), 0.0) - 5.0).tolist(); nd = [3] * n; atr = [600.0] * n
+    spec = topstep_150k().funded
+    base_plan = FundedPlan("p", "x", 1500.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8)
+    base = run_funded_firm(spec, x, lo, nd, 0, base_plan, atr)
+    for sc in (("ladder", ((1e9, 9.0),)), ("ladder", ((0.0, 1.2),)), ("perf", 5, 1.0, 1.0), ("ramp", 20, 1.2)):
+        got = run_funded_firm(spec, x, lo, nd, 0, FundedPlan("p", "x", 1500.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8, sc), atr)
+        assert got == base, sc
+    for sc in (("ladder", ((300.0, 0.4),)), ("perf", 5, 1.5, 0.5), ("ramp", 20, 0.4)):
+        assert run_funded_firm(spec, x, lo, nd, 0, FundedPlan("p", "x", 1500.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 1.2, 0.8, sc), atr) != base, sc
+
+
+def test_scaled_a_is_causal_and_follows_the_definitions():
+    from firm_engine import _scaled_a
+    assert _scaled_a(("ladder", ((500.0, 2.0), (1000.0, 2.5))), 0.4, 499.0, 3, []) == 0.4
+    assert _scaled_a(("ladder", ((500.0, 2.0), (1000.0, 2.5))), 0.4, 500.0, 3, []) == 2.0
+    assert _scaled_a(("ladder", ((500.0, 2.0), (1000.0, 2.5))), 0.4, 1200.0, 3, []) == 2.5
+    assert _scaled_a(("ladder", ((500.0, 2.0),)), 0.4, 100.0, 3, []) == 0.4          # falling back below a milestone steps the size back down
+    assert _scaled_a(("perf", 3, 1.5, 0.5), 1.0, 0.0, 2, [1.0, 1.0]) == 1.0          # fewer than L sessions -> unchanged
+    assert _scaled_a(("perf", 3, 1.5, 0.5), 1.0, 0.0, 3, [5.0, -1.0, -1.0]) == 1.5
+    assert _scaled_a(("perf", 3, 1.5, 0.5), 1.0, 0.0, 3, [9.0, -5.0, -5.0, -5.0]) == 0.5   # only the last 3 sessions count
+    assert _scaled_a(("ramp", 10, 0.4), 1.2, 0.0, 0, []) == 0.4 and abs(_scaled_a(("ramp", 10, 0.4), 1.2, 0.0, 5, []) - 0.8) < 1e-12 and _scaled_a(("ramp", 10, 0.4), 1.2, 0.0, 99, []) == 1.2
