@@ -52,7 +52,10 @@ class LifecycleResult:
 
 def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
                        rng: np.random.Generator, horizon: int = HORIZON_DAYS_3Y,
-                       payout: Optional[PayoutRule] = None) -> LifecycleResult:
+                       payout: Optional[PayoutRule] = None,
+                       xfa_cfg: Optional[EngineConfig] = None) -> LifecycleResult:
+    """`xfa_cfg` optionally gives the funded phase its own market process (e.g. a real
+    edge there but a no-edge, aggressive Combine); defaults to `cfg`."""
     payout = payout or PayoutRule()
     path = cfg.paths[path_key]
     rules = cfg.combine_rules
@@ -94,6 +97,10 @@ def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
         fees[bill] += path.monthly_cost
 
         x = _draw_days(rng, n, mp.mu_daily_gross, mp.sigma_daily, path.intraday_dll, fric)
+        if xfa_cfg is not None:
+            xm = xfa_cfg.market_process
+            xf = _draw_days(rng, n, xm.mu_daily_gross, xm.sigma_daily, path.intraday_dll, fric)
+            x = np.where(funded, xf, x)
         pnl += x
         peak = np.maximum(peak, pnl)
 
@@ -125,6 +132,7 @@ def simulate_lifecycle(cfg: EngineConfig, path_key: str, n_paths: int,
         close = c_breach | f_breach | (f_pay if payout.close_after_payout else np.zeros(n, bool))
         if not payout.close_after_payout:
             pnl[f_pay] -= gross[f_pay]
+            win_days[f_pay] = 0
         funded[to_xfa] = True
         pnl[to_xfa] = 0.0
         peak[to_xfa] = 0.0
