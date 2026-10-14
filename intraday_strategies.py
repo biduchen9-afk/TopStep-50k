@@ -228,6 +228,31 @@ def gap_session(o, h, l, c, v, smin, atr, thr, s, mode, cost_pts):
     return net, min(worst - cost_pts, net, 0.0), 1
 
 
+def coin_session(o, h, l, c, v, smin, atr, direction, s, cost_pts):
+    """No-edge lottery: coin-flip direction at the 09:30 ET open, optional stop s*ATR (None = no stop),
+    flat by 15:55 ET. A stop truncates losses without creating edge; it only reshapes the distribution."""
+    a, end = int(np.searchsorted(smin, CASH_OPEN)), int(np.searchsorted(smin, FLAT_BY))
+    if a < 100 or end - a < 100:
+        return 0.0, 0.0, 0
+    price = o[a]
+    js = -1
+    if s is not None:
+        stop_d = s * atr
+        js = _first_true(l[a:end] <= price - stop_d) if direction > 0 else _first_true(h[a:end] >= price + stop_d)
+    if js >= 0:
+        j = a + js
+        px = min(price - stop_d, o[j]) if direction > 0 else max(price + stop_d, o[j])
+        last = j
+    else:
+        px, last = c[end - 1], end - 1
+    if direction > 0:
+        worst, pnl_pts = l[a:last + 1].min() - price, px - price
+    else:
+        worst, pnl_pts = price - h[a:last + 1].max(), price - px
+    net = pnl_pts - cost_pts
+    return net, min(worst - cost_pts, net, 0.0), 1
+
+
 def run(sess: Sessions, name: str, costs: Costs = Costs(), seed: int = 0, **params) -> DailySeries:
     """Run one strategy over every session; returns $ per 1 mini."""
     n = len(sess)
@@ -248,6 +273,8 @@ def run(sess: Sessions, name: str, costs: Costs = Costs(), seed: int = 0, **para
         elif name == "orb":
             p, w, t = orb_session(o, h, l, c, v, m, atr[i], params["buf"], params["s"], cp,
                                   or_min=params.get("or_min", 30))
+        elif name == "coin":
+            p, w, t = coin_session(o, h, l, c, v, m, atr[i], flips[i], params.get("s"), cp)
         elif name == "gap":
             p, w, t = gap_session(o, h, l, c, v, m, atr[i], params["thr"], params["s"], params["mode"], cp)
         else:
