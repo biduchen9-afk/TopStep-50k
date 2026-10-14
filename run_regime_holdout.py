@@ -37,21 +37,24 @@ def run_all(s, row, label):
 
 
 def main() -> None:
-    g = pd.read_pickle("results/regime_dev_grid.pkl")
+    g = pd.concat([pd.read_pickle("results/regime_dev_grid.pkl"), pd.read_pickle("results/regime_dev_grid_ext.pkl")], ignore_index=True)
     streams = pickle.load(open("/home/user/data_raw/regime_streams.pkl", "rb"))
     top = g.sort_values("obj", ascending=False).head(1).iloc[0]
-    base_row = dict(R=6400, a1=0.4, a2=1.6, refill="all", pause=0.0, unit="atr")
-    cands = {"previous headline (NQ noise, ATR, R=6400, a2=1.6, no throttle)": (streams[("P2 NQ only (noise, vwap, gap30)", "static")], None), }
     print("DEV-selected config:", top[["set", "rule", "unit", "R", "a1", "a2", "refill", "pause", "mean", "p10", "obj"]].to_dict())
-    rows = []
-    # previous headline: NQ noise-area stream only -> rebuild
     from run_corrected import NEW, streams as old_streams
     nq = old_streams(NEW)["NQ noise-area"]
-    for lab, s, row in (("previous headline", nq, base_row), ("DEV-selected", with_risk_unit(streams[(top.set, top.rule)], top.unit, 40), top.to_dict())):
+    sel = top.to_dict()
+    variants = [("A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all)", nq, dict(R=6400, a1=0.4, a2=1.6, refill="all", pause=0.0, unit="atr")),
+                ("B DEV-selected", None, dict(sel)),
+                ("C = B + throttle (pause<10% trailing pass rate)", None, dict(sel, pause=0.10)),
+                ("D = B + buffer refill rule", None, dict(sel, refill="buffer")),
+                ("E = B + hyst refill + throttle 10%", None, dict(sel, refill="hyst", pause=0.10))]
+    rows = []
+    for lab, s0, row in variants:
+        s = s0 if s0 is not None else with_risk_unit(streams[(sel["set"], sel["rule"])], sel["unit"], 40)
         res = run_all(s, row, lab)
         for d, (net, pay, fee, nf) in res.items():
             rows.append(dict(config=lab, start=d, net=net, payouts=pay, fees=fee, funded=nf))
-        # no-edge control, same farm rules
         cs = coin_streams(row["unit"])
         nets = {d: [] for d in STARTS}
         for c in cs:
