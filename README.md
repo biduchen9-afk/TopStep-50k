@@ -1,5 +1,7 @@
 # TopStep-50k
 
+**Start with [FINDINGS.md](FINDINGS.md)** for the verdict, the final strategy ([`final_strategy.py`](final_strategy.py)) and the evidence. The rest of this README is the engine documentation and the study log.
+
 Monte Carlo valuation engine for a farm of Topstep 150K Combine / XFA accounts
 (2026 fee paths: `standard`, `no_activation`, `no_activation_dll`).
 
