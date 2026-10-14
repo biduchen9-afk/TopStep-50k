@@ -45,7 +45,7 @@ def evaluate(fps, ref, n_dev, n):
     nets = np.array(nets)
     seen = [round(run_multifirm(fps, pol, idx(x))["net"]) for x in ("2021-01-04", "2023-01-02", "2025-01-02", "2025-07-01")]
     full = run_multifirm(fps, pol, int(np.flatnonzero(ref.ok)[0]))
-    return dict(dev_mean=nets.mean(), dev_p25=np.percentile(nets, 25), dev_worst=nets.min(), green=int((nets > 0).sum()), paid_share=npaid / max(nf, 1), died_share=ndied / max(nf, 1),
+    return dict(nets=[float(v) for v in nets], dev_mean=nets.mean(), dev_p25=np.percentile(nets, 25), dev_worst=nets.min(), green=int((nets > 0).sum()), paid_share=npaid / max(nf, 1), died_share=ndied / max(nf, 1),
                 pay_per_paid=pay / max(npaid, 1), n_pay_per_paid=npay / max(npaid, 1), days_first_payout=float(np.median(d1)) if d1 else np.nan, seen=str(seen), full_net=full["net"])
 
 
