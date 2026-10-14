@@ -40,6 +40,7 @@ class Policy:
     k0: int = 1                     # lead-firm evaluations open at once before the first payout
     reserve_cycles: float = 3.0     # None -> no cash gating at all (unconstrained, used to test against run_farm)
     sequential_unlock: bool = True
+    stagger_gap: int = 0            # minimum sessions between two evaluation purchases of the same firm (decorrelates attempts that share one market path)
     unlock_cash: float = 0.0        # a non-lead firm may buy only when cash >= unlock_cash + price + reserve ('only once our payouts are enough')
     single_pipeline: bool = True   # before the first payout the lead firm runs ONE account at a time (Combine -> pass -> funded), as in 'out of pocket only for the first account'
     maintenance: bool = True        # lead firm keeps `k0` evaluation(s) running whenever cash >= price (no reserve); the reserve only gates EXPANSION
@@ -149,6 +150,8 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                 elif occupied <= spec.max_funded - fp.refill_dead:
                     f["refill_on"] = True
             started = 0
+            if pol.stagger_gap and f.get("last_buy_t") is not None and t - f["last_buy_t"] < pol.stagger_gap:
+                continue
             while (len(f["evals"]) < cap and started < fp.starts_per_day and f["refill_on"]
                    and occupied + fp.p_est * len(f["evals"]) < spec.max_funded):
                 si = f["counter"] % len(fp.streams)
@@ -176,6 +179,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                 f["n_evals"] += 1
                 if f["first_buy_t"] is None:
                     f["first_buy_t"] = t
+                f["last_buy_t"] = t
                 if log:
                     events.append((t, spec.name, "eval_fee", price))
                     events.extend((t + b * spec.cycle, spec.name, "eval_fee", price) for b in range(1, bills))

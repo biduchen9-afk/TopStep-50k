@@ -31,6 +31,10 @@ from pricing_config import load_config
 
 PATH = "no_activation_dll"
 FINAL = dict(R=9600.0, a1=0.4, a2=0.8, t1=4000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
+# Speed presets (pre-registration 5): faster first payout costs value and recent-start robustness, see FINDINGS.md section 15. Use farm_from(stream, start, **PRESETS["balanced"]).
+PRESETS = {"safe": dict(a1=0.4, t1=4000.0),                 # the default above: slowest, most robust
+           "balanced": dict(a1=1.2, t1=2000.0),             # ~4x faster per account, ~half the funded accounts reach a payout, 3x the fees
+           "fast": dict(a1=2.4, t1=6000.0)}                 # fastest per account, only a third of funded accounts are paid, 4x the fees, highest variance
 
 
 def build_stream() -> Stream:
