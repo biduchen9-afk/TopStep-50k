@@ -35,6 +35,22 @@ def build_streams() -> dict:
     }
 
 
+def build_wf_streams() -> dict:
+    from run_sweep import GRIDS
+    from wf import walk_forward_series
+    nq = build_sessions("nq")
+    mk = Stream.from_series
+    vw, ch_v = walk_forward_series(nq, "vwap_atr", GRIDS["vwap_atr"])
+    orb, ch_o = walk_forward_series(nq, "orb", GRIDS["orb"])
+    fixed = st.run(nq, "vwap_atr", k=0.2, s=0.2, start_min=st.CASH_OPEN)
+    ctl = st.run(nq, "random", seed=0)
+    first = int(np.flatnonzero(pd.DatetimeIndex(nq.dates).year >= 2015)[0])
+    cut = lambda d: st.DailySeries(d.dates[first:], d.pnl[first:], d.minpnl[first:], d.trades[first:], d.traded_ok[first:], d.atr[first:], d.mult)
+    print("walk-forward choices (NQ VWAP+ATR):", {y: f"k={p['k']} s={p['s']}" for y, p in ch_v.items()})
+    return {"nq_vwap_WF": mk("nq_vwap_WF", vw), "nq_orb_WF": mk("nq_orb_WF", orb),
+            "nq_vwap_fixed(k.2 s.2)": mk("nq_vwap_fixed", cut(fixed)), "noedge_nq": mk("noedge_nq", cut(ctl))}
+
+
 def plans() -> list:
     out = []
     for path in ("standard", "consistency"):
@@ -64,11 +80,11 @@ def study(path_key: str, risks, rules: RuleSet, plan_list=None, streams=None) ->
             sigma = float(np.std(s.pnl[s.ok] * np.array(nd)[s.ok]))
             cost = c["fees"].sum() / max(passed.sum(), 1)
             for v in plan_list:
-                p1 = np.zeros(len(starts)); p2 = np.zeros(len(starts))
+                p1 = np.zeros(len(starts)); p2 = np.zeros(len(starts)); fdays = np.zeros(len(starts))
                 for k in idx:
                     i_f = int(starts[k] + c["tau"][k])
                     if i_f < n - 5:
-                        p1[k], p2[k], _, _ = run_funded(x, lo, nd, i_f, rules, v)
+                        p1[k], p2[k], fdays[k], _ = run_funded(x, lo, nd, i_f, rules, v)
                 net = p1 + p2 - c["fees"]
                 paid1 = (p1 > 0) & passed
                 paid2 = (p2 > 0) & passed
@@ -84,7 +100,8 @@ def study(path_key: str, risks, rules: RuleSet, plan_list=None, streams=None) ->
                     ev_funded=ev[0] / max(passed.mean(), 1e-9), ev_lo=ev[1], ev_hi=ev[2],
                     p_first_pre=((p1 > 0) & passed & pre).sum() / max((passed & pre).sum(), 1),
                     p_first_post=((p1 > 0) & passed & post).sum() / max((passed & post).sum(), 1),
-                    n_funded=int(passed.sum())))
+                    n_funded=int(passed.sum()), attempt_days=float(c['tau'].mean()),
+                    funded_days=float(fdays[passed].mean()) if passed.any() else 0.0))
     return pd.DataFrame(rows)
 
 
@@ -93,12 +110,13 @@ def main() -> None:
     ap.add_argument("--path", default="no_activation_dll")
     ap.add_argument("--risk", type=float, nargs="+", default=[400, 800, 1600, 2400])
     ap.add_argument("--compare-rules", action="store_true")
+    ap.add_argument("--wf", action="store_true", help="use walk-forward NQ streams (2015+)")
     a = ap.parse_args()
     cfg = load_config()
     rules = rules_from_config(cfg, a.path)
-    df = study(a.path, a.risk, rules)
+    df = study(a.path, a.risk, rules, streams=(build_wf_streams() if a.wf else None))
     Path("results").mkdir(exist_ok=True)
-    df.to_csv(f"results/real_study_{a.path}.csv", index=False)
+    df.to_csv(f"results/{'wf_' if a.wf else ''}real_study_{a.path}.csv", index=False)
     pd.set_option("display.width", 250, "display.max_columns", 30)
     cols = ["stream", "risk_unit", "daily_sigma", "plan", "p_pass", "p_first", "first_net", "cost_funded",
             "p_second", "ev_funded", "ev_lo", "ev_hi", "p_first_pre", "p_first_post"]
