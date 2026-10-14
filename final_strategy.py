@@ -10,10 +10,10 @@ SIGNALS - three NQ sleeves, all long/short, all flat by 15:55 ET, signals read a
   nq_gap30  the same VWAP+ATR entry (k=0.3, s=0.2) but only in the direction that BOTH the overnight gap (09:30 open vs previous close) and the first
             30-minute move (09:30-10:00) agree on; signals start at 10:00 ET; otherwise no trade that day.
 PORTFOLIO - 1-micro baskets with long-only mean-variance weights fitted on 2010-2022 only (shrunk 50% to equal weights); static (no switching).
-SIZING - Combine: micros = round(R / ATR$ per micro) with R = 9,600 ($ per ATR unit; 12,800 scored slightly higher but sits next to a cliff - R >= 16,000 collapses); funded: micros = a * (balance - MLL floor) / ATR$ with a1 = 0.4 before the first
-         payout and a2 = 0.8 afterwards (pre-registration 3 winner; 1.6 was the earlier choice), capped by the XFA scaling ladder.
+SIZING - Combine: micros = round(R / ATR$ per micro) with R = 9,600 ($ per ATR unit; 12,800 scored slightly higher but sits next to a cliff - R >= 16,000 collapses); funded: micros = a * (balance - MLL floor) / ATR$ with a1 = 1.2 before the first
+         payout and a2 = 0.8 afterwards (the 'balanced' preset chosen by the user; 'safe' = 0.4/$4,000, 'fast' = 2.4/$6,000, see PRESETS), capped by the XFA scaling ladder.
 FARM   - up to 5 funded accounts; new Combines only when expected funded accounts < 5; "hyst" refill (once full, open nothing until 3 slots have emptied);
-         first payout at balance >= $4,000 (pre-registration 3; a fast alternative is t1=1,500, a1=0.8, a2=0.8) with 5 winning days of >= $150 (Standard path), then every eligible payout at 50% of balance (cap $5,000).
+         first payout at balance >= $2,000 ('balanced' preset) with 5 winning days of >= $150 (Standard path), then every eligible payout at 50% of balance (cap $5,000).
 FEES   - no_activation_dll path: $199 per 21 sessions per Combine, no activation fee, -$3,000 daily loss limit.
 
 Run `python final_strategy.py` (needs the Databento NQ/ES/GC 1-minute data in /home/user/data_raw; see README) to rebuild the stream and re-run the farm.
@@ -30,10 +30,10 @@ from real_engine import FundedPlan, Stream, costs_from_config, rules_from_config
 from pricing_config import load_config
 
 PATH = "no_activation_dll"
-FINAL = dict(R=9600.0, a1=0.4, a2=0.8, t1=4000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
+FINAL = dict(R=9600.0, a1=1.2, a2=0.8, t1=2000.0, refill="hyst", pause_below=0.0, max_funded=5, max_evals=10, p_est=1.0)
 # Speed presets (pre-registration 5): faster first payout costs value and recent-start robustness, see FINDINGS.md section 15. Use farm_from(stream, start, **PRESETS["balanced"]).
-PRESETS = {"safe": dict(a1=0.4, t1=4000.0),                 # the default above: slowest, most robust
-           "balanced": dict(a1=1.2, t1=2000.0),             # ~4x faster per account, ~half the funded accounts reach a payout, 3x the fees
+PRESETS = {"safe": dict(a1=0.4, t1=4000.0),                 # slowest, most robust
+           "balanced": dict(a1=1.2, t1=2000.0),             # THE DEFAULT (set by the user): ~4x faster per account, ~63% of funded accounts reach a payout, 3x the fees of safe
            "fast": dict(a1=2.4, t1=6000.0)}                 # fastest per account, only a third of funded accounts are paid, 4x the fees, highest variance
 
 
