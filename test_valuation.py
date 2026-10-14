@@ -94,3 +94,13 @@ def test_cost_funded_identity_from_simulation():
     v = value_path(cfg, "standard")
     assert v.ev_cycle == pytest.approx(v.ev_attempt / v.p_empirical)
     assert v.mu_ext_star == pytest.approx(v.mu_attempt / v.p_empirical + 149.0)
+
+
+def test_lifecycle_billing_clock_when_nothing_happens():
+    """Tiny volatility, no friction: the account never resolves, so fees = ceil(756/21) bills."""
+    from lifecycle_simulator import simulate_lifecycle
+    cfg = load_config().with_market(eval_mode="no_edge", sigma_daily=1.0)
+    cfg = replace(cfg, friction=replace(cfg.friction, trades_per_day=0))
+    r = simulate_lifecycle(cfg, "standard", 50, np.random.default_rng(0))
+    assert np.all(r.fees == 36 * 199.0)
+    assert np.all(r.total_pnl == -36 * 199.0) and np.all(r.n_funded == 0)
