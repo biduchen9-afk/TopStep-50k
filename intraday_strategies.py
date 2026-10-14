@@ -144,11 +144,12 @@ def vwap_atr_session(o, h, l, c, v, smin, atr, k, s, cost_pts, start_min=60, max
     return realized, min(minp, realized), trades
 
 
-def orb_session(o, h, l, c, v, smin, atr, buf, s, cost_pts):
-    """Opening-range breakout (09:30-10:00 ET range), one trade, stop s*ATR, flat by 15:55 ET."""
+def orb_session(o, h, l, c, v, smin, atr, buf, s, cost_pts, or_min=30):
+    """Opening-range breakout (range of the first `or_min` minutes after 09:30 ET), one trade, stop s*ATR,
+    flat by 15:55 ET."""
     end = int(np.searchsorted(smin, FLAT_BY))
-    a, b = int(np.searchsorted(smin, CASH_OPEN)), int(np.searchsorted(smin, OR_END))
-    if b - a < 15 or end - b < 30:
+    a, b = int(np.searchsorted(smin, CASH_OPEN)), int(np.searchsorted(smin, CASH_OPEN + or_min))
+    if b - a < max(5, or_min // 2) or end - b < 30:
         return 0.0, 0.0, 0
     hi, lo = h[a:b].max(), l[a:b].min()
     bu = buf * atr
@@ -195,6 +196,38 @@ def random_session(o, h, l, c, v, smin, direction, cost_pts):
     return net, min(worst - cost_pts, net, 0.0), 1
 
 
+def gap_session(o, h, l, c, v, smin, atr, thr, s, mode, cost_pts):
+    """Overnight-move momentum (mode=+1) or fade (mode=-1).
+
+    The overnight move is close(09:29 ET) - open(18:00 ET). If |move| >= thr*ATR, trade at the 09:30 ET
+    open in the direction of the move (momentum) or against it (fade), stop s*ATR, flat by 15:55 ET.
+    """
+    a, end = int(np.searchsorted(smin, CASH_OPEN)), int(np.searchsorted(smin, FLAT_BY))
+    if a < 100 or end - a < 100:
+        return 0.0, 0.0, 0
+    move = c[a - 1] - o[0]
+    if abs(move) < thr * atr:
+        return 0.0, 0.0, 0
+    direction = int(np.sign(move)) * mode
+    price, stop_d = o[a], s * atr
+    if direction > 0:
+        js = _first_true(l[a:end] <= price - stop_d)
+    else:
+        js = _first_true(h[a:end] >= price + stop_d)
+    if js >= 0:
+        j = a + js
+        px = min(price - stop_d, o[j]) if direction > 0 else max(price + stop_d, o[j])
+        last = j
+    else:
+        px, last = c[end - 1], end - 1
+    if direction > 0:
+        worst, pnl_pts = l[a:last + 1].min() - price, px - price
+    else:
+        worst, pnl_pts = price - h[a:last + 1].max(), price - px
+    net = pnl_pts - cost_pts
+    return net, min(worst - cost_pts, net, 0.0), 1
+
+
 def run(sess: Sessions, name: str, costs: Costs = Costs(), seed: int = 0, **params) -> DailySeries:
     """Run one strategy over every session; returns $ per 1 mini."""
     n = len(sess)
@@ -213,7 +246,10 @@ def run(sess: Sessions, name: str, costs: Costs = Costs(), seed: int = 0, **para
             p, w, t = vwap_atr_session(o, h, l, c, v, m, atr[i], params["k"], params["s"], cp,
                                        start_min=params.get("start_min", 60))
         elif name == "orb":
-            p, w, t = orb_session(o, h, l, c, v, m, atr[i], params["buf"], params["s"], cp)
+            p, w, t = orb_session(o, h, l, c, v, m, atr[i], params["buf"], params["s"], cp,
+                                  or_min=params.get("or_min", 30))
+        elif name == "gap":
+            p, w, t = gap_session(o, h, l, c, v, m, atr[i], params["thr"], params["s"], params["mode"], cp)
         else:
             raise ValueError(name)
         pnl[i], mn[i], tr[i] = p * sess.mult, w * sess.mult, t
