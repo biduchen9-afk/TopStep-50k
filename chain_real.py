@@ -95,7 +95,7 @@ def replay_detail(comb: Stream, Rc: float, fund: Stream, Rf: float, plan: Funded
     ndc, ndf = comb.desired_micros(Rc)[:n_end], fund.desired_micros(Rf)[:n_end]
     t = i0
     out = dict(fees=0.0, payouts=0.0, attempts=0, funded=0, n_payouts=0, days_combine=0, days_funded=0,
-               left_on_table=0.0, died=0, closed=0)
+               left_on_table=0.0, died=0, closed=0, no_payout_deaths=0)
     while t < n_end - 5:
         sp, fees, att, last = combine_chain(xc, lc, ndc, t, n_end, rules, cfg, path_key, policy)
         out["fees"] += fees
@@ -116,6 +116,8 @@ def replay_detail(comb: Stream, Rc: float, fund: Stream, Rf: float, plan: Funded
             out["left_on_table"] += max(bal, 0.0)
         elif state == 1:
             out["died"] += 1
+            if not pays:
+                out["no_payout_deaths"] += 1
         t = i_f + days
         if state == 0:
             break

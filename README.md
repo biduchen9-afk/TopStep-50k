@@ -47,3 +47,10 @@ spec's older assumptions), `friction.slippage_ticks_rt`, fee paths and billing c
 | `real_engine.py` | Combine + funded rules; funded plans with repeated payouts (`max_payouts`) |
 
 Results CSVs are in `results/`. Treat the hold-out as used: it has been run more than once.
+
+## The contract as specified (take every eligible payout, trade until the account dies, repeat)
+
+`run_rinse_repeat.py`, `run_noedge_contract.py`, `run_contract_final.py`, `run_contract_robustness.py`.
+After the first payout (50% of balance at trigger t1) every later payout is taken the moment it is eligible, at the
+maximum allowed; the account is traded until it dies; then a new Combine starts. Selection uses 2010-2022 only, the
+hold-out (2023-2026) uses fresh coin-flip seeds. See `results/contract_*.csv`.
