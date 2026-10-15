@@ -44,6 +44,8 @@ def main(argv=None) -> None:
     ap.add_argument("--start", default=None, help="lse: first UTC time to fetch (default: right after the last completed session)")
     ap.add_argument("--poll", type=float, default=20.0)
     ap.add_argument("--state", default="paper_state.pkl")
+    ap.add_argument("--warmup", default=None, help="lse: a warm-up file made by python -m paper.make_warmup (replaces the 2.7 GB stored Databento history on a machine that does not have it)")
+    ap.add_argument("--warm-from-lse", type=int, default=None, metavar="DAYS", help="lse: build the warm-up from the last DAYS calendar days of vault candles (no stored history needed; 60 is plenty), then start the farm fresh on the next session")
     ap.add_argument("--fresh", action="store_true", help="ignore an existing state file")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)
@@ -52,7 +54,10 @@ def main(argv=None) -> None:
     ap.add_argument("--stop-at", default=None, help="replay: stop feeding at this Eastern wall-clock time (e.g. '2026-06-26 14:20') and leave that session open, to look at a mid-session state")
     a = ap.parse_args(argv)
 
-    sess, cost_pts = load_costs_and_sessions()
+    if a.warmup or a.warm_from_lse:
+        sess, cost_pts = None, 0.86                                   # NQ: ($1.22 x 10 per mini) / $20 per point + one 0.25 tick = 0.86 points per round trip (same as costs_from_config)
+    else:
+        sess, cost_pts = load_costs_and_sessions()
     meta = dict(mode=a.source.upper(), symbol=a.symbol or "NQ (Databento replay)", strategy="3 noise-area + 2 gap-VWAP accounts, balanced sizing (the baseline)")
     if os.path.exists(a.state) and not a.fresh:
         runner = PaperRunner.load(a.state)
@@ -63,13 +68,31 @@ def main(argv=None) -> None:
         runner = PaperRunner(History.from_sessions(sess, i0), PaperFarm(), cost_pts, a.state, meta, t0=i0)
         if i0 > 0:
             runner.last_label = pd.Timestamp(sess.dates[i0 - 1]).date()
+    elif a.warm_from_lse:
+        from paper.feed import lse_fetch
+        from paper.make_warmup import warm_from_bars
+        if not a.symbol:
+            sys.exit("--symbol is required with --warm-from-lse")
+        t_from = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=a.warm_from_lse)).strftime("%Y-%m-%dT%H:%M:%S")
+        wb = warm_from_bars(lse_fetch(a.symbol, t_from, dataset=a.dataset), cost_pts=cost_pts)
+        runner = PaperRunner(wb.hist.trimmed(60), PaperFarm(), cost_pts, a.state, meta, t0=wb.t_next, live_guards=True)
+        runner.last_label = wb.last_label
+        print(f"warm-up from the vault: {len(wb.hist.ranges)} sessions up to {wb.last_label}; the farm starts fresh on the next session", flush=True)
+    elif a.warmup:
+        import pickle
+        w = pickle.load(open(a.warmup, "rb"))
+        runner = PaperRunner(w["hist"], PaperFarm(), cost_pts, a.state, meta, t0=w["t0"], live_guards=True)
+        runner.last_label = w["last_label"]
+        print(f"warm-up {a.warmup}: history of {len(w['hist'].ranges)} sessions, last completed session {w['last_label']}", flush=True)
     else:
         # forward test / live: warm up the history with every stored Databento session, start the farm fresh on the first new session
         n = len(sess)
-        runner = PaperRunner(History.from_sessions(sess), PaperFarm(), cost_pts, a.state, meta, t0=n)
+        runner = PaperRunner(History.from_sessions(sess), PaperFarm(), cost_pts, a.state, meta, t0=n, live_guards=True)
         runner.last_label = pd.Timestamp(sess.dates[n - 1]).date()
     runner.state_path = a.state
     if a.source == "replay":
+        if sess is None:
+            sys.exit("--source replay needs the stored sessions")
         feed = ReplayFeed(sess, a.from_, a.to, speed=a.speed or None)
     else:
         if not a.symbol:

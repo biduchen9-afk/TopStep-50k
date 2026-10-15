@@ -50,6 +50,10 @@ class History:
             hs.add_bars(o, h, l, c, m, bool(sess.roll[i]))
         return hs
 
+    def trimmed(self, k: int = 60) -> "History":
+        """A copy holding only the last k sessions (the context needs the previous 14 non-roll sessions and the previous close, so 60 is ample); small enough to ship without the 2.7 GB raw data."""
+        return History(self.ranges[-k:], self.roll[-k:], self.last_close[-k:], self.move[-k:])
+
     def context(self) -> dict:
         """Context of the next session: atr (points, NaN until 14 non-roll sessions), prev_close, sigma[12] (NaN until 14 sessions)."""
         good = [r for r, rl in zip(self.ranges, self.roll) if not rl]

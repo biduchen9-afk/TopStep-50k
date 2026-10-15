@@ -76,7 +76,7 @@ def main(argv=None) -> None:
     sess, cost_pts = load_costs_and_sessions()
     n = len(sess) if a.warm_until is None else int(np.searchsorted(sess.dates.astype("datetime64[D]"), np.datetime64(pd.Timestamp(a.warm_until).date()), side="right"))
     last_db = pd.Timestamp(sess.dates[n - 1]).date()
-    runner = PaperRunner(History.from_sessions(sess, n), PaperFarm(), cost_pts, a.state, dict(mode="FORWARD TEST", symbol="LSE feed"), t0=n)
+    runner = PaperRunner(History.from_sessions(sess, n), PaperFarm(), cost_pts, a.state, dict(mode="FORWARD TEST", symbol="LSE feed"), t0=n, live_guards=True)
     runner.last_label = last_db
     new = [b for b in bars if b.label > last_db]
     for b in new:
@@ -91,8 +91,16 @@ def main(argv=None) -> None:
     # ---- data checks
     zv = float(np.mean([b.v <= 0 for b in new]))
     rth = pd.Series([1 if 930 <= b.smin < 1315 else 0 for b in new], index=[b.label for b in new]).groupby(level=0).sum()
-    rep["data"] = dict(zero_volume_share=zv, rth_bars_median=float(rth.median()), sessions_rth_under_370=int((rth < 370).sum()), sessions_flagged_roll_or_bad=int(J.roll.sum()))
-    valid = zv < 0.05 and float(rth.median()) >= 370
+    last_ts = max(b.ts for b in new)
+    open_last = (last_ts.hour * 60 + last_ts.minute - 18 * 60) % 1440 < 1319                       # the data end before 16:00 ET: the final session is still in progress, not a session with holes
+    gaps = J[J.get("data_gap", False) == True].date.tolist() if "data_gap" in J else []            # sessions with holes in regular hours (an exchange early close with no holes is complete)
+    if open_last and gaps and gaps[-1] == str(J.date.iloc[-1]):
+        gaps = gaps[:-1]
+    inc_share = len(gaps) / max(len(J) - (1 if open_last else 0), 1)
+    rep["data"] = dict(zero_volume_share=zv, rth_bars_median=float(rth.median()), sessions_rth_under_370=int((rth < 370).sum()), sessions_flagged_roll_or_bad=int(J.roll.sum()),
+                       sessions_with_holes=len(gaps), share_sessions_with_holes=inc_share, sessions_with_holes_list=gaps, roll_or_bad_sessions=J[J.roll == True].date.tolist())
+    valid = zv < 0.05 and float(rth.median()) >= 370 and inc_share <= 0.02                    # PR15 check (3): median >= 370 and at most 2% of sessions below
+    rep["invalid_reasons"] = [r for r, bad in (("zero-volume share >= 5%", zv >= 0.05), ("regular-hours bar median < 370", float(rth.median()) < 370), (f"{len(gaps)} of {len(J) - (1 if open_last else 0)} completed sessions have holes in regular hours ({inc_share:.0%} > 2%)", inc_share > 0.02)) if bad]
     rep["valid"] = bool(valid)
     # ---- strategy level
     import market_data as _md
@@ -119,6 +127,9 @@ def main(argv=None) -> None:
     Rg = np.where(okd, np.array([r["gap"]["usd"] for r in rows]) / np.where(okd, atr, 1.0), 0.0)
     Rp = (3 * Rn + 2 * Rg) / 5.0
     rep["R_units"] = dict(sessions_with_atr=int(okd.sum()), noise_cum_R=float(Rn.sum()), gap_cum_R=float(Rg.sum()), pooled_cum_R=float(Rp.sum()), pooled_mean_R=float(Rp.mean()))
+    flagged = np.array([bool(r.get("roll")) or bool(r.get("data_gap")) for r in rows])
+    rep["R_units_descriptive_without_flagged_sessions"] = dict(sessions_dropped=int(flagged.sum()), noise_cum_R=float(Rn[~flagged].sum()), gap_cum_R=float(Rg[~flagged].sum()), pooled_cum_R=float(Rp[~flagged].sum()),
+                                                                 note="descriptive only: the PR18 verdict is computed on all sessions; the dropped ones had holes in regular hours or a suspected roll")
     pooled_pct = None
     if live:
         import retest_cost as CC
@@ -148,7 +159,7 @@ def main(argv=None) -> None:
     if live:
         for k in range(60, L + 1, 5):                       # weekly looks from session 60: the verdict is latched (a STOP at an earlier look stays a STOP)
             pk = window_pct_R(pooled_dev_R, k, float(Rp[:k].sum()))
-            ks = kill_reasons(valid, k, pk, float(Rn[:k].sum()), float(Rg[:k].sum()))
+            ks = kill_reasons(True, k, pk, float(Rn[:k].sum()), float(Rg[:k].sum()))                # the data-validity message is not a look
             if ks:
                 looks.append(dict(session=k, reasons=ks))
         if looks and not kill:

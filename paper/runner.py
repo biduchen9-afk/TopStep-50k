@@ -20,6 +20,8 @@ from paper.sleeves import CASH_OPEN, FLAT_BY, K_DEC, STEP, NoiseAreaSleeve, Vwap
 GROUP_SLEEVE = {"noise": "nq_noise", "gap": "nq_gap30"}
 POINT_USD_PER_MICRO = 2.0           # MNQ: $2.00 per index point (NQ $20 / 10)
 ROLL_REL_JUMP = 0.0008              # a one-minute splice of 8bp or more inside a roll window marks a contract roll (the back-test skips that session)
+ROLL_SESSION_JUMP = 0.004           # live guard: a first bar this far (0.4%, about 120 NQ points) from the previous session's last close inside a roll window is the front-month splice (the quarterly calendar spread is about 1%)
+RTH_MIN_BARS = 370                  # regular-hours completeness (09:30 to 15:55 ET = 385 one-minute bars); an exchange early close (last bar at 12:55 to 13:05 ET, no holes) counts as complete
 
 
 def third_friday(year: int, month: int) -> pd.Timestamp:
@@ -37,8 +39,9 @@ def in_roll_window(label) -> bool:
 
 
 class PaperRunner:
-    def __init__(self, hist: History, farm: PaperFarm, cost_pts: float, state_path: Optional[str] = None, meta: Optional[dict] = None, R: float = 9600.0, t0: int = 0):
+    def __init__(self, hist: History, farm: PaperFarm, cost_pts: float, state_path: Optional[str] = None, meta: Optional[dict] = None, R: float = 9600.0, t0: int = 0, live_guards: bool = False):
         self.hist, self.farm, self.cost = hist, farm, cost_pts
+        self.live_guards = live_guards         # real-feed guards: inter-session roll splice, and sessions with holes are kept out of the ATR / noise-area history (off for the parity replays)
         self.R = R
         self.state_path = state_path
         self.meta = meta or {}
@@ -63,6 +66,16 @@ class PaperRunner:
         self.roll_note = ""
         self.zero_vol = 0
         self.bad_data = False
+
+    @staticmethod
+    def _incomplete(smins) -> bool:
+        """True when the regular-hours window (09:30 to 15:55 ET, smin 930..1314) has holes: fewer than RTH_MIN_BARS bars, unless the exchange closed early (last bar 12:55 to 13:05 ET) with no holes before it."""
+        r = np.asarray([m for m in smins if 930 <= m < 1315])
+        if len(r) >= RTH_MIN_BARS:
+            return False
+        if len(r) and 1135 <= r.max() <= 1145 and len(r) >= 0.95 * (r.max() - 930 + 1):                    # early close: the session runs to about 13:00 ET (last bar 12:55 to 13:05) with no holes
+            return False
+        return True
 
     def _make_sleeves(self) -> None:
         self.sleeves = {"noise": NoiseAreaSleeve(self.cost), "gap": VwapAtrSleeve(self.cost, 0.3, 0.2, OR_END, True)}
@@ -96,7 +109,9 @@ class PaperRunner:
         self.farm.end_session(day)
         if self.bars:
             o = np.array([b.o for b in self.bars]); h = np.array([b.h for b in self.bars]); l = np.array([b.l for b in self.bars]); c = np.array([b.c for b in self.bars]); sm = np.array([b.smin for b in self.bars])
-            self.hist.add_bars(o, h, l, c, sm, self.roll_today)
+            gap = self.live_guards and self._incomplete(sm)
+            row["data_gap"] = bool(gap)
+            self.hist.add_bars(o, h, l, c, sm, self.roll_today or gap)
         row["farm_net"] = self.farm.net
         row["cash"] = self.farm.cash
         self.journal.append(row)
@@ -119,6 +134,11 @@ class PaperRunner:
             if self.cur_label is None:
                 self._start_session(lab)
             smin = bar.smin
+            if self.live_guards and not self.bars and not self.roll_today and in_roll_window(lab) and self.hist.last_close:
+                pc = self.hist.last_close[-1]
+                if pc and abs(bar.o - pc) / pc >= ROLL_SESSION_JUMP:
+                    self.roll_today = True
+                    self.roll_note = f"front-month roll suspected at the session open (first bar {bar.o:.2f} against the previous close {pc:.2f}, {bar.o - pc:+.2f}): no trades today"
             if self.bars and not self.roll_today and in_roll_window(lab) and smin < FLAT_BY:
                 prev_c = self.bars[-1].c
                 if prev_c and abs(bar.o - prev_c) / prev_c >= ROLL_REL_JUMP:
@@ -156,14 +176,14 @@ class PaperRunner:
             return
         tmp = self.state_path + ".tmp"
         with open(tmp, "wb") as f:
-            pickle.dump(dict(hist=self.hist, farm=self.farm, t_next=self.t_next, last_label=self.last_label, journal=self.journal, cost=self.cost, meta=self.meta, R=self.R), f)
+            pickle.dump(dict(hist=self.hist, farm=self.farm, t_next=self.t_next, last_label=self.last_label, journal=self.journal, cost=self.cost, meta=self.meta, R=self.R, live_guards=self.live_guards), f)
         os.replace(tmp, self.state_path)
 
     @classmethod
     def load(cls, path: str) -> "PaperRunner":
         with open(path, "rb") as f:
             d = pickle.load(f)
-        r = cls(d["hist"], d["farm"], d["cost"], path, d["meta"], d["R"], d["t_next"])
+        r = cls(d["hist"], d["farm"], d["cost"], path, d["meta"], d["R"], d["t_next"], live_guards=d.get("live_guards", False))
         r.last_label, r.journal = d["last_label"], d["journal"]
         return r
 

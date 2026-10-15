@@ -239,3 +239,49 @@ def test_forward_verdict_logic():
     assert verdict(True, kill_reasons(True, 500, 99.0, 9.0, 9.0)) == "CONTINUE"                       # no CONFIRMED state exists
     assert verdict(True, [], reference_ok=False) == "UNKNOWN"                                         # rule (ii) could not be evaluated: never a silent CONTINUE
     assert verdict(True, ["x"], reference_ok=False) == "STOP"
+
+
+def test_live_guards_incomplete_session_and_intersession_roll():
+    """Real-feed guards: holes in regular hours keep a session out of the ATR history (an exchange early close is complete); a front-month splice at the session open inside the roll window stops trading that session."""
+    import numpy as np, pandas as pd
+    from paper.farm import PaperFarm
+    from paper.feed import Bar
+    from paper.history import History
+    from paper.runner import PaperRunner
+    inc = PaperRunner._incomplete
+    assert inc(list(range(930, 1315))) is False or inc(list(range(930, 1315))) == False       # full day
+    assert not inc(list(range(930, 1140)))                                                      # early close at 13:00 ET, no holes
+    assert inc(list(range(930, 1140, 2)))                                                       # early close but half the minutes missing
+    assert inc(list(range(930, 1315, 2))) and inc(list(range(930, 1000)))                       # holes / data stops early
+    # roll splice: previous close 30000, session opens 300 points higher in the September roll window (2026-09-14 is a Monday inside the window)
+    h = History()
+    for i in range(20):
+        h.add_session(300.0, 30000.0, np.full(12, 0.002), False)
+    r = PaperRunner(h, PaperFarm(), 0.86, None, {}, t0=100, live_guards=True)
+    r.last_label = pd.Timestamp("2026-09-11").date()
+    ts = pd.Timestamp("2026-09-13 18:00", tz="America/New_York")
+    for k in range(5):
+        r.process(Bar(ts + pd.Timedelta(minutes=k), 30300.0, 30301.0, 30299.0, 30300.5, 10.0))
+    assert r.roll_today and "roll" in r.roll_note
+    r2 = PaperRunner(h, PaperFarm(), 0.86, None, {}, t0=100, live_guards=False)
+    r2.last_label = pd.Timestamp("2026-09-11").date()
+    for k in range(5):
+        r2.process(Bar(ts + pd.Timedelta(minutes=k), 30300.0, 30301.0, 30299.0, 30300.5, 10.0))
+    assert not r2.roll_today                                                                    # off by default: the parity replays are unchanged
+
+
+def test_warm_up_from_bars_equals_history_from_sessions():
+    """A history built bar by bar from an empty start (the live warm-up, no stored data) gives the same ATR / sigma / previous close as the stored-session history."""
+    import numpy as np, pandas as pd
+    from market_data import build_sessions
+    from paper.feed import ReplayFeed
+    from paper.history import History
+    from paper.make_warmup import warm_from_bars
+    sess = build_sessions("nq")
+    i0 = int(np.searchsorted(sess.dates.astype("datetime64[D]"), np.datetime64("2024-01-02")))
+    feed = ReplayFeed(sess, str(pd.Timestamp(sess.dates[i0 - 30]).date()), str(pd.Timestamp(sess.dates[i0 - 1]).date()), speed=None)
+    r = warm_from_bars(list(feed))
+    ref = History.from_sessions(sess, i0).context()
+    got = r.hist.trimmed(60).context()
+    assert abs(got["atr"] - ref["atr"]) < 1e-9 and abs(got["prev_close"] - ref["prev_close"]) < 1e-9
+    assert np.allclose(got["sigma"], ref["sigma"], equal_nan=True)
