@@ -16,7 +16,7 @@ def _stream(seed, n=2200):
 
 
 def test_single_firm_unconstrained_matches_run_farm():
-    cfg = load_config(); rules = rules_from_config(cfg, "no_activation_dll"); spec = topstep_150k("no_activation_dll")
+    cfg = load_config(); rules = rules_from_config(cfg, "no_activation_dll"); spec = topstep_150k("no_activation_dll", rules="v1")
     plan = FundedPlan("p", "standard", 3000.0, 0.5, 1.0, 0.0, 0.5, 1.0, 99, 0.4, 0.8)
     for seed in range(3):
         s = _stream(seed)

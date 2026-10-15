@@ -49,7 +49,7 @@ class EvalAccount:
             first = lim if ph.dll is None else max(lim, ph.dll)
             if ph.dd_type == "intraday" and w <= first:
                 if ph.dll is not None and ph.dll > lim and not ph.dll_hard:
-                    p = ph.dll
+                    p = ph.dll - ph.dll_slip
                 else:
                     self.status = 0
                     return self.status
@@ -57,7 +57,7 @@ class EvalAccount:
                 if ph.dll_hard:
                     self.status = 0
                     return self.status
-                p = ph.dll
+                p = ph.dll - ph.dll_slip
         if ph.day_cap is not None and p > ph.day_cap:
             p = ph.day_cap
         self.bal += p
@@ -145,7 +145,7 @@ class FundedAccount:
             first = lim if spec.dll is None else max(lim, spec.dll)
             if spec.dd_type == "intraday" and w <= first:
                 if spec.dll is not None and spec.dll > lim and not spec.dll_hard:
-                    p = spec.dll
+                    p = spec.dll - spec.dll_slip
                 else:
                     self.state = 1
                     return []
@@ -153,7 +153,7 @@ class FundedAccount:
                 if spec.dll_hard:
                     self.state = 1
                     return []
-                p = spec.dll
+                p = spec.dll - spec.dll_slip
         if spec.day_cap is not None and p > spec.day_cap:
             p = spec.day_cap
         self.bal += p
@@ -176,6 +176,8 @@ class FundedAccount:
             eligible = eligible and self.prof > 0 and self.best <= spec.consistency * self.prof
         if spec.min_cycle_profit > 0:
             eligible = eligible and self.prof >= spec.min_cycle_profit
+        if spec.net_pos_after_first and self.pays:
+            eligible = eligible and self.prof > 0
         trig, frac = (plan.t1, plan.w1) if self.stage == 1 else (plan.t2, plan.w2)
         out: List[float] = []
         if eligible and self.bal >= trig:

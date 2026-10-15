@@ -29,6 +29,7 @@ class EvalPhase:
     max_days: int = 252
     max_micros: int = 150
     day_cap: Optional[float] = None    # overlay: flatten when the day's profit reaches this ($); modelled as p = min(p, cap)
+    dll_slip: float = 0.0              # sensitivity: $ lost beyond the daily loss limit when it liquidates the account (0 = booked exactly at the limit)
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,8 @@ class FundedSpec:
     post_floor: float = 0.0            # floor level (profit terms) after a 'zero' payout (Topstep 0; FundedNext +100)
     min_cycle_profit: float = 0.0      # profit since the last payout needed to request one (FundedNext $500)
     day_cap: Optional[float] = None    # overlay (see EvalPhase.day_cap)
+    net_pos_after_first: bool = False  # Topstep Standard path: net profit since the last payout must be > 0 for every payout after the first
+    dll_slip: float = 0.0              # sensitivity: $ lost beyond the daily loss limit when it liquidates the account
 
 
 @dataclass(frozen=True)
@@ -124,13 +127,13 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
                 first = lim if ph.dll is None else max(lim, ph.dll)
                 if ph.dd_type == "intraday" and w <= first:
                     if ph.dll is not None and ph.dll > lim and not ph.dll_hard:
-                        p = ph.dll
+                        p = ph.dll - ph.dll_slip
                     else:
                         return 0, t - i0 + 1
                 elif ph.dll is not None and w <= ph.dll:
                     if ph.dll_hard:
                         return 0, t - i0 + 1
-                    p = ph.dll
+                    p = ph.dll - ph.dll_slip
             if ph.day_cap is not None and p > ph.day_cap:
                 p = ph.day_cap
             bal += p
@@ -212,13 +215,13 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
             first = lim if spec.dll is None else max(lim, spec.dll)
             if spec.dd_type == "intraday" and w <= first:
                 if spec.dll is not None and spec.dll > lim and not spec.dll_hard:
-                    p = spec.dll
+                    p = spec.dll - spec.dll_slip
                 else:
                     return pays, t - i0 + 1, 1, floor
             elif spec.dll is not None and w <= spec.dll:
                 if spec.dll_hard:
                     return pays, t - i0 + 1, 1, floor
-                p = spec.dll
+                p = spec.dll - spec.dll_slip
         if spec.day_cap is not None and p > spec.day_cap:
             p = spec.day_cap
         bal += p
@@ -240,6 +243,8 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
             eligible = eligible and prof > 0 and best <= spec.consistency * prof
         if spec.min_cycle_profit > 0:
             eligible = eligible and prof >= spec.min_cycle_profit
+        if spec.net_pos_after_first and pays:
+            eligible = eligible and prof > 0
         trig, frac = (plan.t1, plan.w1) if stage == 1 else (plan.t2, plan.w2)
         if eligible and bal >= trig:
             gross = min(min(frac, spec.payout_frac) * bal, spec.payout_cap, bal - spec.buffer)
@@ -263,16 +268,22 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
     return pays, n - i0, 0, bal
 
 
-def topstep_150k(path: str = "no_activation_dll", payout_path: str = "standard") -> FirmSpec:
-    """Topstep 150K as modelled so far (config.yaml). `path` picks the fee path."""
+def topstep_150k(path: str = "no_activation_dll", payout_path: str = "standard", rules: Optional[str] = None) -> FirmSpec:
+    """Topstep 150K as modelled so far (config.yaml). `path` picks the fee path.
+    rules 'v2' (default; env TOPSTEP_RULES) adds the Payout Policy rule that every payout after the first needs a positive net profit since the last payout; 'v1' reproduces all results up to section 27.
+    env TOPSTEP_DLL_SLIP (default 0) books the daily-loss-limit liquidation that many dollars beyond the limit (sensitivity)."""
+    import os
+    rules = rules or os.environ.get("TOPSTEP_RULES", "v2")
+    slip = float(os.environ.get("TOPSTEP_DLL_SLIP", "0"))
     from pricing_config import load_config
     from real_engine import rules_from_config
     cfg = load_config(); r = rules_from_config(cfg, path); p = cfg.paths[path]
     ph = EvalPhase(target=r.profit_target, dd=r.mll, dd_type="intraday" if r.intraday_mll else "eod", trail=True, lock=r.combine_mll_locks, lock_level=0.0,
-                   dll=r.dll, dll_hard=False, consistency=r.consistency_ratio, min_days=0, max_days=r.max_combine_days, max_micros=r.combine_micros)
+                   dll=r.dll, dll_hard=False, consistency=r.consistency_ratio, min_days=0, max_days=r.max_combine_days, max_micros=r.combine_micros, dll_slip=slip)
     fd = FundedSpec(dd=r.mll, dd_type="intraday" if r.intraday_mll else "eod", trail=True, lock=True, lock_level=0.0, dll=r.dll, dll_hard=False, ladder=r.ladder,
                     split=r.split, payout_min=r.payout_min, payout_cap=r.cap_standard if payout_path == "standard" else r.cap_consistency, payout_frac=0.5,
                     win_day_amt=r.win_day, win_days_req=r.standard_win_days if payout_path == "standard" else 0,
-                    min_days_req=0 if payout_path == "standard" else r.consistency_days, consistency=None if payout_path == "standard" else r.consistency_xfa, after_payout="zero")
+                    min_days_req=0 if payout_path == "standard" else r.consistency_days, consistency=None if payout_path == "standard" else r.consistency_xfa, after_payout="zero",
+                    net_pos_after_first=(rules == "v2" and payout_path == "standard"), dll_slip=slip)
     return FirmSpec("Topstep 150K", (ph,), fd, eval_fee=p.monthly_cost, eval_monthly=True, cycle=cfg.billing_cycle_days, activation_fee=p.activation_fee, reset_fee=p.reset_fee,
                     max_funded=5, max_evals=20, micro_commission_rt=cfg.friction.micro_round_turn_commission, payout_delay_days=3)

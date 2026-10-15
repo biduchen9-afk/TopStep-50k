@@ -14,7 +14,7 @@ first = int(np.flatnonzero(ref.ok)[0]); starts = list(range(first, n_dev - WINDO
 fps = P.plans_g(ST, [("noise", 3), ("gap", 2)], 1.2, 2000.0, 0.8); pol = Policy(reserve_cycles=None, global_one_eval=True)
 nets = np.array([run_multifirm(fps, pol, i0, i0 + WINDOW)["net"] for i0 in starts])
 d = pd.DatetimeIndex(ref.dates)
-tag = os.path.basename(os.environ.get("TOPSTEP_RAW_DIR", "data_raw"))
+tag = os.path.basename(os.environ.get("TOPSTEP_RAW_DIR", "data_raw")) + ("" if os.environ.get("TOPSTEP_RULES", "v2") == "v1" else "_" + os.environ.get("TOPSTEP_RULES", "v2")) + (os.environ.get("TAG", ""))
 pd.DataFrame(dict(start=d[starts], net=nets)).to_csv(f"results/many_starts_{tag}_w{WINDOW}.csv", index=False)
 q = np.percentile(nets, [10, 25, 50, 75, 90])
 print(f"{tag} window {WINDOW}: {len(nets)} farms (every {STEP} sessions) mean {nets.mean():,.0f}  p10 {q[0]:,.0f}  p25 {q[1]:,.0f}  median {q[2]:,.0f}  p75 {q[3]:,.0f}  p90 {q[4]:,.0f}  share > 0: {(nets > 0).mean():.0%}  worst {nets.min():,.0f}")
