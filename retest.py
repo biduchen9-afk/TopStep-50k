@@ -150,14 +150,19 @@ def farm_starts(ref: Stream, n_dev: int) -> List[int]:
 def farm_stats(fps: List[FirmPlan], ref: Stream, n_dev: int, starts: Optional[List[int]] = None, seen: bool = True) -> dict:
     pol = Policy(reserve_cycles=None, global_one_eval=True)
     starts = farm_starts(ref, n_dev) if starts is None else starts
-    nets, evals, funded, paid = [], {}, {}, {}
+    nets, evals, funded, paid, d1 = [], {}, {}, {}, []
+    dts = pd.DatetimeIndex(ref.dates)
     for i0 in starts:
         r = run_multifirm(fps, pol, i0, i0 + WINDOW); nets.append(r["net"])
+        fb = [v["first_buy_t"] for v in r["firms"].values() if v["first_buy_t"] is not None]; fp_ = [v["first_payout_t"] for v in r["firms"].values() if v["first_payout_t"] is not None]
+        if fb and fp_:
+            d1.append((dts[min(min(fp_), len(dts) - 1)] - dts[min(fb)]).days)
         for g, v in r["firms"].items():
             evals[g] = evals.get(g, 0) + v["n_evals"]; funded[g] = funded.get(g, 0) + v["n_funded"]; paid[g] = paid.get(g, 0) + v["n_paid_accts"]
     nets = np.array(nets); q = np.percentile(nets, [10, 25, 50, 75, 90])
     out = dict(farms=len(nets), mean=nets.mean(), p10=q[0], p25=q[1], median=q[2], p75=q[3], p90=q[4], share_pos=float((nets > 0).mean()), worst=nets.min(),
-               funded_total=sum(funded.values()), paid_share_farm=sum(paid.values()) / max(sum(funded.values()), 1), evals=evals, funded=funded, paid=paid, nets=nets)
+               funded_total=sum(funded.values()), paid_share_farm=sum(paid.values()) / max(sum(funded.values()), 1), evals=evals, funded=funded, paid=paid, nets=nets,
+               days_first_payout=float(np.median(d1)) if d1 else np.nan, farms_paid_in_window=len(d1) / len(nets))
     if seen:
         ix = lambda dt: int(np.searchsorted(ref.dates, np.datetime64(dt)))
         pol2 = Policy(reserve_cycles=None, global_one_eval=True)

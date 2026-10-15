@@ -182,7 +182,8 @@ def s3_stage(chosen: dict, sel2: dict, bf: dict) -> None:
         groups = [(g, k, prm(g)) for g, k in (("noise", kn), ("gap", kg)) if k > 0]
         fps = T.farm_plans(ST2, groups)
         fs = T.farm_stats(fps, REF, N_DEV, seen=True)
-        rows.append(dict(split=lab, mean=fs["mean"], median=fs["median"], p10=fs["p10"], p25=fs["p25"], p75=fs["p75"], p90=fs["p90"], share_pos=fs["share_pos"], worst=fs["worst"], paid_share_farm=fs["paid_share_farm"], funded_total=fs["funded_total"], seen=str(fs["seen"])))
+        rows.append(dict(split=lab, mean=fs["mean"], median=fs["median"], p10=fs["p10"], p25=fs["p25"], p75=fs["p75"], p90=fs["p90"], share_pos=fs["share_pos"], worst=fs["worst"], paid_share_farm=fs["paid_share_farm"], funded_total=fs["funded_total"], days_first_payout=fs["days_first_payout"], farms_paid_in_window=fs["farms_paid_in_window"], seen=str(fs["seen"])))
+        np.save(f"{OUT}/retest_s3_nets_{lab.split()[0].replace('+','p')}_{kn}{kg}.npy", fs["nets"])
         print(rows[-1], flush=True)
     pd.DataFrame(rows).to_csv(f"{OUT}/retest_s3.csv", index=False)
 
