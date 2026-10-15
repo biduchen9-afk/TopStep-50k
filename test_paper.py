@@ -458,3 +458,112 @@ def test_remote_viewer_page_is_the_same_file_as_the_local_dashboard():
     import pathlib
     root = pathlib.Path(__file__).parent
     assert (root / "public/index.html").read_bytes() == (root / "paper/static/dashboard.html").read_bytes()
+
+
+# ------------------------------------------------------------------------------------------------ council 2 ops findings: regression tests for the fixes
+def test_incomplete_accepts_the_1300_and_1315_early_closes_but_not_outages():
+    from paper.runner import PaperRunner
+    inc = PaperRunner._incomplete
+    assert not inc(list(range(930, 1140)))            # 13:00 ET close (Labor Day, 3 July when it is an early close)
+    assert not inc(list(range(930, 1155)))            # 13:15 ET close (day after Thanksgiving, 24 December): 34 perfect Databento sessions
+    assert inc(list(range(930, 1155, 2)))             # same close, half the minutes missing
+    assert inc(list(range(930, 1030)))                # outage that ends at 11:10 ET
+    assert inc(list(range(930, 1100)) + list(range(1130, 1155)))   # a 30-minute hole inside an early-close day
+
+
+def _flat_bars(start, n, price=30000.0):
+    from paper.feed import Bar
+    return [Bar(start + pd.Timedelta(minutes=k), price, price + 1.0, price - 1.0, price, 10.0) for k in range(n)]
+
+
+def _quiet_runner():
+    from paper.farm import PaperFarm
+    from paper.history import History
+    from paper.runner import PaperRunner
+    h = History()
+    for i in range(20):
+        h.add_session(300.0, 30000.0, np.full(12, 0.002), False)
+    r = PaperRunner(h, PaperFarm(), 0.86, None, {}, t0=100, live_guards=True)
+    r.last_label = pd.Timestamp("2026-10-13").date()
+    return r
+
+
+def test_session_closes_at_16h_and_duplicate_bars_are_ignored():
+    r = _quiet_runner()
+    start = pd.Timestamp("2026-10-13 18:00", tz="America/New_York")             # session of Wednesday 14 October
+    bars = _flat_bars(start, 1320)                                              # 18:00 to 15:59 ET
+    for b in bars[:700]:
+        r.process(b)
+    r.process(bars[699])                                                         # duplicate of the last bar
+    r.process(bars[650])                                                         # out-of-order bar
+    assert len(r.bars) == 700
+    for b in bars[700:]:
+        r.process(b)
+    assert len(r.journal) == 0 and r.cur_label is not None                       # still open at 15:59
+    r.process(_flat_bars(start + pd.Timedelta(minutes=1320), 1)[0])              # the 16:00 ET bar closes the session
+    assert len(r.journal) == 1 and r.cur_label is None                           # no waiting for Thursday evening's first bar
+
+
+def test_tick_feed_market_hours_and_bad_ticks():
+    from paper.tickfeed import TickBars
+    mo = lambda s: TickBars.market_open(pd.Timestamp(s, tz="America/New_York").tz_convert("UTC"))
+    assert mo("2026-10-14 11:00") and mo("2026-10-18 18:30") and mo("2026-10-16 16:30")
+    assert not mo("2026-10-17 12:00") and not mo("2026-10-18 17:30") and not mo("2026-10-16 17:30") and not mo("2026-10-13 17:30")     # Saturday, Sunday before the open, Friday after the close, daily halt
+    tf = TickBars(lambda s: iter([]))
+    for bad in (float("nan"), -5.0, 0.0, float("inf")):
+        with pytest.raises(ValueError):
+            tf._parse(_Tick("2026-10-14T15:00:10+00:00", bad, 1.0))
+    t, p, size, rep = tf._parse(_Tick("2026-10-14T15:00:10+00:00", 100.0, float("nan")))
+    assert size == 0.0 and tf.n_bad_size == 1 and tf.n_bad_price == 4            # a NaN size counts the tick, not the contracts
+
+
+def test_tick_feed_drops_a_future_stamped_tick_and_keeps_the_real_ones():
+    from paper.tickfeed import TickBars
+    now = pd.Timestamp("2026-10-14 15:00:55", tz="UTC")
+    ticks = [_Tick("2026-10-14T15:00:10+00:00", 100.0, 1.0), _Tick("2026-10-14T15:45:00+00:00", 999.0, 1.0), _Tick("2026-10-14T15:00:30+00:00", 102.0, 1.0)]
+    tf = TickBars(lambda s: iter(ticks), settle=0.2, backoff=0.0, clock=lambda: now.timestamp(), max_reconnects=0)
+    got = list(tf)
+    assert tf.n_future == 1 and len(got) == 1 and got[0].ts.tz_convert("UTC") == pd.Timestamp("2026-10-14 15:00", tz="UTC") and got[0].h == 102.0 and got[0].v == 2.0
+
+
+def test_tick_feed_replay_pause_does_not_cut_a_minute():
+    import threading, time
+    from paper.tickfeed import TickBars
+    old = pd.Timestamp.now(tz="UTC").floor("min") - pd.Timedelta(hours=2)
+    def connect(start):
+        def g():
+            yield _Tick((old + pd.Timedelta(seconds=5)).isoformat(), 100.0, 3.0, replay=True)
+            time.sleep(1.2)                                                      # the vendor pauses the replay for longer than the settle time
+            yield _Tick((old + pd.Timedelta(seconds=50)).isoformat(), 101.0, 4.0, replay=True)
+            yield _Tick((old + pd.Timedelta(seconds=70)).isoformat(), 102.0, 1.0, replay=True)
+        return g()
+    got = list(TickBars(connect, settle=0.3, backoff=0.0, max_reconnects=0))
+    assert got[0].v == 7.0 and got[0].h == 101.0                                 # both halves of the minute are in one bar
+
+
+def test_tick_feed_reconnects_when_the_socket_goes_silent():
+    import threading, time
+    from paper.tickfeed import TickBars
+    base = pd.Timestamp("2026-10-14 15:00:00", tz="UTC").timestamp()             # Wednesday 11:00 ET, market open
+    clk = [base]
+    stop = threading.Event()
+    def ticker():
+        while not stop.is_set():
+            time.sleep(0.05); clk[0] += 10.0                                     # a fast fake wall clock: 10 s per 50 ms
+    threading.Thread(target=ticker, daemon=True).start()
+    calls = []
+    def connect(start):
+        calls.append(start)
+        def g():
+            if len(calls) == 1:
+                yield _Tick(pd.Timestamp(clk[0], unit="s", tz="UTC").isoformat(), 100.0, 1.0)
+                threading.Event().wait(20)                                       # silent socket: no ticks, no error
+            else:
+                yield _Tick(pd.Timestamp(clk[0], unit="s", tz="UTC").isoformat(), 101.0, 1.0)
+        return g()
+    tf = TickBars(connect, settle=0.2, backoff=0.0, sleep=lambda s: None, clock=lambda: clk[0], stall=60.0, max_reconnects=1)
+    try:
+        list(tf)
+    finally:
+        stop.set()
+    assert len(calls) == 2 and tf.n_stall >= 1 and "reconnecting" in (tf.last_error or "")

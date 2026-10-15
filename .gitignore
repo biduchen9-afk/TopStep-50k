@@ -7,3 +7,7 @@ data_new/
 # scratch outputs written by council agents
 exp[A-Z]*.csv
 vec*.pkl
+
+# the harness writes its own bar record next to the state file (market-derived prices: never commit)
+paper_state*_bars.csv
+*_bars.csv

@@ -47,6 +47,7 @@ def main(argv=None) -> None:
     ap.add_argument("--warmup", default=None, help="lse: a warm-up file made by python -m paper.make_warmup (replaces the 2.7 GB stored Databento history on a machine that does not have it)")
     ap.add_argument("--warm-from-lse", type=int, default=None, metavar="DAYS", help="lse: build the warm-up from the last DAYS calendar days of vault candles (no stored history needed; 60 is plenty), then start the farm fresh on the next session")
     ap.add_argument("--fresh", action="store_true", help="ignore an existing state file")
+    ap.add_argument("--max-idle", type=float, default=None, help="ticks: batch mode, end the feed after this many seconds without a tick (run once a day between 16:00 and 17:00 ET with --no-server; the session is rebuilt from the vendor's 24 h replay)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-server", action="store_true")
@@ -54,6 +55,7 @@ def main(argv=None) -> None:
     ap.add_argument("--dump", default=None, help="write the final snapshot JSON here when the feed ends")
     ap.add_argument("--stop-at", default=None, help="replay: stop feeding at this Eastern wall-clock time (e.g. '2026-06-26 14:20') and leave that session open, to look at a mid-session state")
     a = ap.parse_args(argv)
+    redact = lambda s: str(s).replace(os.environ.get("LSE_API_KEY") or "\0", "***")           # exception text can carry the URL; the snapshot (and the public viewer) must never carry the key
 
     if a.warmup or a.warm_from_lse:
         sess, cost_pts = None, 0.86                                   # NQ: ($1.22 x 10 per mini) / $20 per point + one 0.25 tick = 0.86 points per round trip (same as costs_from_config)
@@ -91,6 +93,8 @@ def main(argv=None) -> None:
         runner = PaperRunner(History.from_sessions(sess), PaperFarm(), cost_pts, a.state, meta, t0=n, live_guards=True)
         runner.last_label = pd.Timestamp(sess.dates[n - 1]).date()
     runner.state_path = a.state
+    runner.bar_log = os.path.splitext(a.state)[0] + "_bars.csv"
+    tb_ref = None
     if a.source == "replay":
         if sess is None:
             sys.exit("--source replay needs the stored sessions")
@@ -108,10 +112,11 @@ def main(argv=None) -> None:
                 sys.exit("LSE_API_KEY is not set in the environment")
             now = pd.Timestamp.now(tz="UTC")
             first = (pd.Timestamp(nxt) - pd.Timedelta(days=1) + pd.Timedelta(hours=18)).tz_localize("America/New_York").tz_convert("UTC")
-            tick_from = max(first, now - pd.Timedelta(hours=23))                 # the stream replays at most 24 hours; anything older is caught up from the vault candles
+            tick_from = max(first, (now - pd.Timedelta(hours=23)).ceil("min"))   # the stream replays at most 24 hours; anything older is caught up from the vault candles (whole minutes, so no partial first bar)
             pre = lse_fetch(a.symbol, first.strftime("%Y-%m-%dT%H:%M:%S"), end=tick_from.strftime("%Y-%m-%dT%H:%M:%S"), dataset=a.dataset) if first < tick_from else []
-            tb = TickBars(lambda s: sdk_ticks(a.symbol, key, s), start=tick_from.strftime("%Y-%m-%dT%H:%M:%S"))
+            tb = TickBars(lambda s: sdk_ticks(a.symbol, key, s), start=tick_from.strftime("%Y-%m-%dT%H:%M:%S"), stall=90.0, max_replay_hours=23.0, max_idle=a.max_idle)
             runner.meta["volume_basis"] = "see tick fields (size/volume) once ticks arrive"
+            tb_ref = tb
             feed = itertools.chain(pre, tb)
         start = a.start or (pd.Timestamp(nxt) - pd.Timedelta(days=1)).strftime("%Y-%m-%dT18:00:00")     # wall clock; converted below
         if not a.start:
@@ -126,6 +131,8 @@ def main(argv=None) -> None:
                 if stop is not None and bar.ts >= stop:
                     break
                 runner.process(bar)
+                if tb_ref is not None:
+                    runner.meta.update(volume_basis=tb_ref.volume_basis, feed_reconnects=tb_ref.reconnects, feed_last_error=redact(tb_ref.last_error or ""), feed_rejected=dict(future=tb_ref.n_future, price=tb_ref.n_bad_price, size=tb_ref.n_bad_size, stall=tb_ref.n_stall))
             if stop is None:
                 runner.close_open_session()
             print("feed finished", flush=True)
@@ -134,7 +141,7 @@ def main(argv=None) -> None:
                 with open(a.dump, "w") as f:
                     json.dump(jsonable(runner.snapshot()), f)
         except Exception as e:                           # keep the dashboard up and show the problem
-            runner.meta["error"] = f"{type(e).__name__}: {e}"
+            runner.meta["error"] = redact(f"{type(e).__name__}: {e}")
             print("feed stopped:", runner.meta["error"], flush=True)
 
     th = threading.Thread(target=pump, daemon=True)

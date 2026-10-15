@@ -56,6 +56,7 @@ class PaperRunner:
         self.n_bars_total = 0
         self.last_bar_ts: Optional[pd.Timestamp] = None
         self.started_wall = time.time()
+        self.bar_log: Optional[str] = None      # append every processed bar here (UTC ISO, o, h, l, c, v): the harness's own record of the live sample (restarts re-append a replayed session: keep the last copy per timestamp)
 
     # ------------------------------------------------------------------ session lifecycle
     def reset_session_arrays(self) -> None:
@@ -73,7 +74,7 @@ class PaperRunner:
         r = np.asarray([m for m in smins if 930 <= m < 1315])
         if len(r) >= RTH_MIN_BARS:
             return False
-        if len(r) and 1135 <= r.max() <= 1145 and len(r) >= 0.95 * (r.max() - 930 + 1):                    # early close: the session runs to about 13:00 ET (last bar 12:55 to 13:05) with no holes
+        if len(r) and 1135 <= r.max() <= 1160 and len(r) >= 0.95 * (r.max() - 930 + 1):                    # early close: 13:00 or 13:15 ET (last bar 12:55 to 13:20) with no holes
             return False
         return True
 
@@ -124,6 +125,9 @@ class PaperRunner:
     # ------------------------------------------------------------------ bars
     def process(self, bar: Bar) -> None:
         if not in_session(bar):
+            with self.lock:
+                if self.cur_label is not None and bar.smin >= 1320 and bar.label == self.cur_label:
+                    self._finish_session()                 # 16:00 ET reached: close the session now (farm, journal, state file), not at the next evening's first bar
             return
         with self.lock:
             lab = bar.label
@@ -133,6 +137,8 @@ class PaperRunner:
                 self._finish_session()
             if self.cur_label is None:
                 self._start_session(lab)
+            if self.bars and bar.ts <= self.bars[-1].ts:
+                return                                     # duplicate or out-of-order bar (REST/tick seam, replay overlap)
             smin = bar.smin
             if self.live_guards and not self.bars and not self.roll_today and in_roll_window(lab) and self.hist.last_close:
                 pc = self.hist.last_close[-1]
@@ -147,6 +153,9 @@ class PaperRunner:
                     for s in self.sleeves.values():
                         s.finish()
             self.bars.append(bar)
+            if self.bar_log:
+                with open(self.bar_log, "a") as f:
+                    f.write(f"{bar.ts.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S')},{bar.o},{bar.h},{bar.l},{bar.c},{bar.v}\n")
             if bar.v <= 0:
                 self.zero_vol += 1
             if not self.bad_data and len(self.bars) >= 30 and self.zero_vol / len(self.bars) > 0.5:
