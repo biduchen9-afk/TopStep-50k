@@ -637,3 +637,66 @@ def test_runner_vwap_shadow_sleeve_matches_the_batch_sleeve_and_does_not_touch_t
     assert n >= 15
     f = r.snapshot()["forward"]
     assert f["status"] == "TOO EARLY" and f["sessions"] == len(r.journal)
+
+
+# ------------------------------------------------------------------------------------------------ operations tools: day-0 checks, key file, supervisor
+def test_day0_inspects_fields_and_compares_tick_bars_with_vendor_candles():
+    from paper.day0 import compare_bars, inspect_ticks, verdict
+    from paper.feed import Bar
+    info = inspect_ticks([_Tick("2026-10-14T15:00:10+00:00", 100.0, 3.0), _Tick("2026-10-14T15:00:20+00:00", 100.25, 1.0, replay=True)])
+    assert info["size_field"] == "size" and info["has_replay_flag"] and info["has_timestamp"] and "price" in info["fields"]
+    class NoSize:
+        symbol, price, timestamp, replay = "NQ.F", 1.0, "2026-10-14T15:00:10+00:00", False
+    assert inspect_ticks([NoSize()])["size_field"] is None                                  # prices only: NO-GO
+    t0 = pd.Timestamp("2026-10-14 11:00", tz="America/New_York")
+    bars = [Bar(t0 + pd.Timedelta(minutes=k), 100.0, 101.0, 99.0, 100.0 + (k % 3) * 0.25, 10.0) for k in range(70)]
+    same = compare_bars(bars, list(bars))
+    assert same["minutes_both"] == 70 and same["close_match"] == 1.0 and same["volume_match"] == 1.0 and verdict(info, same)["go"]
+    off = [Bar(b.ts, b.o, b.h, b.l, b.c + (2.0 if k % 5 == 0 else 0.0), b.v * (1.2 if k % 4 == 0 else 1.0)) for k, b in enumerate(bars)]
+    bad = compare_bars(bars, off)
+    assert abs(bad["close_match"] - (1 - 14 / 70)) < 1e-9 and bad["volume_match"] < 0.8 and not verdict(info, bad)["go"]       # 80% < 95%: NO-GO
+    short = compare_bars(bars[:40], bars[:40]); assert not verdict(info, short)["go"]                                                 # fewer than 60 minutes
+    assert not verdict(inspect_ticks([NoSize()]), same)["go"]
+
+
+def test_key_file_is_read_without_printing_and_warns_when_world_readable(tmp_path, monkeypatch, capsys):
+    import os
+    from paper.run import load_key_file
+    monkeypatch.delenv("LSE_API_KEY", raising=False)
+    f = tmp_path / "k"; f.write_text("  secret-key-123  \n"); os.chmod(f, 0o600)
+    load_key_file(str(f)); assert os.environ["LSE_API_KEY"] == "secret-key-123" and "secret" not in capsys.readouterr().out
+    monkeypatch.delenv("LSE_API_KEY"); os.chmod(f, 0o644)
+    load_key_file(str(f)); out = capsys.readouterr().out; assert "chmod 600" in out and "secret" not in out
+    monkeypatch.setenv("LSE_API_KEY", "from-env"); load_key_file(str(f)); assert os.environ["LSE_API_KEY"] == "from-env"         # the environment wins
+    monkeypatch.delenv("LSE_API_KEY"); (tmp_path / "e").write_text(" \n")
+    with pytest.raises(SystemExit):
+        load_key_file(str(tmp_path / "e"))
+
+
+def test_supervisor_restarts_keeps_the_clock_and_backs_up(tmp_path, monkeypatch):
+    import sys
+    from paper import supervise as S
+    st = tmp_path / "state.pkl"
+    # restart arguments: drop --fresh and the warm-up only when a state file exists
+    a = ["--source", "ticks", "--warm-from-lse", "60", "--fresh", "--state", str(st), "--port", "8765"]
+    assert S.restart_args(a, str(st)) == a
+    st.write_bytes(b"x")
+    assert S.restart_args(a, str(st)) == ["--source", "ticks", "--state", str(st), "--port", "8765"]
+    assert S.restart_args(["--warm-from-lse=60", "--fresh", "--x"], str(st)) == ["--x"]
+    # rolling backups of the state and the bar file, newest 14 kept
+    (tmp_path / "state_bars.csv").write_text("a\n")
+    d = tmp_path / "bk"
+    for k in range(17):
+        S.backup(str(st), str(d), keep=14, now=1_700_000_000 + 3600 * k)
+    names = sorted(x.name for x in d.iterdir()); assert len([n for n in names if n.startswith("state.pkl.")]) == 14 and len([n for n in names if n.startswith("state_bars.csv.")]) == 14
+    # the loop: a child that exits is relaunched with backoff until max_restarts
+    script = tmp_path / "fake_run.py"; script.write_text("import sys; print('args', sys.argv[1:]); sys.exit(3)\n")
+    sleeps = []; calls = []
+    real_popen = S.subprocess.Popen
+    def popen(cmd, **kw):
+        calls.append(cmd); return real_popen([sys.executable, str(script)] + cmd[3:], **kw)
+    monkeypatch.setattr(S.subprocess, "Popen", popen)
+    rc = S.supervise(a, log=str(tmp_path / "log.txt"), backup_dir=None, max_restarts=2, sleep=sleeps.append, poll=0.01)
+    assert rc == 3 and len(calls) == 3 and sleeps[:2] == [10.0, 20.0]                         # 5 s * 2**fails, doubling
+    assert "--fresh" in calls[0] and "--fresh" not in calls[1] and "--warm-from-lse" not in calls[2]
+    log = (tmp_path / "log.txt").read_text(); assert "exited with code 3" in log and "launch 3" in log

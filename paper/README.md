@@ -39,3 +39,7 @@ Known limits of the vault candles (FINDINGS section 32): 24% of the sessions aft
 
 ## Optional: publish to the remote viewer (Vercel + Supabase)
 Set `PAPER_PUBLISH_URL` (https://<project>.vercel.app/api/ingest) and `PAPER_PUBLISH_TOKEN` in the environment of the harness and it pushes its snapshot every `--publish-every` seconds (default 15) so the viewer (`api/` + `public/` at the repo root, notes in `web/README.md`) can be opened from any device. Setup, security model and limits: `web/README.md`. The engine always runs in the harness; the viewer only displays.
+
+
+## Forward test (PR19): start here
+`paper/RUNBOOK.md` has the steps: rotate the LSE key and keep it in a file, run the day-0 check (`python -m paper.day0`), then start the supervised harness (`python -m paper.supervise -- ... --fresh`); `python -m paper.verdict --state paper_state.pkl` gives the PR19 status. The rules are in `docs/PREREGISTRATION_19.md`.

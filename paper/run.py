@@ -25,6 +25,23 @@ from paper.runner import PaperRunner
 from paper.server import jsonable, serve
 
 
+def load_key_file(path):
+    """Put the LSE key from a file into the environment of this process only (keeps it out of shell history and process listings). The file should be readable by you alone (chmod 600)."""
+    if not path or os.environ.get("LSE_API_KEY"):
+        return
+    try:
+        mode = os.stat(path).st_mode & 0o077
+        if os.name == "posix" and mode:
+            print(f"WARNING: {path} can be read by other users; run: chmod 600 {path}", flush=True)
+        toks = open(path).read().split()
+        key = toks[0] if toks else ""
+    except OSError as e:
+        sys.exit(f"cannot read the key file: {e.__class__.__name__}")
+    if not key:
+        sys.exit("the key file is empty")
+    os.environ["LSE_API_KEY"] = key
+
+
 def load_costs_and_sessions():
     from market_data import build_sessions
     from pricing_config import load_config
@@ -50,11 +67,13 @@ def main(argv=None) -> None:
     ap.add_argument("--max-idle", type=float, default=None, help="ticks: batch mode, end the feed after this many seconds without a tick (run once a day between 16:00 and 17:00 ET with --no-server; the session is rebuilt from the vendor's 24 h replay)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--key-file", default=None, help="a file whose first line is the LSE key (used when LSE_API_KEY is not set); keep it chmod 600 and outside the repository")
     ap.add_argument("--no-server", action="store_true")
     ap.add_argument("--publish-every", type=float, default=15.0, help="seconds between snapshots pushed to the remote viewer when PAPER_PUBLISH_URL and PAPER_PUBLISH_TOKEN are set in the environment")
     ap.add_argument("--dump", default=None, help="write the final snapshot JSON here when the feed ends")
     ap.add_argument("--stop-at", default=None, help="replay: stop feeding at this Eastern wall-clock time (e.g. '2026-06-26 14:20') and leave that session open, to look at a mid-session state")
     a = ap.parse_args(argv)
+    load_key_file(a.key_file)
     redact = lambda s: str(s).replace(os.environ.get("LSE_API_KEY") or "\0", "***")           # exception text can carry the URL; the snapshot (and the public viewer) must never carry the key
 
     if a.warmup or a.warm_from_lse:

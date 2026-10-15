@@ -11,3 +11,9 @@ vec*.pkl
 # the harness writes its own bar record next to the state file (market-derived prices: never commit)
 paper_state*_bars.csv
 *_bars.csv
+
+# local run artefacts of the harness (market-derived or private)
+day0_report.json
+paper_harness.log
+paper_backups/
+*.key
