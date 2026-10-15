@@ -81,10 +81,11 @@ class AcctEval:
         self.spec = S["spec"]; self.s, self.n_dev, self.R = s, n_dev, R
         self.x, self.lo, self.atr = s.pnl[:n_dev].tolist(), s.low[:n_dev].tolist(), s.atr_usd[:n_dev].tolist()
         self.nd = s.desired_micros(R)[:n_dev]
+        self.fx = s.fx[:n_dev].tolist() if getattr(s, "fx", None) is not None else None
         first = int(np.flatnonzero(s.ok)[0]) + 260
         self.starts = list(range(first, n_dev - 400, 3)) if starts is None else list(starts)
         self.d = pd.DatetimeIndex(s.dates)
-        self.ev = [(i0,) + run_eval_firm(self.spec.eval_phases, self.x, self.lo, self.nd, i0) for i0 in self.starts]
+        self.ev = [(i0,) + run_eval_firm(self.spec.eval_phases, self.x, self.lo, self.nd, i0, None, self.fx) for i0 in self.starts]
 
     def run(self, a1: float, t1: float, a2: float, w1=None, scale=None, scale2=None) -> pd.DataFrame:
         plan = mk_plan(a1, t1, a2, w1, scale, scale2)
@@ -95,7 +96,7 @@ class AcctEval:
             r = dict(start=self.d[i0], passed=status == 1, paid=False, d_total=np.nan, first=np.nan, total=0.0, fees=fees, tau=tau)
             if status == 1:
                 act = min(i0 + tau + 1, self.n_dev - 1); tm: list = []
-                pays, *_ = run_funded_firm(self.spec.funded, self.x, self.lo, self.nd, act, plan, self.atr, tm)
+                pays, *_ = run_funded_firm(self.spec.funded, self.x, self.lo, self.nd, act, plan, self.atr, tm, None, self.fx)
                 if pays:
                     r.update(paid=True, d_total=(self.d[min(tm[0], self.n_dev - 1)] - self.d[i0]).days, first=pays[0], total=sum(pays))
             rows.append(r)

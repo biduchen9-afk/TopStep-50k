@@ -226,3 +226,14 @@ def test_runner_replay_matches_batch_farm_and_resumes(tmp_path):
     r3.close_open_session()
     assert abs(r2.farm.net - r3.farm.net) < 1e-9 and abs(r2.farm.fees - r3.farm.fees) < 1e-9 and r2.farm.summary()["groups"] == r3.farm.summary()["groups"]
     assert len(r3.journal) == i1 - i0 + 1
+
+
+def test_forward_verdict_logic():
+    from paper.forward_test import kill_reasons, verdict
+    assert verdict(False, kill_reasons(False, 10, None, 0.0, 0.0)) == "INVALID"
+    assert verdict(True, kill_reasons(True, 30, 1.0, -1.0, -1.0)) == "CONTINUE"                      # too early for any rule
+    assert verdict(True, kill_reasons(True, 60, 4.9, 1.0, 1.0)) == "STOP"                             # below the 5th percentile after 60 sessions
+    assert verdict(True, kill_reasons(True, 60, 5.0, 1.0, 1.0)) == "CONTINUE"
+    assert verdict(True, kill_reasons(True, 120, 50.0, -0.1, -0.2)) == "STOP"                         # both sleeves negative after 120
+    assert verdict(True, kill_reasons(True, 120, 50.0, -0.1, 0.2)) == "CONTINUE"
+    assert verdict(True, kill_reasons(True, 500, 99.0, 9.0, 9.0)) == "CONTINUE"                       # no CONFIRMED state exists

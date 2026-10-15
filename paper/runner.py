@@ -76,6 +76,7 @@ class PaperRunner:
         c["ok"], c["roll"] = ok, False
         self.ctx = c
         atr_usd = c["atr"] * POINT_USD_PER_MICRO if ok else float("nan")
+        self.atr_usd_today = atr_usd
         nd = max(1, int(round(self.R / atr_usd))) if ok else 1
         today = {g: dict(ok=ok, atr_usd=atr_usd, nd=nd) for g in GROUP_SLEEVE}
         for s in self.sleeves.values():
@@ -85,7 +86,7 @@ class PaperRunner:
     def _finish_session(self) -> None:
         for s in self.sleeves.values():
             s.finish()
-        day, row = {}, dict(date=str(self.cur_label), t=self.t_next, roll=self.roll_today or self.bad_data, bars=len(self.bars), zero_vol=self.zero_vol)
+        day, row = {}, dict(date=str(self.cur_label), t=self.t_next, roll=self.roll_today or self.bad_data, bars=len(self.bars), zero_vol=self.zero_vol, atr_usd=float(getattr(self, "atr_usd_today", float("nan"))))
         for g, s in self.sleeves.items():
             pts, low, tr = s.result()
             if self.roll_today or self.bad_data or not self.ctx.get("ok", False):

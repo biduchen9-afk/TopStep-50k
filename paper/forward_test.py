@@ -33,6 +33,31 @@ def window_pct(series: np.ndarray, L: int, value: float) -> float:
     return float((w < value).mean() * 100) if len(w) else float("nan")
 
 
+# ----------------------------------------------------------------------------------------------------------------------------
+# PR18 (forward test v2): everything that carries a verdict is in R units (daily P&L per micro / ATR in dollars), the dollar scale doubled over the development period.
+def kill_reasons(valid: bool, L: int, pooled_pct, noise_cum_R: float, gap_cum_R: float) -> list:
+    """The declared kill rules (docs/PREREGISTRATION_18.md). `pooled_pct` is the percentile of the pooled cumulative R among equal-length development windows (re-based costs)."""
+    out = []
+    if not valid:
+        out.append("data checks failed: the forward test is invalid")
+    if pooled_pct is not None and L >= 60 and pooled_pct < 5:
+        out.append(f"after {L} sessions the pooled sleeve R is below the 5th percentile of development windows ({pooled_pct:.1f})")
+    if L >= 120 and noise_cum_R < 0 and gap_cum_R < 0:
+        out.append("after 120 sessions both sleeves have a negative cumulative R: edge not confirmed")
+    return out
+
+
+def verdict(valid: bool, kills: list) -> str:
+    """INVALID (data), STOP (a kill rule fired) or CONTINUE. There is no CONFIRMED: the test can kill, it cannot confirm (docs/PREREGISTRATION_18.md, results/forward_power.csv)."""
+    if not valid:
+        return "INVALID"
+    return "STOP" if kills else "CONTINUE"
+
+
+def window_pct_R(series: np.ndarray, L: int, value: float) -> float:
+    return window_pct(series, L, value)
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bars", required=True)
@@ -80,6 +105,24 @@ def main(argv=None) -> None:
             m = (s.dates <= np.datetime64("2022-12-31")) & s.ok
             d["dev_window_percentile"] = window_pct(s.pnl[m], L, float(x.sum()))
         rep["sleeves"][g] = d
+    # ---- R units (PR18): P&L per micro / ATR in dollars, reference = development windows re-charged at today's cost-to-ATR
+    rows = J.to_dict("records")
+    atr = np.array([r.get("atr_usd", float("nan")) for r in rows], dtype=float)
+    okd = np.isfinite(atr) & (atr > 0)
+    Rn = np.where(okd, np.array([r["noise"]["usd"] for r in rows]) / np.where(okd, atr, 1.0), 0.0)
+    Rg = np.where(okd, np.array([r["gap"]["usd"] for r in rows]) / np.where(okd, atr, 1.0), 0.0)
+    Rp = (3 * Rn + 2 * Rg) / 5.0
+    rep["R_units"] = dict(sessions_with_atr=int(okd.sum()), noise_cum_R=float(Rn.sum()), gap_cum_R=float(Rg.sum()), pooled_cum_R=float(Rp.sum()), pooled_mean_R=float(Rp.mean()))
+    pooled_pct = None
+    if live:
+        import retest_cost as CC
+        st_dev = CC.rebase(dev, 1.0)
+        mdev = (st_dev["noise"].dates <= np.datetime64("2022-12-31")) & st_dev["noise"].ok & st_dev["gap"].ok
+        rd = {g: np.where(st_dev[g].ok, st_dev[g].pnl / np.where(st_dev[g].ok, st_dev[g].atr_usd, 1.0), 0.0)[mdev] for g in st_dev}
+        pooled_dev_R = (3 * rd["noise"] + 2 * rd["gap"]) / 5.0
+        pooled_pct = window_pct_R(pooled_dev_R, L, float(Rp.sum()))
+        c_ = np.r_[0.0, np.cumsum(pooled_dev_R)]; w_ = c_[L:] - c_[:-L]
+        rep["R_units"].update(pooled_dev_window_percentile=pooled_pct, dev_window_p5=float(np.percentile(w_, 5)) if len(w_) else None, dev_window_median=float(np.median(w_)) if len(w_) else None)
     if live:
         # pooled like the farm: 3 noise accounts + 2 gap accounts at one micro each
         x = np.array([3 * r["noise"]["usd"] + 2 * r["gap"]["usd"] for r in J.to_dict("records")])
@@ -93,17 +136,12 @@ def main(argv=None) -> None:
     if os.path.exists(p) and abs(L - 75) <= 40:
         dist = pd.read_csv(p).net.to_numpy()
         rep["farm"]["dev_farm_percentile_75_sessions"] = float((dist < sm["net"]).mean() * 100)
-    # ---- declared kill criteria (PR15)
-    pc = rep.get("pooled_3_2", {}).get("dev_window_percentile")
-    sh = None
-    kill = []
-    if not valid:
-        kill.append("data checks failed: the forward test is invalid")
-    if pc is not None and L >= 60 and pc < 5:
-        kill.append(f"after {L} sessions the pooled sleeve P&L is below the 5th percentile of development windows ({pc:.1f})")
-    if L >= 120 and rep["sleeves"]["noise"]["total_usd_per_micro"] < 0 and rep["sleeves"]["gap"]["total_usd_per_micro"] < 0:
-        kill.append("after 120 sessions both sleeves have a negative cumulative P&L: edge not confirmed")
+    # ---- declared kill criteria (PR18, R units)
+    kill = kill_reasons(valid, L, pooled_pct, float(Rn.sum()), float(Rg.sum()))
     rep["kill_criteria_triggered"] = kill
+    rep["verdict"] = verdict(valid, kill)
+    rep["gates"] = dict(data_valid=bool(valid), fill_cost_realism="NOT MEASURABLE in paper trading: needs real fills (no purchases / out-of-pocket money are planned)", rules="first-hand Topstep text in docs/TOPSTEP_RULES.md")
+    rep["note"] = "This test can stop the strategy, it cannot confirm it: see results/forward_power.csv (a zero-edge strategy is stopped within 250 sessions 57% of the time; the full development edge is stopped falsely 16% of the time)."
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     with open(a.out, "w") as f:
         json.dump(jsonable(rep), f, indent=1)
