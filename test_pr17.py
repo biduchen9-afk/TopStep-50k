@@ -1,6 +1,10 @@
-"""PR17 additions: tick-based liquidation overshoot, price factor, cohort accounting switch, cost re-basing arithmetic."""
+"""PR17 additions: tick-based liquidation overshoot, cohort accounting switch, cost re-basing.
+Run as   TOPSTEP_RAW_DIR=/home/user/data_raw_live python3 -m pytest -q test_pr17.py   (retest_cost refuses to run on any other data directory)."""
+import os
+os.environ.setdefault("TOPSTEP_RAW_DIR", "/home/user/data_raw_live")
 import dataclasses
 import numpy as np
+import pytest
 from firm_engine import FundedPlan, run_funded_firm, run_eval_firm, topstep_150k
 
 
@@ -28,17 +32,32 @@ def test_eval_tick_slip_neutral_default():
     assert run_eval_firm(spec.eval_phases, x, lo, nd, 0) == run_eval_firm(spec.eval_phases, x, lo, nd, 0, None, None)
 
 
-def test_rebase_arithmetic_and_identity_at_dev_costs():
+def test_gross_minus_net_is_whole_trades_of_the_modelled_cost():
+    """The cached cost must be (gross - net) from the REPAIRED data: whole multiples of the $1.72 per-micro round trip. (A cache built from the unrepaired data failed this on 25% of days.)"""
+    import retest_cost as C
+    for g, d in C.gross_net().items():
+        ok = d["ok"]
+        k = d["cost"][ok] / C.modelled_cost_usd()
+        assert np.max(np.abs(k - np.round(k))) < 1e-6, g
+        assert np.all(d["cost"][ok] >= -1e-9) and np.all(d["cin"][ok] >= -1e-9)
+        assert np.all(d["cin"][ok] <= d["cost"][ok] + 1e-9)             # the cost inside the low is part of the day's cost
+
+
+def test_rebase_modes():
     import retest as T, retest_cost as C
     D = T.load(); ST = D["ST"]
-    same = C.rebase(ST, 1.0, to_today=False)
+    dev = C.rebase(ST, 1.0, "dev")                                       # identity at the modelled cost
     for g in ST:
-        assert np.allclose(same[g].pnl, ST[g].pnl) and np.allclose(same[g].low, ST[g].low)
-    lo = C.rebase(ST, 1.0, to_today=True)
+        assert np.allclose(dev[g].pnl, ST[g].pnl) and np.allclose(dev[g].low, ST[g].low, atol=1e-9)
+    ex = C.rebase(ST, 1.0, "exact"); co = C.rebase(ST, 1.0, "cost_only")
+    f = C.price_factor(ST["noise"].dates)
+    assert f.max() <= 1.0 and f.min() > 0.05
     for g in ST:
         ok = ST[g].ok
-        assert np.all(lo[g].pnl[ok] >= ST[g].pnl[ok] - 1e-9)      # cheaper costs can only raise P&L
-        assert np.all(lo[g].low <= 1e-12)
+        r_ex = np.where(ok, ex[g].pnl / np.where(ok, ex[g].atr_usd, 1.0), 0.0); r_co = np.where(ok, co[g].pnl / np.where(ok, co[g].atr_usd, 1.0), 0.0)
+        assert np.allclose(r_ex, r_co, atol=1e-9)                        # R units are identical in the two re-based worlds
+        assert np.allclose(ex[g].atr_usd[ok], ST[g].atr_usd[ok] / f[ok])
+        assert np.all(ex[g].low <= 1e-12) and np.all(co[g].low <= 1e-12)
     assert abs(C.modelled_cost_usd() - 1.72) < 1e-12
 
 

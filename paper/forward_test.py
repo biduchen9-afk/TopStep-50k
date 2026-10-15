@@ -16,6 +16,9 @@ import os
 import pickle
 import sys
 
+if os.path.isdir("/home/user/data_raw_live"):                    # the repaired development data must be bound BEFORE market_data is first imported (PR18; audit Oct 2026)
+    os.environ.setdefault("TOPSTEP_RAW_DIR", "/home/user/data_raw_live")
+
 import numpy as np
 import pandas as pd
 
@@ -47,11 +50,14 @@ def kill_reasons(valid: bool, L: int, pooled_pct, noise_cum_R: float, gap_cum_R:
     return out
 
 
-def verdict(valid: bool, kills: list) -> str:
-    """INVALID (data), STOP (a kill rule fired) or CONTINUE. There is no CONFIRMED: the test can kill, it cannot confirm (docs/PREREGISTRATION_18.md, results/forward_power.csv)."""
+def verdict(valid: bool, kills: list, reference_ok: bool = True) -> str:
+    """INVALID (data), STOP (a kill rule fired at any weekly look: latched), UNKNOWN (rule (ii) could not be evaluated: no reference data) or CONTINUE.
+    There is no CONFIRMED: the test can kill, it cannot confirm (docs/PREREGISTRATION_18.md, results/forward_power.csv)."""
     if not valid:
         return "INVALID"
-    return "STOP" if kills else "CONTINUE"
+    if kills:
+        return "STOP"
+    return "CONTINUE" if reference_ok else "UNKNOWN"
 
 
 def window_pct_R(series: np.ndarray, L: int, value: float) -> float:
@@ -89,9 +95,9 @@ def main(argv=None) -> None:
     valid = zv < 0.05 and float(rth.median()) >= 370
     rep["valid"] = bool(valid)
     # ---- strategy level
-    live = os.path.isdir("/home/user/data_raw_live")
+    import market_data as _md
+    live = str(_md.RAW_DIR).rstrip("/").endswith("data_raw_live")
     if live:
-        os.environ["TOPSTEP_RAW_DIR"] = "/home/user/data_raw_live"
         import run_kelly as K
         gs = lambda names: K.with_risk_unit(K.group_stream(names), "atr", 40)
         dev = {"noise": gs(["nq_noise"]), "gap": gs(["nq_gap30"])}
@@ -116,7 +122,7 @@ def main(argv=None) -> None:
     pooled_pct = None
     if live:
         import retest_cost as CC
-        st_dev = CC.rebase(dev, 1.0)
+        st_dev = CC.rebase(dev, 1.0, "exact")
         mdev = (st_dev["noise"].dates <= np.datetime64("2022-12-31")) & st_dev["noise"].ok & st_dev["gap"].ok
         rd = {g: np.where(st_dev[g].ok, st_dev[g].pnl / np.where(st_dev[g].ok, st_dev[g].atr_usd, 1.0), 0.0)[mdev] for g in st_dev}
         pooled_dev_R = (3 * rd["noise"] + 2 * rd["gap"]) / 5.0
@@ -138,10 +144,22 @@ def main(argv=None) -> None:
         rep["farm"]["dev_farm_percentile_75_sessions"] = float((dist < sm["net"]).mean() * 100)
     # ---- declared kill criteria (PR18, R units)
     kill = kill_reasons(valid, L, pooled_pct, float(Rn.sum()), float(Rg.sum()))
+    looks = []
+    if live:
+        for k in range(60, L + 1, 5):                       # weekly looks from session 60: the verdict is latched (a STOP at an earlier look stays a STOP)
+            pk = window_pct_R(pooled_dev_R, k, float(Rp[:k].sum()))
+            ks = kill_reasons(valid, k, pk, float(Rn[:k].sum()), float(Rg[:k].sum()))
+            if ks:
+                looks.append(dict(session=k, reasons=ks))
+        if looks and not kill:
+            kill = looks[0]["reasons"]
+    rep["stop_looks"] = looks[:5]
+    rep["first_stop_session"] = looks[0]["session"] if looks else None
+    rep["reference_available"] = bool(live)
     rep["kill_criteria_triggered"] = kill
-    rep["verdict"] = verdict(valid, kill)
+    rep["verdict"] = verdict(valid, kill, bool(live))
     rep["gates"] = dict(data_valid=bool(valid), fill_cost_realism="NOT MEASURABLE in paper trading: needs real fills (no purchases / out-of-pocket money are planned)", rules="first-hand Topstep text in docs/TOPSTEP_RULES.md")
-    rep["note"] = "This test can stop the strategy, it cannot confirm it: see results/forward_power.csv (a zero-edge strategy is stopped within 250 sessions 57% of the time; the full development edge is stopped falsely 16% of the time)."
+    rep["note"] = "This test can stop the strategy, it cannot confirm it: see results/forward_power.csv (weekly looks from session 60: a zero-edge strategy is stopped within 250 sessions about two times in three, the full development edge falsely about one time in four)."
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     with open(a.out, "w") as f:
         json.dump(jsonable(rep), f, indent=1)

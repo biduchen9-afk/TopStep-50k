@@ -100,7 +100,7 @@ class PaperRunner:
         row["farm_net"] = self.farm.net
         row["cash"] = self.farm.cash
         self.journal.append(row)
-        self.journal = self.journal[-400:]
+        self.journal = self.journal[-5000:]
         self.last_label = self.cur_label
         self.cur_label = None
         self.t_next += 1

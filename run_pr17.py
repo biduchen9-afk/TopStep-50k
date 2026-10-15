@@ -97,16 +97,16 @@ def full_eval(ST, split=(3, 2), label="", fee_per_payout=0.0):
 
 def stage_A():
     rows = []
-    for lab, ST in (("as modelled (dev costs)", ST0), ("re-based, 1 tick", C.rebase(ST0, 1.0)), ("re-based, 2 ticks", C.rebase(ST0, 2.0)), ("re-based, 3 ticks", C.rebase(ST0, 3.0))):
+    for lab, ST in (("as modelled (dev costs)", ST0), ("re-based exact, 1 tick", C.rebase(ST0, 1.0, "exact")), ("re-based exact, 2 ticks", C.rebase(ST0, 2.0, "exact")), ("re-based exact, 3 ticks", C.rebase(ST0, 3.0, "exact")), ("re-based cost-only, 1 tick (first PR17 version)", C.rebase(ST0, 1.0, "cost_only"))):
         r, F, Co = full_eval(ST, label=lab); rows.append(r); print(lab, {k: (round(v, 3) if isinstance(v, float) else v) for k, v in r.items() if k in ("mix_rate", "mix_paid", "farm_mean", "farm_median", "farm_p25", "cohort_mean", "cohort_median", "cohort_p25", "days_first_payout", "peak_cash_p90")}, flush=True)
-        if lab == "re-based, 1 tick":
+        if lab == "re-based exact, 1 tick":
             F.to_csv(f"{OUT}/pr17_A_farms_rebased1.csv", index=False); Co.to_csv(f"{OUT}/pr17_A_cohort_rebased1.csv", index=False)
     pd.DataFrame(rows).to_csv(f"{OUT}/pr17_A.csv", index=False)
 
 
 def stage_B():
     rows = []
-    for basis, ST in (("re-based, 1 tick cost", C.rebase(ST0, 1.0)), ("dev costs", ST0)):
+    for basis, ST in (("re-based exact, 1 tick cost", C.rebase(ST0, 1.0, "exact")), ("dev costs", ST0)):
         for tk in (0, 1, 2, 3, 4):
             with spec_variant(ticks=float(tk)):
                 r, _, _ = full_eval(ST, label=f"{basis} | overshoot {tk} ticks")
@@ -116,12 +116,12 @@ def stage_B():
 
 
 def stage_C():
-    ST = C.rebase(ST0, 1.0); rows = []
+    ST = C.rebase(ST0, 1.0, "exact"); rows = []
     lad = ((0.0, 3), (3000.0, 10), (4500.0, 15))
-    scen = [("reference (re-based, 1 tick)", dict(), 0.0, ST), ("(1) all accounts on the Consistency path", dict(payout_path="consistency"), 0.0, ST), ("(2a) payouts capped at 5 per account", dict(max_payouts=5), 0.0, ST),
+    scen = [("reference (re-based exact, 1 tick)", dict(), 0.0, ST), ("(1) all accounts on the Consistency path", dict(payout_path="consistency"), 0.0, ST), ("(2a) payouts capped at 5 per account", dict(max_payouts=5), 0.0, ST),
             ("(2b) payouts capped at 3 per account", dict(max_payouts=3), 0.0, ST), ("(3) $30 fee on every payout", dict(), 30.0, ST), ("(4) Standard-path price ($199 + $149 per XFA)", dict(activation_fee=149.0), 0.0, ST),
             ("(5) XFA ladder flat at 30 micros to $3,000", dict(ladder=lad), 0.0, ST),
-            ("(6) combined adverse: 2 ticks cost, 2 ticks overshoot, $30 per payout, 5 payouts", dict(ticks=2.0, max_payouts=5), 30.0, C.rebase(ST0, 2.0))]
+            ("(6) combined adverse: 2 ticks cost, 2 ticks overshoot, $30 per payout, 5 payouts", dict(ticks=2.0, max_payouts=5), 30.0, C.rebase(ST0, 2.0, "exact"))]
     for lab, kw, fee, S_ in scen:
         with spec_variant(**kw):
             r, _, _ = full_eval(S_, label=lab, fee_per_payout=fee)
@@ -154,7 +154,7 @@ def split_metrics(SY, split, step=20):
 def one_draw(args):
     seed, null = args
     rng = np.random.default_rng(seed); draw = rng.choice(YEARS, size=len(YEARS), replace=True)
-    ST = C.rebase(ST0, 1.0)
+    ST = C.rebase(ST0, 1.0, "exact")
     if null:
         ST = {**ST, **placebo_streams(ST)}
     SY = synth(ST, draw)
@@ -163,7 +163,7 @@ def one_draw(args):
 
 def stage_D():
     # (i) real dev farms, paired by start year
-    ST = C.rebase(ST0, 1.0); real = {}; rows = []
+    ST = C.rebase(ST0, 1.0, "exact"); real = {}; rows = []
     for lab, sp in SPLITS.items():
         F = farm_runs(ST, sp); Co = farm_runs(ST, sp, cohort=True); real[lab] = (F, Co)
         rows.append(dict(split=lab, **{f"farm_{k}": v for k, v in q(F.net).items()}, **{f"cohort_{k}": v for k, v in q(Co.net).items()}, farm_paid=F.paid.sum() / max(F.funded.sum(), 1), days_first_payout=float(np.nanmedian(F.d1))))

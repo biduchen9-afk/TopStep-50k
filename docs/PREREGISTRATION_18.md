@@ -14,15 +14,15 @@ All verdict-bearing statistics are in **R units**: R = daily P&L per micro divid
 * **CONTINUE** otherwise, including any result above the median or above the 90th percentile. No window, however good, is a confirmation.
 Checked weekly from 60 sessions on; the test runs at least 250 sessions (about one year) before any statement beyond 'not stopped'.
 
-## What the test can detect (`run_forward_power.py`, `results/forward_power.csv`, 20,000 block-bootstrap paths of development R, 21-day blocks, re-based costs)
-Chance that the kill rules have fired by session 60 / 120 / 250, by the size of the true edge relative to the development edge:
-| true edge | stopped by 60 | by 120 | by 250 | rule (iii) alone at 120 | pooled R positive at 120 |
-|---|---|---|---|---|---|
-| 100% | 3.2% | 12.0% | 16.1% | 9.8% | 80% |
-| 75% | 4.3% | 17.0% | 24.0% | 14.5% | 74% |
-| 50% | 6.4% | 23.8% | 33.9% | 20.5% | 66% |
-| 0% | 11.6% | 39.9% | 56.9% | 36.5% | 49% |
-So the rules stop a strategy with no edge only 57% of the time within a year, and wrongly stop one with the full development edge 16% of the time. The likelihood ratio of a STOP is about 3.5 for 'no edge' against 'full edge' after 250 sessions. The test is a monitor with a late alarm, not evidence of an edge. (Development-window percentiles in R: 5th percentile of the pooled 60-session sum -2.09 R, of the 120-session sum -1.88 R, of the 250-session sum -0.47 R; median 1.10, 2.29, 4.66 R.)
+## What the test can detect (`run_forward_power.py`, `results/forward_power.csv`, 20,000 block-bootstrap paths of development R, 21-day blocks, re-based costs, WEEKLY looks at sessions 60, 65, ..., 250)
+Chance that a kill rule has fired at some weekly look by session 60 / 120 / 250, by the size of the true edge relative to the development edge (rule (ii) is evaluated against the 5th percentile of equal-length development windows at each look, rule (iii) from session 120):
+| true edge | stopped by 60 | by 120 | by 250 | pooled R positive at 120 |
+|---|---|---|---|---|
+| 100% | 3.2% | 13.9% | 23.4% | 80% |
+| 75% | 4.3% | 19.4% | 32.6% | 74% |
+| 50% | 6.4% | 26.9% | 44.0% | 66% |
+| 0% | 11.7% | 43.4% | 66.4% | 49% |
+So the rules stop a strategy with no edge about two times in three within a year, and wrongly stop one with the full development edge about one time in four. The likelihood ratio of a STOP after 250 sessions is 2.8 for 'no edge' against 'full edge'. The test is a monitor with a late alarm, not evidence of an edge. (An earlier version of this table assumed three looks only, 60, 120 and 250, which gave 16% and 57%; the document says weekly looks, which is what is evaluated and what `paper/forward_test.py` does.) The verdict is latched: a STOP at any earlier weekly look stays a STOP. If the reference data are missing the verdict is UNKNOWN, never a silent CONTINUE. Development-window percentiles in R: 5th percentile of the pooled 60-session sum -2.09 R, of the 120-session sum -1.88 R, of the 250-session sum -0.46 R; median 1.11, 2.29, 4.67 R.
 
 ## Gates that are not measurable here
 Realised cost per micro against the model's $1.72 and the liquidation fill need real fills; paper trading cannot show them (the sleeves fill at the next bar's open). No real-money pilot, purchase or top-up is planned or authorised; the gates stay open and the model's cost and fill assumptions stay labelled assumptions. Farm-level results are descriptive only (unchanged from PR15 section C, with the re-based reference distributions when available).

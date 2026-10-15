@@ -237,3 +237,5 @@ def test_forward_verdict_logic():
     assert verdict(True, kill_reasons(True, 120, 50.0, -0.1, -0.2)) == "STOP"                         # both sleeves negative after 120
     assert verdict(True, kill_reasons(True, 120, 50.0, -0.1, 0.2)) == "CONTINUE"
     assert verdict(True, kill_reasons(True, 500, 99.0, 9.0, 9.0)) == "CONTINUE"                       # no CONFIRMED state exists
+    assert verdict(True, [], reference_ok=False) == "UNKNOWN"                                         # rule (ii) could not be evaluated: never a silent CONTINUE
+    assert verdict(True, ["x"], reference_ok=False) == "STOP"
