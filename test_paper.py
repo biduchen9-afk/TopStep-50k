@@ -428,19 +428,22 @@ def test_publisher_posts_the_snapshot_with_a_bearer_token_and_never_leaks_it(tmp
 
         def do_POST(self):
             body = self.rfile.read(int(self.headers["Content-Length"]))
-            seen.append((self.path, self.headers.get("Authorization"), self.headers.get("Content-Type"), body))
+            seen.append((self.path, self.headers.get("Authorization"), self.headers.get("Content-Type"), body, self.headers.get("x-vercel-protection-bypass")))
             self.send_response(status[0]); self.send_header("Content-Length", "0"); self.end_headers()
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     tok = "T" * 43
     pub = Publisher(r, f"http://127.0.0.1:{srv.server_address[1]}/api/ingest", tok)
     assert pub.once() and pub.ok == 1
-    path, auth, ctype, body = seen[0]
+    path, auth, ctype, body, byp = seen[0]
+    assert byp is None                                                   # no bypass header unless one is configured
     assert path == "/api/ingest" and auth == "Bearer " + tok and ctype == "application/json"
     assert tok.encode() not in body                                      # the token is not part of the published data
     got, want = json.loads(body), json.loads(json.dumps(jsonable(r.snapshot())))
     got.pop("wall"), want.pop("wall")
     assert got == want and got["farm"] is not None and len(got["journal"]) == 6        # the 7th session is still open
+    pub2 = Publisher(r, pub.url, tok, bypass="B" * 32)
+    assert pub2.once() and seen[-1][4] == "B" * 32 and b"B" * 32 not in seen[-1][3]    # the bypass secret goes in a header only
     status[0] = 401
     assert not pub.once() and "token rejected" in pub.last_error         # a rejected token is reported, never raised
     status[0] = 200
@@ -451,7 +454,7 @@ def test_publisher_posts_the_snapshot_with_a_bearer_token_and_never_leaks_it(tmp
 
 
 def test_remote_viewer_page_is_the_same_file_as_the_local_dashboard():
-    """web/public/index.html is a copy of paper/static/dashboard.html (the Vercel viewer serves the very same page); edit the source and copy it over."""
+    """public/index.html is a copy of paper/static/dashboard.html (the Vercel viewer serves the very same page); edit the source and copy it over."""
     import pathlib
     root = pathlib.Path(__file__).parent
-    assert (root / "web/public/index.html").read_bytes() == (root / "paper/static/dashboard.html").read_bytes()
+    assert (root / "public/index.html").read_bytes() == (root / "paper/static/dashboard.html").read_bytes()

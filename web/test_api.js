@@ -5,8 +5,8 @@ const { Readable } = require('node:stream');
 
 process.env.SUPABASE_URL = 'https://example.supabase.co/';
 process.env.SUPABASE_KEY = 'sb_publishable_test';
-const state = require('./api/state');
-const ingest = require('./api/ingest');
+const state = require('../api/state');
+const ingest = require('../api/ingest');
 
 const GOOD = 'A'.repeat(43);
 function mkRes() { const r = { headers: {}, statusCode: 0, body: '' }; r.setHeader = (k, v) => { r.headers[k.toLowerCase()] = v; }; r.end = (b) => { r.body = b || ''; r.done = true; }; return r; }
@@ -64,7 +64,17 @@ test('ingest: a body over the limit is refused', async () => {
 });
 
 test('legacy JWT-style keys are also sent as a bearer', async () => {
-  delete require.cache[require.resolve('./api/_supabase')]; delete require.cache[require.resolve('./api/state')];
-  process.env.SUPABASE_KEY = 'eyJhbGciOi.test.key'; const st2 = require('./api/state'); mockFetch(200, '{}');
+  delete require.cache[require.resolve('../api/_supabase')]; delete require.cache[require.resolve('../api/state')];
+  process.env.SUPABASE_KEY = 'eyJhbGciOi.test.key'; const st2 = require('../api/state'); mockFetch(200, '{}');
   const res = mkRes(); await st2(mkReq('GET', { 'x-dash-key': GOOD }), res); assert.equal(calls[0].opt.headers.Authorization, 'Bearer eyJhbGciOi.test.key');
+});
+
+test('health: reports configuration and database state without needing or returning any secret', async () => {
+  delete require.cache[require.resolve('../api/_supabase')]; delete require.cache[require.resolve('../api/health')];
+  process.env.SUPABASE_KEY = 'sb_publishable_test'; const health = require('../api/health');
+  mockFetch(403, '{"message":"forbidden"}'); let res = mkRes(); await health(mkReq('GET', {}), res);
+  assert.deepEqual(JSON.parse(res.body), { ok: true, env: { SUPABASE_URL: true, SUPABASE_KEY: true }, db: 'reachable, functions installed' });
+  assert.ok(!res.body.includes('sb_publishable') && !res.body.includes('supabase.co'));
+  mockFetch(404, '{}'); res = mkRes(); await health(mkReq('GET', {}), res); assert.equal(JSON.parse(res.body).ok, false); assert.match(JSON.parse(res.body).db, /schema not installed/);
+  mockFetch(200, '{}'); res = mkRes(); await health(mkReq('GET', {}), res); assert.equal(JSON.parse(res.body).ok, false);
 });

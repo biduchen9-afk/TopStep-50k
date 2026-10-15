@@ -19,15 +19,19 @@ browser (this page, access key in localStorage)    --GET  /api/state  (x-dash-ke
 * Pages send `noindex`, `no-store`, a strict content-security policy and `no-referrer`.
 * Rotate a token: generate a new random one, put the SHA-256 hex of it in `paper_private.tokens` (statement at the bottom of `schema.sql`), use the new token.
 
-## Deploy (about 3 minutes, free plan)
-1. Vercel -> Add New -> Project -> import the GitHub repo `biduchen9-afk/TopStep-50k`. **Root Directory: `web`**. Framework preset: Other. Leave build and install commands empty.
-2. Environment variables (Production and Preview): `SUPABASE_URL` = `https://urnxldnectikeekkjqzm.supabase.co`, `SUPABASE_KEY` = the project's publishable key (Supabase dashboard -> Project Settings -> API Keys -> `sb_publishable_...`).
-3. The code lives on the branch `claude/sharpe-strategy-validation-kks7q1`, not on `main`: either merge it, or in the Vercel project set Settings -> Environments -> Production -> Branch Tracking to that branch, then redeploy.
-4. Open the project URL, type the access key.
-5. On the machine that runs the harness:
+## Deploy (the Vercel project is connected to the GitHub repo; every push deploys)
+The viewer lives at the repo root so a plain push deploys it with no project setting changed: `api/` (functions), `public/index.html` (the page), `vercel.json`. This folder (`web/`) holds only the notes, the database schema and the function tests.
+Done once in the Vercel dashboard (project -> Settings), because the assistant's Vercel connection is read-only:
+1. **Environment variables** (Production and Preview): `SUPABASE_URL` = `https://urnxldnectikeekkjqzm.supabase.co` and `SUPABASE_KEY` = the project's publishable key (Supabase dashboard -> Project Settings -> API Keys -> `sb_publishable_...`). Redeploy afterwards (Deployments -> Redeploy, or push any commit).
+2. Check `https://<deployment>/api/health`: it must say `"ok": true` (the variables are set and the database answers).
+3. **Vercel Authentication** is on for this project, so the page and the API ask for a Vercel login. That is an extra lock in front of the access key. The harness cannot log in, so create a secret under Settings -> Deployment Protection -> Protection Bypass for Automation and give it to the harness as `PAPER_PUBLISH_BYPASS`. (Or switch protection to "Preview" only; the access key then remains the only lock on the production URL.)
+4. The code is on the branch `claude/sharpe-strategy-validation-kks7q1`, so the stable URL is that branch's preview alias (`topstep-50k-git-claude-sharpe-st-a39e11-biduchen9-afks-projects.vercel.app`). `topstep-50k.vercel.app` serves `main`; it shows the page once the branch is merged, or after you set Settings -> Environments -> Production -> Branch Tracking to the branch.
+5. Open the URL and type the access key.
+6. On the machine that runs the harness:
 ```
-export PAPER_PUBLISH_URL=https://<your-project>.vercel.app/api/ingest
+export PAPER_PUBLISH_URL=https://<deployment-host>/api/ingest
 export PAPER_PUBLISH_TOKEN=<ingest token>
+export PAPER_PUBLISH_BYPASS=<automation bypass secret>      # only while Vercel Authentication is on
 python -m paper.run --source ticks --symbol NQ.F --dataset futures --warm-from-lse 60 --port 8765
 ```
 The local dashboard on port 8765 keeps working; the same snapshot is also pushed every 15 s (`--publish-every`).
@@ -36,4 +40,4 @@ The local dashboard on port 8765 keeps working; the same snapshot is also pushed
 The page polls every 10 s while the tab is visible (one function call each); left open all week that is about 60,000 calls, far below the free allowance. The harness writes one small row every 15 s (about 5,000 a day); the row is overwritten, so the database does not grow.
 
 ## Files
-`public/index.html` is a copy of `paper/static/dashboard.html` (a test fails if they differ; edit the source and copy it over), `api/state.js`, `api/ingest.js`, `api/_supabase.js`, `vercel.json`, `supabase/schema.sql`, `test_api.js` (`node --test web/test_api.js`).
+`public/index.html` is a copy of `paper/static/dashboard.html` (a test fails if they differ; edit the source and copy it over), `api/state.js`, `api/ingest.js`, `api/health.js`, `api/_supabase.js`, `vercel.json` (all at the repo root), `web/supabase/schema.sql`, `web/test_api.js` (`node --test web/test_api.js`).

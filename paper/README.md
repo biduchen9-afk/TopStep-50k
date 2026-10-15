@@ -38,4 +38,4 @@ Known limits of the vault candles (FINDINGS section 32): 24% of the sessions aft
 
 
 ## Optional: publish to the remote viewer (Vercel + Supabase)
-Set `PAPER_PUBLISH_URL` (https://<project>.vercel.app/api/ingest) and `PAPER_PUBLISH_TOKEN` in the environment of the harness and it pushes its snapshot every `--publish-every` seconds (default 15) so the page in `web/` can be opened from any device. Setup, security model and limits: `web/README.md`. The engine always runs in the harness; the viewer only displays.
+Set `PAPER_PUBLISH_URL` (https://<project>.vercel.app/api/ingest) and `PAPER_PUBLISH_TOKEN` in the environment of the harness and it pushes its snapshot every `--publish-every` seconds (default 15) so the viewer (`api/` + `public/` at the repo root, notes in `web/README.md`) can be opened from any device. Setup, security model and limits: `web/README.md`. The engine always runs in the harness; the viewer only displays.
