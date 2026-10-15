@@ -50,6 +50,7 @@ def main(argv=None) -> None:
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-server", action="store_true")
+    ap.add_argument("--publish-every", type=float, default=15.0, help="seconds between snapshots pushed to the remote viewer when PAPER_PUBLISH_URL and PAPER_PUBLISH_TOKEN are set in the environment")
     ap.add_argument("--dump", default=None, help="write the final snapshot JSON here when the feed ends")
     ap.add_argument("--stop-at", default=None, help="replay: stop feeding at this Eastern wall-clock time (e.g. '2026-06-26 14:20') and leave that session open, to look at a mid-session state")
     a = ap.parse_args(argv)
@@ -138,8 +139,15 @@ def main(argv=None) -> None:
 
     th = threading.Thread(target=pump, daemon=True)
     th.start()
+    from paper.publish import from_env
+    pub = from_env(runner, a.publish_every)
+    if pub is not None:
+        pub.start()
+        print(f"publishing a snapshot every {a.publish_every:.0f} s to {pub.url}", flush=True)
     if a.no_server:
         th.join()
+        if pub is not None:
+            pub.once()
         return
     print(f"dashboard: http://{a.host}:{a.port}/", flush=True)
     serve(runner, a.host, a.port, block=True)

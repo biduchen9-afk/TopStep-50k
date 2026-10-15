@@ -396,3 +396,62 @@ def test_runner_on_tick_built_bars_equals_runner_on_the_original_bars():
     assert len(ja) == len(jb) == 3
     for x, y in zip(ja, jb):
         assert x["date"] == y["date"] and abs(x["noise"]["usd"] - y["noise"]["usd"]) < 1e-6 and abs(x["gap"]["usd"] - y["gap"]["usd"]) < 1e-6 and x["noise"]["trades"] == y["noise"]["trades"]
+
+
+def test_publisher_posts_the_snapshot_with_a_bearer_token_and_never_leaks_it(tmp_path):
+    import http.server
+    import json
+    import threading
+    import pandas as pd
+    from market_data import build_sessions
+    from paper.farm import PaperFarm
+    from paper.feed import ReplayFeed
+    from paper.history import History
+    from paper.publish import Publisher
+    from paper.runner import PaperRunner
+    from paper.server import jsonable
+    from pricing_config import load_config
+    from real_engine import costs_from_config
+    sess = build_sessions("nq")
+    cost = costs_from_config(load_config()).points(sess)
+    dates = sess.dates.astype("datetime64[D]")
+    i0 = int(np.searchsorted(dates, np.datetime64("2019-03-01")))
+    r = PaperRunner(History.from_sessions(sess, i0), PaperFarm(), cost, None, dict(mode="REPLAY", symbol="x"), t0=i0)
+    r.last_label = pd.Timestamp(sess.dates[i0 - 1]).date()
+    for b in ReplayFeed(sess, pd.Timestamp(sess.dates[i0]), pd.Timestamp(sess.dates[i0 + 6])):
+        r.process(b)
+    seen, status = [], [200]
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            seen.append((self.path, self.headers.get("Authorization"), self.headers.get("Content-Type"), body))
+            self.send_response(status[0]); self.send_header("Content-Length", "0"); self.end_headers()
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    tok = "T" * 43
+    pub = Publisher(r, f"http://127.0.0.1:{srv.server_address[1]}/api/ingest", tok)
+    assert pub.once() and pub.ok == 1
+    path, auth, ctype, body = seen[0]
+    assert path == "/api/ingest" and auth == "Bearer " + tok and ctype == "application/json"
+    assert tok.encode() not in body                                      # the token is not part of the published data
+    got, want = json.loads(body), json.loads(json.dumps(jsonable(r.snapshot())))
+    got.pop("wall"), want.pop("wall")
+    assert got == want and got["farm"] is not None and len(got["journal"]) == 6        # the 7th session is still open
+    status[0] = 401
+    assert not pub.once() and "token rejected" in pub.last_error         # a rejected token is reported, never raised
+    status[0] = 200
+    srv.shutdown()
+    assert not pub.once() and pub.last_error                              # server gone: reported, not raised
+    with pytest.raises(ValueError):
+        Publisher(r, "http://example.com/api/ingest", tok)               # plain http is only allowed for localhost
+
+
+def test_remote_viewer_page_is_the_same_file_as_the_local_dashboard():
+    """web/public/index.html is a copy of paper/static/dashboard.html (the Vercel viewer serves the very same page); edit the source and copy it over."""
+    import pathlib
+    root = pathlib.Path(__file__).parent
+    assert (root / "web/public/index.html").read_bytes() == (root / "paper/static/dashboard.html").read_bytes()
