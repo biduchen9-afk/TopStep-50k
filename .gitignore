@@ -1,2 +1,5 @@
 __pycache__/
 .pytest_cache/
+paper_state*.pkl
+*.tmp
+data_new/

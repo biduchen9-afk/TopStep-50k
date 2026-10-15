@@ -61,6 +61,8 @@ class PaperRunner:
         self.vw_session: List[float] = []
         self.roll_today = False
         self.roll_note = ""
+        self.zero_vol = 0
+        self.bad_data = False
 
     def _make_sleeves(self) -> None:
         self.sleeves = {"noise": NoiseAreaSleeve(self.cost), "gap": VwapAtrSleeve(self.cost, 0.3, 0.2, OR_END, True)}
@@ -83,10 +85,10 @@ class PaperRunner:
     def _finish_session(self) -> None:
         for s in self.sleeves.values():
             s.finish()
-        day, row = {}, dict(date=str(self.cur_label), t=self.t_next, roll=self.roll_today, bars=len(self.bars))
+        day, row = {}, dict(date=str(self.cur_label), t=self.t_next, roll=self.roll_today or self.bad_data, bars=len(self.bars), zero_vol=self.zero_vol)
         for g, s in self.sleeves.items():
             pts, low, tr = s.result()
-            if self.roll_today or not self.ctx.get("ok", False):
+            if self.roll_today or self.bad_data or not self.ctx.get("ok", False):
                 pts = low = 0.0
             day[g] = dict(x=pts * POINT_USD_PER_MICRO, lo=low * POINT_USD_PER_MICRO)
             row[g] = dict(usd=day[g]["x"], low=day[g]["lo"], trades=tr)
@@ -124,11 +126,18 @@ class PaperRunner:
                     for s in self.sleeves.values():
                         s.finish()
             self.bars.append(bar)
+            if bar.v <= 0:
+                self.zero_vol += 1
+            if not self.bad_data and len(self.bars) >= 30 and self.zero_vol / len(self.bars) > 0.5:
+                self.bad_data = True
+                self.roll_note = "feed carries no volume: the VWAP-based sleeves cannot be computed, session not traded"
+                for sl in self.sleeves.values():
+                    sl.finish()
             tp = (bar.h + bar.l + bar.c) / 3.0
             self.cpv += tp * bar.v
             self.cv += bar.v
             self.vw_session.append(self.cpv / max(self.cv, 1.0))
-            if not self.roll_today:
+            if not self.roll_today and not self.bad_data:
                 for s in self.sleeves.values():
                     s.on_bar(len(self.bars) - 1, smin, bar.o, bar.h, bar.l, bar.c, bar.v)
             self.n_bars_total += 1
@@ -221,7 +230,7 @@ class PaperRunner:
             return dict(
                 meta=self.meta, now=str(self.last_bar_ts) if self.last_bar_ts is not None else None, wall=time.time(), bars_total=self.n_bars_total,
                 session=dict(label=str(self.cur_label) if self.cur_label else None, t=self.t_next, bars=len(self.bars), last=lc, last_smin=(lastb.smin if lastb else None), atr_pts=self.ctx.get("atr") if self.ctx else None,
-                             prev_close=self.ctx.get("prev_close") if self.ctx else None, ok=bool(self.ctx.get("ok")) if self.ctx else False, roll=self.roll_today, roll_note=self.roll_note,
+                             prev_close=self.ctx.get("prev_close") if self.ctx else None, ok=bool(self.ctx.get("ok")) if self.ctx else False, roll=self.roll_today or self.bad_data, roll_note=self.roll_note,
                              flat_by_smin=FLAT_BY, last_completed=str(self.last_label) if self.last_label else None),
                 sleeves={g: self._sleeve_view(g, lc) for g in GROUP_SLEEVE}, accounts=self._accounts_view(lc), farm=sm, bands=bands, chart=chart,
                 journal=self.journal[-60:], net_curve=[[str(d), float(v)] for d, v in self.farm.net_curve[-400:]], events=self.farm.log[-60:],
