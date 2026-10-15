@@ -24,10 +24,10 @@ def mk_plan(a1, t1, a2, w1=None, scale=None, scale2=None):
 
 class Acc:
     """Combine outcomes of one sleeve on sequential dev starts, computed once; funded runs per plan."""
-    def __init__(self, s, n_dev):
+    def __init__(self, s, n_dev, starts=None):
         spec = S["spec"]; self.s, self.spec, self.n_dev = s, spec, n_dev
         self.x, self.lo, self.atr = s.pnl[:n_dev].tolist(), s.low[:n_dev].tolist(), s.atr_usd[:n_dev].tolist(); self.nd = s.desired_micros(R)[:n_dev]
-        first = int(np.flatnonzero(s.ok)[0]) + 260; self.starts = list(range(first, n_dev - 400, 3)); self.d = pd.DatetimeIndex(s.dates)
+        first = int(np.flatnonzero(s.ok)[0]) + 260; self.starts = list(range(first, n_dev - 400, 3)) if starts is None else list(starts); self.d = pd.DatetimeIndex(s.dates)
         self.ev = [(i0,) + run_eval_firm(spec.eval_phases, self.x, self.lo, self.nd, i0) for i0 in self.starts]
 
     def run(self, a1, t1, a2, w1=None, scale=None):
