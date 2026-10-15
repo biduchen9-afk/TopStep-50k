@@ -1,0 +1,13 @@
+import pandas as pd
+pd.set_option("display.width",250,"display.max_columns",40,"display.max_colwidth",60)
+d=pd.read_csv("results/farm_dev_grid.csv")
+print(len(d))
+print(d.sort_values("dev_net_3y",ascending=False).head(10).round(0).to_string())
+print(d.sort_values("dev_net_3y",ascending=False).groupby("streams").head(1).round(0).to_string())
+print(d.groupby("a2")[["dev_net_3y","dev_p10"]].mean().round(0))
+print(d.groupby(["streams","a2"]).dev_net_3y.mean().unstack().round(0))
+print(d.groupby(["streams","a1"]).dev_net_3y.mean().unstack().round(0))
+print(d.groupby(["p_est","max_evals"])[["dev_net_3y"]].mean().round(0))
+print(pd.read_csv("results/farm_holdout.csv").round(0).T)
+print(pd.read_csv("results/farm_scaling.csv").round(1).to_string())
+print(pd.read_csv("results/farm_robustness.csv").round(1).to_string())

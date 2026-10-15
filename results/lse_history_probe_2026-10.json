@@ -1,0 +1,1085 @@
+{
+ "generated": "2026-10-15",
+ "metrics_only": true,
+ "no_prices": true,
+ "bulk_export_used": false,
+ "catalog": {
+  "rows_total": 22966,
+  "catalog_row_fields_returned": [
+   "category",
+   "change_1y",
+   "change_pct",
+   "country",
+   "country_name",
+   "dataset",
+   "first_tick",
+   "frequency",
+   "last_tick",
+   "last_value",
+   "live",
+   "name",
+   "source",
+   "symbol",
+   "ticks",
+   "unit",
+   "years"
+  ],
+  "note": "catalog rows carry no exchange, timeframe or per-timeframe candle span; first_tick/last_tick/ticks are for the tick table only",
+  "matched_by_symbol_or_name_NQ_MNQ_NDX_Nasdaq_E-mini_100_all_datasets": 30,
+  "mnq_matches": 0,
+  "nasdaq100_like_rows": [
+   {
+    "dataset": "futures",
+    "symbol": "NQ.F",
+    "name": "Nasdaq 100 Futures",
+    "ticks": 111764722,
+    "first_tick": "2025-09-19 00:00:00.052952",
+    "last_tick": "2026-10-15 04:32:20.286891",
+    "years": 1.1,
+    "live": 1
+   },
+   {
+    "dataset": "index",
+    "symbol": "NAS100/USD",
+    "name": "NASDAQ 100",
+    "ticks": 46494168,
+    "first_tick": "2023-02-15 14:30:15.000000",
+    "last_tick": "2026-10-15 04:32:40.059342",
+    "years": 3.7,
+    "live": 1
+   },
+   {
+    "dataset": "etf",
+    "symbol": "QQQ",
+    "name": "Invesco QQQ Trust, Series 1",
+    "ticks": 32918103,
+    "first_tick": "2026-04-27 13:38:17.613000",
+    "last_tick": "2026-10-14 23:59:55.944222",
+    "years": 0.5,
+    "live": 1
+   },
+   {
+    "dataset": "etf",
+    "symbol": "TQQQ",
+    "name": "ProShares UltraPro QQQ",
+    "ticks": 21206036,
+    "first_tick": "2026-04-27 13:38:17.637000",
+    "last_tick": "2026-10-14 23:59:56.865866",
+    "years": 0.5,
+    "live": 1
+   },
+   {
+    "dataset": "index",
+    "symbol": "NASCOMP/USD",
+    "name": "NASDAQ Composite",
+    "ticks": 19617532,
+    "first_tick": "2023-02-15 14:30:15.000000",
+    "last_tick": "2026-06-30 21:15:59.000000",
+    "years": 3.4,
+    "live": 0
+   },
+   {
+    "dataset": "etf",
+    "symbol": "SQQQ",
+    "name": "ProShares - UltraPro Short QQQ",
+    "ticks": 9342416,
+    "first_tick": "2026-04-27 13:38:16.936000",
+    "last_tick": "2026-10-14 23:59:59.215937",
+    "years": 0.5,
+    "live": 1
+   },
+   {
+    "dataset": "stocks",
+    "symbol": "NDAQ",
+    "name": "Nasdaq, Inc.",
+    "ticks": 2545899,
+    "first_tick": "2026-04-27 13:38:17.008000",
+    "last_tick": "2026-10-14 23:55:55.914973",
+    "years": 0.5,
+    "live": 1
+   }
+  ],
+  "other_matches_are_unrelated": "IONQ, CNQ, AQN, SNDX, DXYZ, GEMI (stocks/options names containing NQ, NDX or 100), economics series, credit_indices, one corporate bond"
+ },
+ "meta_endpoint": {
+  "path": "GET /vault/meta",
+  "timeframes": [
+   "1s",
+   "5s",
+   "15s",
+   "30s",
+   "1m",
+   "3m",
+   "5m",
+   "15m",
+   "30m",
+   "1h",
+   "4h",
+   "1d",
+   "1w",
+   "1mo"
+  ],
+  "candle_classes": [
+   "commodity",
+   "crypto",
+   "etf",
+   "futures",
+   "fx",
+   "index",
+   "stocks"
+  ],
+  "access_futures": [
+   "candles",
+   "export"
+  ],
+  "access_index": [
+   "candles",
+   "export"
+  ],
+  "states_history_depth": false,
+  "documents_tick_endpoint_other_than_export": false
+ },
+ "candle_depth_by_timeframe": {
+  "NQ.F": {
+   "dataset": "futures",
+   "1d_from_2010-01-01": {
+    "start_requested": "2010-01-01",
+    "rows_keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "first_ts": "2016-05-29 00:00:00.000000",
+    "last_ts": "2026-10-14 00:00:00.000000",
+    "empty": false
+   },
+   "1h_from_2016-01-01": {
+    "start_requested": "2016-01-01",
+    "rows_keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "first_ts": "2016-05-29 22:00:00.000000",
+    "last_ts": "2026-10-15 04:00:00.000000",
+    "empty": false
+   },
+   "1m_from_2010-01-01": {
+    "start_requested": "2010-01-01",
+    "rows_keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "first_ts": "2016-05-29 22:01:00.000000",
+    "last_ts": "2026-10-15 05:49:00.000000",
+    "empty": false
+   }
+  },
+  "NAS100/USD": {
+   "dataset": "index",
+   "1d_from_2010-01-01": {
+    "start_requested": "2010-01-01",
+    "rows_keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "first_ts": "2010-01-04 00:00:00.000000",
+    "last_ts": "2026-10-15 00:00:00.000000",
+    "empty": false
+   },
+   "1h_from_2016-01-01": {
+    "start_requested": "2016-01-01",
+    "rows_keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "first_ts": "2016-01-04 14:00:00.000000",
+    "last_ts": "2026-10-15 06:00:00.000000",
+    "empty": false
+   },
+   "1m_from_2010-01-01": {
+    "start_requested": "2010-01-01",
+    "rows_keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "first_ts": "2010-01-04 14:30:00.000000",
+    "last_ts": "2026-10-15 06:50:00.000000",
+    "empty": false
+   }
+  }
+ },
+ "sample_days_1m": {
+  "NQ.F": {
+   "2016-06-15": {
+    "bars": 1330,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2016-06-14 22:00:00.000000",
+    "last_ts_utc": "2016-06-15 20:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2019-06-12": {
+    "bars": 1365,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2019-06-11 22:00:00.000000",
+    "last_ts_utc": "2019-06-12 20:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2022-06-15": {
+    "bars": 1380,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2022-06-14 22:00:00.000000",
+    "last_ts_utc": "2022-06-15 20:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2024-06-12": {
+    "bars": 1380,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2024-06-11 22:00:00.000000",
+    "last_ts_utc": "2024-06-12 20:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2025-06-11": {
+    "bars": 1380,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2025-06-10 22:00:00.000000",
+    "last_ts_utc": "2025-06-11 20:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2026-01-14": {
+    "bars": 1380,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2026-01-13 23:00:00.000000",
+    "last_ts_utc": "2026-01-14 21:59:00.000000",
+    "n_rows_cap_hit": false
+   }
+  },
+  "NAS100/USD": {
+   "2016-06-15": {
+    "bars": 389,
+    "rth_bars_0930_1555": 384,
+    "first_ts_utc": "2016-06-15 13:30:00.000000",
+    "last_ts_utc": "2016-06-15 19:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2019-06-12": {
+    "bars": 390,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2019-06-12 13:30:00.000000",
+    "last_ts_utc": "2019-06-12 19:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2022-06-15": {
+    "bars": 390,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2022-06-15 13:30:00.000000",
+    "last_ts_utc": "2022-06-15 19:59:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2024-06-12": {
+    "bars": 391,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2024-06-12 13:30:00.000000",
+    "last_ts_utc": "2024-06-12 20:00:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2025-06-11": {
+    "bars": 391,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2025-06-11 13:30:00.000000",
+    "last_ts_utc": "2025-06-11 20:00:00.000000",
+    "n_rows_cap_hit": false
+   },
+   "2026-01-14": {
+    "bars": 1380,
+    "rth_bars_0930_1555": 385,
+    "first_ts_utc": "2026-01-13 23:00:00.000000",
+    "last_ts_utc": "2026-01-14 21:59:00.000000",
+    "n_rows_cap_hit": false
+   }
+  }
+ },
+ "interpretation_depth": {
+  "NQ.F": "1m, 1h and 1d candles all start 2016-05-29 (about 10.4 years); the catalog first_tick 2025-09-19 is the tick table only, not the candle depth. Sampled days from 2016 to 2026-01 and 2025-06 (before the first catalog tick) each have 385 regular-hours bars.",
+  "NAS100/USD": "index (CFD-like, no 18:00 session before 2026; 2016 to 2025 sampled days are regular hours only); 1d from 2010-01-04, 1h from 2016-01-04, 1m from 2010-01-04; NOT a CME futures series (not to be used for the forward test)",
+  "1m_shorter_than_1d": false
+ },
+ "our_pull_vs_repull": {
+  "paging_code": "paper.feed.lse_fetch: GET /vault/candles, order=asc, limit=5000, start advanced to last bar + 1 minute (UTC), stops when a page has fewer than limit rows",
+  "days_checked": {
+   "2026-07-27": {
+    "rth_bars_before": 338,
+    "rth_missing_before": 47,
+    "day": {
+     "rows_returned": 1331,
+     "rth_bars_now": 338,
+     "window_minutes_expected": 385,
+     "window_bars_now": 338,
+     "window_bars_before": 338,
+     "holes_in_window_now": 47,
+     "holes_in_window_before": 47,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "6h": {
+     "rows_returned": 313,
+     "rth_bars_now": 313,
+     "window_minutes_expected": 360,
+     "window_bars_now": 313,
+     "window_bars_before": 313,
+     "holes_in_window_now": 47,
+     "holes_in_window_before": 47,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "before_missing_runs_ET": [
+     [
+      "09:31",
+      "09:31"
+     ],
+     [
+      "09:34",
+      "09:34"
+     ],
+     [
+      "09:40",
+      "09:40"
+     ],
+     [
+      "09:43",
+      "09:43"
+     ],
+     [
+      "09:47",
+      "09:47"
+     ],
+     [
+      "09:51",
+      "09:51"
+     ],
+     [
+      "09:53",
+      "09:54"
+     ],
+     [
+      "09:59",
+      "09:59"
+     ],
+     [
+      "10:02",
+      "10:03"
+     ],
+     [
+      "10:05",
+      "10:06"
+     ],
+     [
+      "10:08",
+      "10:09"
+     ],
+     [
+      "10:12",
+      "10:13"
+     ],
+     [
+      "10:15",
+      "10:15"
+     ],
+     [
+      "10:21",
+      "10:21"
+     ],
+     [
+      "10:24",
+      "10:24"
+     ],
+     [
+      "10:30",
+      "10:30"
+     ],
+     [
+      "10:32",
+      "10:33"
+     ],
+     [
+      "10:35",
+      "10:36"
+     ],
+     [
+      "10:38",
+      "10:39"
+     ],
+     [
+      "10:42",
+      "10:43"
+     ],
+     [
+      "10:45",
+      "10:46"
+     ],
+     [
+      "10:48",
+      "10:49"
+     ],
+     [
+      "10:51",
+      "10:52"
+     ],
+     [
+      "11:01",
+      "11:01"
+     ],
+     [
+      "11:03",
+      "11:03"
+     ],
+     [
+      "11:06",
+      "11:06"
+     ],
+     [
+      "11:09",
+      "11:09"
+     ],
+     [
+      "11:12",
+      "11:12"
+     ],
+     [
+      "11:19",
+      "11:19"
+     ],
+     [
+      "11:23",
+      "11:23"
+     ],
+     [
+      "11:37",
+      "11:37"
+     ],
+     [
+      "12:26",
+      "12:27"
+     ],
+     [
+      "14:43",
+      "14:43"
+     ],
+     [
+      "14:49",
+      "14:49"
+     ]
+    ]
+   },
+   "2026-07-29": {
+    "rth_bars_before": 324,
+    "rth_missing_before": 61,
+    "day": {
+     "rows_returned": 1313,
+     "rth_bars_now": 324,
+     "window_minutes_expected": 385,
+     "window_bars_now": 324,
+     "window_bars_before": 324,
+     "holes_in_window_now": 61,
+     "holes_in_window_before": 61,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "6h": {
+     "rows_returned": 309,
+     "rth_bars_now": 309,
+     "window_minutes_expected": 360,
+     "window_bars_now": 309,
+     "window_bars_before": 309,
+     "holes_in_window_now": 51,
+     "holes_in_window_before": 51,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "before_missing_runs_ET": [
+     [
+      "09:31",
+      "09:31"
+     ],
+     [
+      "09:33",
+      "09:34"
+     ],
+     [
+      "09:36",
+      "09:36"
+     ],
+     [
+      "09:40",
+      "09:40"
+     ],
+     [
+      "09:46",
+      "09:46"
+     ],
+     [
+      "09:51",
+      "09:51"
+     ],
+     [
+      "09:57",
+      "09:57"
+     ],
+     [
+      "10:01",
+      "10:01"
+     ],
+     [
+      "10:05",
+      "10:05"
+     ],
+     [
+      "10:14",
+      "10:14"
+     ],
+     [
+      "10:19",
+      "10:19"
+     ],
+     [
+      "10:22",
+      "10:22"
+     ],
+     [
+      "10:25",
+      "10:25"
+     ],
+     [
+      "10:30",
+      "10:30"
+     ],
+     [
+      "10:32",
+      "10:33"
+     ],
+     [
+      "10:39",
+      "10:39"
+     ],
+     [
+      "10:46",
+      "10:46"
+     ],
+     [
+      "10:48",
+      "10:48"
+     ],
+     [
+      "10:55",
+      "10:55"
+     ],
+     [
+      "11:01",
+      "11:01"
+     ],
+     [
+      "11:04",
+      "11:04"
+     ],
+     [
+      "11:07",
+      "11:07"
+     ],
+     [
+      "11:10",
+      "11:10"
+     ],
+     [
+      "11:13",
+      "11:13"
+     ],
+     [
+      "14:01",
+      "14:02"
+     ],
+     [
+      "14:06",
+      "14:07"
+     ],
+     [
+      "14:11",
+      "14:11"
+     ],
+     [
+      "14:13",
+      "14:14"
+     ],
+     [
+      "14:23",
+      "14:23"
+     ],
+     [
+      "14:32",
+      "14:33"
+     ],
+     [
+      "14:36",
+      "14:36"
+     ],
+     [
+      "14:43",
+      "14:43"
+     ],
+     [
+      "14:48",
+      "14:48"
+     ],
+     [
+      "14:57",
+      "14:57"
+     ],
+     [
+      "15:00",
+      "15:00"
+     ],
+     [
+      "15:05",
+      "15:05"
+     ],
+     [
+      "15:10",
+      "15:10"
+     ],
+     [
+      "15:12",
+      "15:13"
+     ],
+     [
+      "15:15",
+      "15:16"
+     ],
+     [
+      "15:18",
+      "15:19"
+     ],
+     [
+      "15:22",
+      "15:22"
+     ],
+     [
+      "15:26",
+      "15:26"
+     ],
+     [
+      "15:31",
+      "15:31"
+     ],
+     [
+      "15:35",
+      "15:35"
+     ],
+     [
+      "15:39",
+      "15:39"
+     ],
+     [
+      "15:42",
+      "15:42"
+     ],
+     [
+      "15:46",
+      "15:46"
+     ],
+     [
+      "15:48",
+      "15:49"
+     ],
+     [
+      "15:51",
+      "15:52"
+     ],
+     [
+      "15:54",
+      "15:54"
+     ]
+    ]
+   },
+   "2026-08-05": {
+    "rth_bars_before": 349,
+    "rth_missing_before": 36,
+    "day": {
+     "rows_returned": 1342,
+     "rth_bars_now": 349,
+     "window_minutes_expected": 385,
+     "window_bars_now": 349,
+     "window_bars_before": 349,
+     "holes_in_window_now": 36,
+     "holes_in_window_before": 36,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "6h": {
+     "rows_returned": 324,
+     "rth_bars_now": 324,
+     "window_minutes_expected": 360,
+     "window_bars_now": 324,
+     "window_bars_before": 324,
+     "holes_in_window_now": 36,
+     "holes_in_window_before": 36,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "before_missing_runs_ET": [
+     [
+      "09:31",
+      "09:31"
+     ],
+     [
+      "09:33",
+      "09:34"
+     ],
+     [
+      "09:37",
+      "09:38"
+     ],
+     [
+      "09:41",
+      "09:41"
+     ],
+     [
+      "09:47",
+      "09:47"
+     ],
+     [
+      "09:49",
+      "09:50"
+     ],
+     [
+      "09:52",
+      "09:52"
+     ],
+     [
+      "09:55",
+      "09:55"
+     ],
+     [
+      "10:02",
+      "10:02"
+     ],
+     [
+      "10:05",
+      "10:06"
+     ],
+     [
+      "10:10",
+      "10:10"
+     ],
+     [
+      "10:15",
+      "10:15"
+     ],
+     [
+      "10:17",
+      "10:18"
+     ],
+     [
+      "10:20",
+      "10:21"
+     ],
+     [
+      "10:25",
+      "10:25"
+     ],
+     [
+      "10:30",
+      "10:30"
+     ],
+     [
+      "10:34",
+      "10:34"
+     ],
+     [
+      "10:37",
+      "10:37"
+     ],
+     [
+      "10:39",
+      "10:40"
+     ],
+     [
+      "10:45",
+      "10:45"
+     ],
+     [
+      "10:51",
+      "10:51"
+     ],
+     [
+      "10:53",
+      "10:54"
+     ],
+     [
+      "10:56",
+      "10:57"
+     ],
+     [
+      "11:03",
+      "11:03"
+     ],
+     [
+      "11:06",
+      "11:06"
+     ],
+     [
+      "11:19",
+      "11:19"
+     ],
+     [
+      "12:04",
+      "12:04"
+     ]
+    ]
+   },
+   "2026-09-16": {
+    "rth_bars_before": 360,
+    "rth_missing_before": 25,
+    "day": {
+     "rows_returned": 1352,
+     "rth_bars_now": 360,
+     "window_minutes_expected": 385,
+     "window_bars_now": 360,
+     "window_bars_before": 360,
+     "holes_in_window_now": 25,
+     "holes_in_window_before": 25,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "6h": {
+     "rows_returned": 337,
+     "rth_bars_now": 337,
+     "window_minutes_expected": 360,
+     "window_bars_now": 337,
+     "window_bars_before": 337,
+     "holes_in_window_now": 23,
+     "holes_in_window_before": 23,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "before_missing_runs_ET": [
+     [
+      "11:49",
+      "11:50"
+     ],
+     [
+      "14:01",
+      "14:03"
+     ],
+     [
+      "14:09",
+      "14:11"
+     ],
+     [
+      "14:34",
+      "14:35"
+     ],
+     [
+      "14:40",
+      "14:42"
+     ],
+     [
+      "14:54",
+      "14:55"
+     ],
+     [
+      "15:01",
+      "15:03"
+     ],
+     [
+      "15:09",
+      "15:10"
+     ],
+     [
+      "15:26",
+      "15:28"
+     ],
+     [
+      "15:38",
+      "15:39"
+     ]
+    ]
+   },
+   "2026-10-05": {
+    "rth_bars_before": 282,
+    "rth_missing_before": 103,
+    "day": {
+     "rows_returned": 1276,
+     "rth_bars_now": 282,
+     "window_minutes_expected": 385,
+     "window_bars_now": 282,
+     "window_bars_before": 282,
+     "holes_in_window_now": 103,
+     "holes_in_window_before": 103,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "6h": {
+     "rows_returned": 257,
+     "rth_bars_now": 257,
+     "window_minutes_expected": 360,
+     "window_bars_now": 257,
+     "window_bars_before": 257,
+     "holes_in_window_now": 103,
+     "holes_in_window_before": 103,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "before_missing_runs_ET": [
+     [
+      "10:31",
+      "10:34"
+     ],
+     [
+      "10:37",
+      "10:37"
+     ],
+     [
+      "10:59",
+      "11:02"
+     ],
+     [
+      "11:15",
+      "12:13"
+     ],
+     [
+      "13:22",
+      "13:56"
+     ]
+    ]
+   },
+   "2026-10-12": {
+    "rth_bars_before": 72,
+    "rth_missing_before": 313,
+    "day": {
+     "rows_returned": 257,
+     "rth_bars_now": 72,
+     "window_minutes_expected": 385,
+     "window_bars_now": 72,
+     "window_bars_before": 72,
+     "holes_in_window_now": 313,
+     "holes_in_window_before": 313,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "6h": {
+     "rows_returned": 47,
+     "rth_bars_now": 47,
+     "window_minutes_expected": 360,
+     "window_bars_now": 47,
+     "window_bars_before": 47,
+     "holes_in_window_now": 313,
+     "holes_in_window_before": 313,
+     "previously_missing_minutes_now_present": 0,
+     "previously_present_minutes_now_absent": 0
+    },
+    "before_missing_runs_ET": [
+     [
+      "09:30",
+      "14:42"
+     ]
+    ]
+   }
+  },
+  "verdict": "re-pulls (single-day and 6-hour requests, fresh) return exactly the bars already stored on all six days; no previously missing minute appeared and no stored minute disappeared. The holes are in the vault, not in our paging. No change to paper/feed.py."
+ },
+ "ticks_and_subminute_check_2026-07-29": {
+  "tests": {
+   "candles_1s_limit5000": {
+    "ok": true,
+    "type": "list",
+    "n": 3967,
+    "keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ],
+    "rows_1s": 3967,
+    "first_ts": "2026-07-29 13:30:00.000000",
+    "last_ts": "2026-07-29 15:29:59.000000",
+    "cap_hit": false,
+    "minutes_in_window": 120,
+    "minutes_missing_in_stored_1m": 26,
+    "of_those_missing_minutes_with_any_1s_bar": 0,
+    "minutes_with_1s_bars": 94,
+    "stored_1m_minutes_without_any_1s_bar": 0
+   },
+   "candles_timeframe_tick": {
+    "ok": false,
+    "error": "[400] {\"detail\":\"{\\\"detail\\\":\\\"invalid timeframe 'tick'; valid: 1s, 5s, 15s, 30s, 1m, 3m, 5m, 15m, 30m, 1h, 4h, 1d, 1w, 1mo\\\"}\"}"
+   },
+   "candles_ticks_param": {
+    "ok": true,
+    "type": "list",
+    "n": 50,
+    "keys": [
+     "close",
+     "high",
+     "low",
+     "open",
+     "symbol",
+     "ts",
+     "volume"
+    ]
+   },
+   "ticks_endpoint": {
+    "ok": false,
+    "error": "[404] {\"detail\":\"Not Found\"}"
+   }
+  },
+  "conclusion": "No documented tick endpoint other than the bulk export (not run). /vault/ticks: 404. timeframe=tick: 400 (valid timeframes start at 1s). A ticks=true parameter on /candles is silently ignored (ordinary candles returned). 1s candles for 09:30-11:30 ET: none of the 26 minutes missing from the stored 1m bars has any 1s bar either, so the holes are not a 1m candle-building problem; the vault has no trades recorded in those minutes (NQ trades every minute, so this is a capture gap)."
+ },
+ "holes_timing_from_stored_csv": {
+  "sessions_2026-06-01_to_2026-07-02": 24,
+  "of_which_incomplete": 1,
+  "incomplete_session": "2026-06-19 early close (210 bars)",
+  "sessions_from_2026-07-03": 74,
+  "with_fewer_than_385_rth_bars": 46,
+  "with_385": 28,
+  "missing_minutes": 1415,
+  "of_minutes": 28490,
+  "sessions_from_2026-07-23": 60,
+  "short_from_2026-07-23": 41
+ },
+ "samples_cover_full_history": false,
+ "not_checked": [
+  "completeness of every session before 2026-06 (only six sample days per symbol)",
+  "how the vault builds the contract roll in the pre-2025-09 history",
+  "whether pre-2025-09 volume is real traded volume"
+ ]
+}

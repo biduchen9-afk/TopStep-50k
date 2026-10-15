@@ -1,0 +1,41 @@
+config,start,net,payouts,fees,funded
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all)",2023-01-02,2180.572749999992,32428.572749999992,30248.0,19.0
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all)",2024-01-02,-8389.102500000003,14893.897499999997,23283.0,15.0
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all)",2025-01-02,-16318.0,0.0,16318.0,7.0
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all)",2025-07-01,-9154.0,0.0,9154.0,7.0
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all) | coin-flip control (mean of 8)",2023-01-02,26435.926171875013,,,
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all) | coin-flip control (mean of 8)",2024-01-02,1009.8437499999964,,,
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all) | coin-flip control (mean of 8)",2025-01-02,-5406.445312499998,,,
+"A previous headline (NQ noise, ATR, R=6400, a2=1.6, refill all) | coin-flip control (mean of 8)",2025-07-01,1020.6156250000026,,,
+B DEV-selected,2023-01-02,19261.07078571432,45529.07078571432,26268.0,20.0
+B DEV-selected,2024-01-02,14899.122767857225,36590.122767857225,21691.0,15.0
+B DEV-selected,2025-01-02,5471.205410714363,20794.205410714363,15323.0,10.0
+B DEV-selected,2025-07-01,-1505.0549464285032,8643.945053571497,10149.0,5.0
+B DEV-selected | coin-flip control (mean of 8),2023-01-02,5746.52968749999,,,
+B DEV-selected | coin-flip control (mean of 8),2024-01-02,-864.447656250004,,,
+B DEV-selected | coin-flip control (mean of 8),2025-01-02,-4711.402343749998,,,
+B DEV-selected | coin-flip control (mean of 8),2025-07-01,-1025.3664062499984,,,
+C = B + throttle (pause<10% trailing pass rate),2023-01-02,24061.854071428577,39185.85407142858,15124.0,11.0
+C = B + throttle (pause<10% trailing pass rate),2024-01-02,12378.910642857169,29492.91064285717,17114.0,11.0
+C = B + throttle (pause<10% trailing pass rate),2025-01-02,4604.636928571363,7987.636928571363,3383.0,5.0
+C = B + throttle (pause<10% trailing pass rate),2025-07-01,-2512.3536607142637,2661.6463392857363,5174.0,1.0
+C = B + throttle (pause<10% trailing pass rate) | coin-flip control (mean of 8),2023-01-02,-13979.842968750003,,,
+C = B + throttle (pause<10% trailing pass rate) | coin-flip control (mean of 8),2024-01-02,-459.51406249999854,,,
+C = B + throttle (pause<10% trailing pass rate) | coin-flip control (mean of 8),2025-01-02,-302.2648437499993,,,
+C = B + throttle (pause<10% trailing pass rate) | coin-flip control (mean of 8),2025-07-01,-216.7531249999995,,,
+D = B + buffer refill rule,2023-01-02,8553.166410714286,25468.166410714286,16915.0,12.0
+D = B + buffer refill rule,2024-01-02,7182.197910714331,21112.19791071433,13930.0,9.0
+D = B + buffer refill rule,2025-01-02,2392.678714285752,12541.678714285752,10149.0,6.0
+D = B + buffer refill rule,2025-07-01,-2262.22321428568,4503.77678571432,6766.0,3.0
+D = B + buffer refill rule | coin-flip control (mean of 8),2023-01-02,2120.246484375006,,,
+D = B + buffer refill rule | coin-flip control (mean of 8),2024-01-02,-5272.909375,,,
+D = B + buffer refill rule | coin-flip control (mean of 8),2025-01-02,-4464.4,,,
+D = B + buffer refill rule | coin-flip control (mean of 8),2025-07-01,-1420.9796874999997,,,
+E = B + hyst refill + throttle 10%,2023-01-02,24061.854071428577,39185.85407142858,15124.0,11.0
+E = B + hyst refill + throttle 10%,2024-01-02,12378.910642857169,29492.91064285717,17114.0,11.0
+E = B + hyst refill + throttle 10%,2025-01-02,4604.636928571363,7987.636928571363,3383.0,5.0
+E = B + hyst refill + throttle 10%,2025-07-01,-2512.3536607142637,2661.6463392857363,5174.0,1.0
+E = B + hyst refill + throttle 10% | coin-flip control (mean of 8),2023-01-02,-13979.842968750003,,,
+E = B + hyst refill + throttle 10% | coin-flip control (mean of 8),2024-01-02,-459.51406249999854,,,
+E = B + hyst refill + throttle 10% | coin-flip control (mean of 8),2025-01-02,-302.2648437499993,,,
+E = B + hyst refill + throttle 10% | coin-flip control (mean of 8),2025-07-01,-216.7531249999995,,,

@@ -1,0 +1,25 @@
+stream,config,costs,start,net,payouts,fees,funded,n_payouts
+NQ noise-area,dev-frozen a1=.4 a2=1.6,old costs,2023-01-02,8823.174999999996,36086.174999999996,27263.0,18,35
+NQ noise-area,dev-frozen a1=.4 a2=1.6,old costs,2024-01-02,-4357.9375,16736.0625,21094.0,14,17
+NQ noise-area,dev-frozen a1=.4 a2=1.6,old costs,2025-01-02,-16517.0,0.0,16517.0,7,0
+NQ noise-area,dev-frozen a1=.4 a2=1.6,old costs,2025-07-01,-9353.0,0.0,9353.0,7,0
+NQ noise-area,dev-frozen a1=.4 a2=1.6,realistic micro fees,2023-01-02,2180.572749999992,32428.572749999992,30248.0,19,28
+NQ noise-area,dev-frozen a1=.4 a2=1.6,realistic micro fees,2024-01-02,-8389.102500000003,14893.897499999997,23283.0,15,10
+NQ noise-area,dev-frozen a1=.4 a2=1.6,realistic micro fees,2025-01-02,-16318.0,0.0,16318.0,7,0
+NQ noise-area,dev-frozen a1=.4 a2=1.6,realistic micro fees,2025-07-01,-9154.0,0.0,9154.0,7,0
+NQ noise-area,post-hoc a1=.4 a2=.4,old costs,2023-01-02,51887.12617187502,67210.12617187502,15323.0,14,67
+NQ noise-area,post-hoc a1=.4 a2=.4,old costs,2024-01-02,26341.356250000004,38679.356250000004,12338.0,9,36
+NQ noise-area,post-hoc a1=.4 a2=.4,old costs,2025-01-02,-16517.0,0.0,16517.0,7,0
+NQ noise-area,post-hoc a1=.4 a2=.4,old costs,2025-07-01,-9353.0,0.0,9353.0,7,0
+NQ noise-area,post-hoc a1=.4 a2=.4,realistic micro fees,2023-01-02,47495.91966406248,62619.91966406248,15124.0,14,65
+NQ noise-area,post-hoc a1=.4 a2=.4,realistic micro fees,2024-01-02,26840.23915624999,39576.23915624999,12736.0,9,36
+NQ noise-area,post-hoc a1=.4 a2=.4,realistic micro fees,2025-01-02,-16318.0,0.0,16318.0,7,0
+NQ noise-area,post-hoc a1=.4 a2=.4,realistic micro fees,2025-07-01,-9154.0,0.0,9154.0,7,0
+Portfolio,dev-frozen a1=.4 a2=.4,old costs,2023-01-02,54229.04772129492,88855.04772129492,34626.0,22,46
+Portfolio,dev-frozen a1=.4 a2=.4,old costs,2024-01-02,43621.27695729374,69491.27695729374,25870.0,14,30
+Portfolio,dev-frozen a1=.4 a2=.4,old costs,2025-01-02,28018.406598807538,44535.40659880754,16517.0,5,13
+Portfolio,dev-frozen a1=.4 a2=.4,old costs,2025-07-01,-13930.0,0.0,13930.0,0,0
+Portfolio,dev-frozen a1=.4 a2=.4,realistic micro fees,2023-01-02,51444.70071862801,84279.70071862801,32835.0,23,43
+Portfolio,dev-frozen a1=.4 a2=.4,realistic micro fees,2024-01-02,41753.50483848981,67623.50483848981,25870.0,14,30
+Portfolio,dev-frozen a1=.4 a2=.4,realistic micro fees,2025-01-02,24596.648898392028,41710.64889839203,17114.0,4,12
+Portfolio,dev-frozen a1=.4 a2=.4,realistic micro fees,2025-07-01,-14129.0,0.0,14129.0,0,0

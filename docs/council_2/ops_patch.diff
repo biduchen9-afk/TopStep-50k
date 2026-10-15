@@ -1,0 +1,284 @@
+diff -ruN -x __pycache__ -x static a/paper/run.py b/paper/run.py
+--- a/paper/run.py	2026-10-15 07:24:52.897574926 +0000
++++ b/paper/run.py	2026-10-15 09:35:58.536246021 +0000
+@@ -47,6 +47,7 @@
+     ap.add_argument("--warmup", default=None, help="lse: a warm-up file made by python -m paper.make_warmup (replaces the 2.7 GB stored Databento history on a machine that does not have it)")
+     ap.add_argument("--warm-from-lse", type=int, default=None, metavar="DAYS", help="lse: build the warm-up from the last DAYS calendar days of vault candles (no stored history needed; 60 is plenty), then start the farm fresh on the next session")
+     ap.add_argument("--fresh", action="store_true", help="ignore an existing state file")
++    ap.add_argument("--max-idle", type=float, default=None, help="ticks: batch mode, end the feed after this many seconds without a tick (run once a day between 16:00 and 17:00 ET with --no-server; the session is rebuilt from the vendor's 24 h replay)")
+     ap.add_argument("--host", default="127.0.0.1")
+     ap.add_argument("--port", type=int, default=8765)
+     ap.add_argument("--no-server", action="store_true")
+@@ -54,6 +55,7 @@
+     ap.add_argument("--dump", default=None, help="write the final snapshot JSON here when the feed ends")
+     ap.add_argument("--stop-at", default=None, help="replay: stop feeding at this Eastern wall-clock time (e.g. '2026-06-26 14:20') and leave that session open, to look at a mid-session state")
+     a = ap.parse_args(argv)
++    redact = lambda s: str(s).replace(os.environ.get("LSE_API_KEY") or "\0", "***")           # exception text can carry the URL; the snapshot (and the public viewer) must never carry the key
+ 
+     if a.warmup or a.warm_from_lse:
+         sess, cost_pts = None, 0.86                                   # NQ: ($1.22 x 10 per mini) / $20 per point + one 0.25 tick = 0.86 points per round trip (same as costs_from_config)
+@@ -91,6 +93,8 @@
+         runner = PaperRunner(History.from_sessions(sess), PaperFarm(), cost_pts, a.state, meta, t0=n, live_guards=True)
+         runner.last_label = pd.Timestamp(sess.dates[n - 1]).date()
+     runner.state_path = a.state
++    runner.bar_log = os.path.splitext(a.state)[0] + "_bars.csv"
++    tb_ref = None
+     if a.source == "replay":
+         if sess is None:
+             sys.exit("--source replay needs the stored sessions")
+@@ -108,10 +112,11 @@
+                 sys.exit("LSE_API_KEY is not set in the environment")
+             now = pd.Timestamp.now(tz="UTC")
+             first = (pd.Timestamp(nxt) - pd.Timedelta(days=1) + pd.Timedelta(hours=18)).tz_localize("America/New_York").tz_convert("UTC")
+-            tick_from = max(first, now - pd.Timedelta(hours=23))                 # the stream replays at most 24 hours; anything older is caught up from the vault candles
++            tick_from = max(first, (now - pd.Timedelta(hours=23)).ceil("min"))   # the stream replays at most 24 hours; anything older is caught up from the vault candles (whole minutes, so no partial first bar)
+             pre = lse_fetch(a.symbol, first.strftime("%Y-%m-%dT%H:%M:%S"), end=tick_from.strftime("%Y-%m-%dT%H:%M:%S"), dataset=a.dataset) if first < tick_from else []
+-            tb = TickBars(lambda s: sdk_ticks(a.symbol, key, s), start=tick_from.strftime("%Y-%m-%dT%H:%M:%S"))
++            tb = TickBars(lambda s: sdk_ticks(a.symbol, key, s), start=tick_from.strftime("%Y-%m-%dT%H:%M:%S"), stall=90.0, max_replay_hours=23.0, max_idle=a.max_idle)
+             runner.meta["volume_basis"] = "see tick fields (size/volume) once ticks arrive"
++            tb_ref = tb
+             feed = itertools.chain(pre, tb)
+         start = a.start or (pd.Timestamp(nxt) - pd.Timedelta(days=1)).strftime("%Y-%m-%dT18:00:00")     # wall clock; converted below
+         if not a.start:
+@@ -126,6 +131,8 @@
+                 if stop is not None and bar.ts >= stop:
+                     break
+                 runner.process(bar)
++                if tb_ref is not None:
++                    runner.meta.update(volume_basis=tb_ref.volume_basis, feed_reconnects=tb_ref.reconnects, feed_last_error=redact(tb_ref.last_error or ""), feed_rejected=dict(future=tb_ref.n_future, price=tb_ref.n_bad_price, size=tb_ref.n_bad_size, stall=tb_ref.n_stall))
+             if stop is None:
+                 runner.close_open_session()
+             print("feed finished", flush=True)
+@@ -134,7 +141,7 @@
+                 with open(a.dump, "w") as f:
+                     json.dump(jsonable(runner.snapshot()), f)
+         except Exception as e:                           # keep the dashboard up and show the problem
+-            runner.meta["error"] = f"{type(e).__name__}: {e}"
++            runner.meta["error"] = redact(f"{type(e).__name__}: {e}")
+             print("feed stopped:", runner.meta["error"], flush=True)
+ 
+     th = threading.Thread(target=pump, daemon=True)
+diff -ruN -x __pycache__ -x static a/paper/runner.py b/paper/runner.py
+--- a/paper/runner.py	2026-10-15 06:35:49.013860664 +0000
++++ b/paper/runner.py	2026-10-15 09:35:58.535757381 +0000
+@@ -56,6 +56,7 @@
+         self.n_bars_total = 0
+         self.last_bar_ts: Optional[pd.Timestamp] = None
+         self.started_wall = time.time()
++        self.bar_log: Optional[str] = None      # append every processed bar here (UTC ISO, o, h, l, c, v): the harness's own record of the live sample (restarts re-append a replayed session: keep the last copy per timestamp)
+ 
+     # ------------------------------------------------------------------ session lifecycle
+     def reset_session_arrays(self) -> None:
+@@ -73,7 +74,7 @@
+         r = np.asarray([m for m in smins if 930 <= m < 1315])
+         if len(r) >= RTH_MIN_BARS:
+             return False
+-        if len(r) and 1135 <= r.max() <= 1145 and len(r) >= 0.95 * (r.max() - 930 + 1):                    # early close: the session runs to about 13:00 ET (last bar 12:55 to 13:05) with no holes
++        if len(r) and 1135 <= r.max() <= 1160 and len(r) >= 0.95 * (r.max() - 930 + 1):                    # early close: 13:00 or 13:15 ET (last bar 12:55 to 13:20) with no holes
+             return False
+         return True
+ 
+@@ -124,6 +125,9 @@
+     # ------------------------------------------------------------------ bars
+     def process(self, bar: Bar) -> None:
+         if not in_session(bar):
++            with self.lock:
++                if self.cur_label is not None and bar.smin >= 1320 and bar.label == self.cur_label:
++                    self._finish_session()                 # 16:00 ET reached: close the session now (farm, journal, state file), not at the next evening's first bar
+             return
+         with self.lock:
+             lab = bar.label
+@@ -133,6 +137,8 @@
+                 self._finish_session()
+             if self.cur_label is None:
+                 self._start_session(lab)
++            if self.bars and bar.ts <= self.bars[-1].ts:
++                return                                     # duplicate or out-of-order bar (REST/tick seam, replay overlap)
+             smin = bar.smin
+             if self.live_guards and not self.bars and not self.roll_today and in_roll_window(lab) and self.hist.last_close:
+                 pc = self.hist.last_close[-1]
+@@ -147,6 +153,9 @@
+                     for s in self.sleeves.values():
+                         s.finish()
+             self.bars.append(bar)
++            if self.bar_log:
++                with open(self.bar_log, "a") as f:
++                    f.write(f"{bar.ts.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S')},{bar.o},{bar.h},{bar.l},{bar.c},{bar.v}\n")
+             if bar.v <= 0:
+                 self.zero_vol += 1
+             if not self.bad_data and len(self.bars) >= 30 and self.zero_vol / len(self.bars) > 0.5:
+diff -ruN -x __pycache__ -x static a/paper/tickfeed.py b/paper/tickfeed.py
+--- a/paper/tickfeed.py	2026-10-15 06:57:00.054040863 +0000
++++ b/paper/tickfeed.py	2026-10-15 09:34:27.225906708 +0000
+@@ -10,6 +10,7 @@
+ """
+ from __future__ import annotations
+ 
++import math
+ import queue
+ import threading
+ import time
+@@ -43,17 +44,31 @@
+ 
+ class TickBars:
+     def __init__(self, connect: Callable[[Optional[str]], Iterator[object]], start: Optional[str] = None, settle: float = 3.0, backoff: float = 5.0, max_idle: Optional[float] = None,
+-                 clock: Callable[[], float] = time.time, sleep: Callable[[float], None] = time.sleep, max_reconnects: Optional[int] = None):
++                 clock: Callable[[], float] = time.time, sleep: Callable[[float], None] = time.sleep, max_reconnects: Optional[int] = None,
++                 stall: Optional[float] = None, max_replay_hours: Optional[float] = None, max_future: float = 90.0):
+         self.connect, self.start, self.settle, self.backoff, self.max_idle = connect, start, settle, backoff, max_idle
+         self.clock, self.sleep, self.max_reconnects = clock, sleep, max_reconnects
+         self.volume_basis = "ticks (no size field seen)"
+         self.n_ticks = 0
+         self.last_emitted: Optional[pd.Timestamp] = None           # UTC start of the last emitted minute
+         self.reconnects = 0
++        self.stall, self.max_replay_hours, self.max_future = stall, max_replay_hours, max_future
++        self.last_error: Optional[str] = None
++        self.n_future = self.n_bad_price = self.n_bad_size = self.n_stall = 0
++        self._fail_streak = 0; self._fut_run = 0
++
++    @staticmethod
++    def market_open(ts_utc: pd.Timestamp) -> bool:
++        """CME equity-index Globex hours in ET: Sunday 18:00 to Friday 17:00, daily halt 17:00-18:00 (holidays not modelled)."""
++        t = ts_utc.tz_convert(ET); m, wd = t.hour * 60 + t.minute, t.weekday()
++        return not (wd == 5 or (wd == 4 and m >= 1020) or (wd == 6 and m < 1080) or 1020 <= m < 1080)
+ 
+     # ---------------------------------------------------------------- tick -> (minute start UTC, price, size)
+     def _parse(self, tick):
+         price = float(getattr(tick, "price"))
++        if not (math.isfinite(price) and price > 0):
++            self.n_bad_price += 1
++            raise ValueError("bad price")
+         size = None
+         for f in SIZE_FIELDS:
+             v = getattr(tick, f, None)
+@@ -62,6 +77,8 @@
+                     size = float(v); self.volume_basis = f; break
+                 except (TypeError, ValueError):
+                     pass
++        if size is not None and not (math.isfinite(size) and size >= 0):
++            self.n_bad_size += 1; size = 0.0                           # NaN / negative size: count the tick, not the contracts
+         t = _ts_utc(getattr(tick, "timestamp"))
+         return t.floor("min"), price, (size if size is not None else 1.0), bool(getattr(tick, "replay", False))
+ 
+@@ -83,18 +100,28 @@
+                         q.put(("tick", tk))
+                     q.put(("end", None))
+                 except Exception as e:                              # the stream dropped
++                    self.last_error = f"{type(e).__name__}: {e}"[:200]
+                     q.put(("error", e))
+             src_start = cur_start = (cur[0].tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%S") if cur is not None else
+                                      (self.last_emitted + pd.Timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%S") if self.last_emitted is not None else self.start)
++            if self.max_replay_hours is not None and src_start is not None:    # the vendor replays a limited window: never ask for an older start (a long outage becomes a hole, not a retry loop)
++                floor_ = (pd.Timestamp(self.clock(), unit="s", tz="UTC") - pd.Timedelta(hours=self.max_replay_hours)).ceil("min")
++                if pd.Timestamp(src_start, tz="UTC") < floor_:
++                    src_start = floor_.strftime("%Y-%m-%dT%H:%M:%S")
+             cur = None                                              # an unfinished minute is rebuilt from the replay
+             th = threading.Thread(target=pump, args=(src_start,), daemon=True); th.start()
+-            last_tick_wall = self.clock(); ended = False
++            last_tick_wall = self.clock(); ended = False; last_replay = False; kind = tk = None
+             while True:
+                 try:
+                     kind, tk = q.get(timeout=0.5)
+                 except queue.Empty:
+                     now = self.clock()
+-                    if cur is not None and now - last_tick_wall >= self.settle and now >= cur[0].timestamp() + 60 + self.settle:
++                    if self.stall and now - last_tick_wall > self.stall and self.market_open(pd.Timestamp(now, unit="s", tz="UTC")):
++                        self.n_stall += 1; self.last_error = f"no tick for {now - last_tick_wall:.0f} s while the market is open: reconnecting"
++                        ended = True
++                        break
++                    # wall-clock flush only for a live minute that ended minutes ago at most (never while ticks are being replayed: a replay pause must not cut a minute)
++                    if cur is not None and not last_replay and now - last_tick_wall >= self.settle and cur[0].timestamp() + 60 + self.settle <= now <= cur[0].timestamp() + 60 + 300:
+                         b = self._flush(cur); cur = None
+                         if b is not None:
+                             yield b
+@@ -105,11 +132,19 @@
+                 if kind in ("end", "error"):
+                     ended = True
+                     break
+-                self.n_ticks += 1
++                self.n_ticks += 1; self._fail_streak = 0
+                 try:
+                     minute, price, size, replay = self._parse(tk)
+                 except Exception:
+                     continue
++                last_replay = replay
++                if not replay and minute > pd.Timestamp(self.clock(), unit="s", tz="UTC").floor("min") + pd.Timedelta(seconds=self.max_future):
++                    self.n_future += 1; self._fut_run += 1          # a tick stamped in the future would black out the real ones until its time comes
++                    if self._fut_run <= 30:
++                        continue                                    # one bad stamp is dropped; 30 in a row means the machine clock is slow: accept and say so
++                    self.last_error = "tick stamps run ahead of the machine clock: check the clock (NTP)"
++                else:
++                    self._fut_run = 0
+                 if self.last_emitted is not None and minute <= self.last_emitted:
+                     continue                                        # a minute already emitted (reconnect replay)
+                 if cur is None:
+@@ -125,6 +160,9 @@
+             stop.set()
+             if not ended:
+                 return
++            if kind == "error":
++                self.last_error = f"{type(tk).__name__}: {tk}"[:200]
++            self._fail_streak += 1
+             # the stream dropped or ended: reconnect (live) with the unfinished minute rebuilt from the replay
+             self.reconnects += 1
+             if self.max_reconnects is not None and self.reconnects > self.max_reconnects:
+@@ -133,7 +171,7 @@
+                     if b is not None:
+                         yield b
+                 return
+-            self.sleep(self.backoff)
++            self.sleep(min(self.backoff * 2 ** min(self._fail_streak - 1, 6), 300.0))      # exponential, capped at 5 minutes
+ 
+     def _flush(self, cur) -> Optional[Bar]:
+         minute = cur[0]
+diff -ruN -x __pycache__ -x static a/paper/verdict.py b/paper/verdict.py
+--- a/paper/verdict.py	1970-01-01 00:00:00.000000000 +0000
++++ b/paper/verdict.py	2026-10-15 09:33:50.712037419 +0000
+@@ -0,0 +1,47 @@
++"""Weekly PR18 verdict straight from the live journal (the state pickle) and results/forward_thresholds_R.json: no Databento and no bars file needed.
++   python -m paper.verdict --state paper_state.pkl [--thresholds results/forward_thresholds_R.json]
++Same rules as paper/forward_test.py (kill_reasons): looks every 5 sessions from 60 up to 250 (the stored thresholds end at 250), latched; flagged sessions stay in the sums (PR18) and are listed."""
++from __future__ import annotations
++
++import argparse
++import json
++import math
++import pickle
++
++MU, SD = 0.0183, 0.232            # development pooled R per session and its block-bootstrap sd (council 2 ops, computed from the re-based development R)
++
++
++def weekly_verdict(journal, thresholds) -> dict:
++    ok = lambda r: math.isfinite(r.get("atr_usd", float("nan"))) and r["atr_usd"] > 0
++    Rn = [r["noise"]["usd"] / r["atr_usd"] if ok(r) else 0.0 for r in journal]
++    Rg = [r["gap"]["usd"] / r["atr_usd"] if ok(r) else 0.0 for r in journal]
++    P = [(3 * a + 2 * b) / 5 for a, b in zip(Rn, Rg)]
++    L = len(P)
++    first, reasons = None, []
++    for k in range(60, min(L, 250) + 1, 5):
++        s = sum(P[:k])
++        if s < thresholds[str(k)]:
++            first, reasons = k, [f"pooled R {s:+.2f} < dev 5th percentile {thresholds[str(k)]:+.2f} at session {k}"]
++            break
++        if k >= 120 and sum(Rn[:k]) < 0 and sum(Rg[:k]) < 0:
++            first, reasons = k, [f"both sleeves negative at session {k}"]
++            break
++    holes = [r["date"] for r in journal if r.get("data_gap")]
++    S = sum(P)
++    return dict(sessions=L, pooled_R=S, noise_R=sum(Rn), gap_R=sum(Rg), first_stop_session=first, reasons=reasons, sessions_with_holes=len(holes), hole_share=len(holes) / max(L, 1), holes=holes,
++                bayes_factor_full_vs_zero=math.exp((MU / SD ** 2) * (S - MU * L / 2)), beyond_reference=L > 250,
++                verdict=("INVALID" if holes and len(holes) / L > 0.02 else "STOP" if first else "CONTINUE" if L >= 60 else "TOO EARLY"))
++
++
++def main(argv=None) -> None:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--state", default="paper_state.pkl")
++    ap.add_argument("--thresholds", default="results/forward_thresholds_R.json")
++    a = ap.parse_args(argv)
++    th = json.load(open(a.thresholds))
++    j = pickle.load(open(a.state, "rb"))["journal"]
++    print(json.dumps(weekly_verdict(j, th), indent=1))
++
++
++if __name__ == "__main__":
++    main()

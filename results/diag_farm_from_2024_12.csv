@@ -1,0 +1,22 @@
+kind,variant,mean_net,median_net,positive,farms_with_any_payout,mean_payouts,mean_fees,combines,passed
+split,3 noise + 2 gap (baseline),-4407,-4378,0%,6%,71,4478,16.4,2.1
+split,5 noise,-4407,-4378,0%,6%,71,4478,16.6,2.1
+split,4 noise + 1 gap,-4407,-4378,0%,6%,71,4478,16.6,2.1
+split,2 noise + 3 gap,-3793,-3582,0%,0%,0,3793,11.8,0.9
+split,1 noise + 4 gap,-3545,-3582,0%,0%,0,3545,10.8,0.5
+split,5 gap,-3545,-3582,0%,0%,0,3545,10.8,0.5
+split,5 vwap,-2749,-4278,12%,44%,2101,4851,17.5,2.7
+split,2 noise + 2 gap + 1 vwap,-4046,-3980,0%,6%,71,4117,14.1,1.8
+split,1 noise + 2 gap + 2 vwap,-3276,-3383,0%,6%,281,3557,10.0,1.0
+setting,"baseline R 9,600 / a1 1.2 / t1 $2,000 / a2 0.8",-4407,-4378,0%,6%,71,4478,16.4,2.1
+setting,"Combine R 4,800",-2915,-2985,0%,6%,58,2973,6.1,0.4
+setting,"Combine R 6,400",-3665,-3582,0%,12%,129,3793,10.8,1.1
+setting,"Combine R 12,800",-3549,-4214,6%,50%,1649,5199,22.8,2.0
+setting,funded a1 0.6,-4122,-4378,0%,12%,343,4465,16.3,2.1
+setting,funded a1 0.8,-4189,-4378,0%,12%,289,4478,16.4,2.1
+setting,funded a1 1.6,-4515,-4577,0%,0%,0,4515,16.6,2.2
+setting,"first payout at $1,500",-4431,-4378,0%,6%,47,4478,16.4,2.1
+setting,"first payout at $3,000",-4378,-4378,0%,6%,99,4478,16.4,2.1
+setting,"first payout at $4,000",-4478,-4378,0%,0%,0,4478,16.4,2.1
+setting,funded a2 0.4,-4407,-4378,0%,6%,71,4478,16.4,2.1
+setting,funded a2 1.2,-4407,-4378,0%,6%,71,4478,16.4,2.1

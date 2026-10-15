@@ -1,0 +1,30 @@
+{
+ "2+3": {
+  "checks": {
+   "P(beats) mean >= 0.975": false,
+   "P(beats) median >= 0.80": false,
+   "P(beats) p25 >= 0.80": false,
+   "cohort-mean gain >= $5k": true,
+   "outside 2016-18 cohort median diff >= -$1k": false,
+   "gain above null 95th percentile": true,
+   "not worse in worst fill case": false
+  },
+  "switch": false,
+  "cohort_gain": 23943.24020538514,
+  "null95": 2821.8748819436705
+ },
+ "gap x5": {
+  "checks": {
+   "P(beats) mean >= 0.975": false,
+   "P(beats) median >= 0.80": false,
+   "P(beats) p25 >= 0.80": false,
+   "cohort-mean gain >= $5k": false,
+   "outside 2016-18 cohort median diff >= -$1k": false,
+   "gain above null 95th percentile": false,
+   "not worse in worst fill case": false
+  },
+  "switch": false,
+  "cohort_gain": -15613.428113029884,
+  "null95": 2114.647566317336
+ }
+}

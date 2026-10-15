@@ -1,0 +1,193 @@
+mix,unlock,kind,start,net,oop,ruined,firms,min_cash
+A same basket,0,dev long (to 2022-12),2012,-1224.5552499999912,1393.0,True,2,0.0
+A same basket,0,dev long (to 2022-12),2014,115608.24257142833,398.0,False,5,-0.9876428571542419
+A same basket,0,dev long (to 2022-12),2016,142808.23199999967,796.0,False,5,-199.0
+A same basket,0,dev long (to 2022-12),2018,31075.52360044628,199.0,False,5,-114.9793950892722
+A same basket,0,dev 3y,2012,-1224.5552499999912,1393.0,False,2,0.0
+A same basket,0,dev 3y,2013,-1592.0,1592.0,False,1,-199.0
+A same basket,0,dev 3y,2014,-398.0,398.0,False,1,0.0
+A same basket,0,dev 3y,2015,-1393.0,1393.0,False,1,0.0
+A same basket,0,dev 3y,2016,1439.4205535714004,796.0,False,2,-199.0
+A same basket,0,dev 3y,2017,8621.160698660686,2189.0,False,2,-398.0
+A same basket,0,dev 3y,2018,850.1958549107221,199.0,False,2,0.0
+A same basket,0,dev 3y,2019,4534.624459821425,2587.0,False,2,-43.42789285712297
+A same basket,0,dev 3y,2020,57418.39482142836,1393.0,False,5,-280.39321428571066
+A same basket,0,seen to end,2021,-188.40035714286296,199.0,True,2,-597.0
+A same basket,0,seen to end,2023,4983.8696964287155,597.0,False,4,-636.0011607142214
+A same basket,0,seen to end,2025,-614.0225357142826,796.0,True,2,-199.0
+A same basket,3000,dev long (to 2022-12),2012,-1316.5552499999912,1393.0,True,1,0.0
+A same basket,3000,dev long (to 2022-12),2014,163425.76918303542,398.0,False,5,0.0
+A same basket,3000,dev long (to 2022-12),2016,110658.8531244417,796.0,False,5,-199.0
+A same basket,3000,dev long (to 2022-12),2018,118863.61500278994,199.0,False,5,0.0
+A same basket,3000,dev 3y,2012,-1316.5552499999912,1393.0,False,1,0.0
+A same basket,3000,dev 3y,2013,-1592.0,1592.0,False,1,-199.0
+A same basket,3000,dev 3y,2014,-398.0,398.0,False,1,0.0
+A same basket,3000,dev 3y,2015,-1393.0,1393.0,False,1,0.0
+A same basket,3000,dev 3y,2016,1990.4205535714004,796.0,False,1,-199.0
+A same basket,3000,dev 3y,2017,4728.160698660686,2189.0,False,2,-398.0
+A same basket,3000,dev 3y,2018,15798.698631696461,199.0,False,2,0.0
+A same basket,3000,dev 3y,2019,5737.378334821413,2587.0,False,2,0.0
+A same basket,3000,dev 3y,2020,63270.05012946404,1393.0,False,5,-199.0
+A same basket,3000,seen to end,2021,17362.706469866185,199.0,False,4,-597.0
+A same basket,3000,seen to end,2023,17428.13014285735,597.0,False,3,0.0
+A same basket,3000,seen to end,2025,369.15346428572957,796.0,False,1,-313.0225357142824
+A same basket,6000,dev long (to 2022-12),2012,-1316.5552499999912,1393.0,True,1,0.0
+A same basket,6000,dev long (to 2022-12),2014,119623.05326618272,398.0,False,5,0.0
+A same basket,6000,dev long (to 2022-12),2016,109740.98168415157,796.0,False,5,-199.0
+A same basket,6000,dev long (to 2022-12),2018,114353.26930189712,199.0,False,5,0.0
+A same basket,6000,dev 3y,2012,-1316.5552499999912,1393.0,False,1,0.0
+A same basket,6000,dev 3y,2013,-1592.0,1592.0,False,1,-199.0
+A same basket,6000,dev 3y,2014,-398.0,398.0,False,1,0.0
+A same basket,6000,dev 3y,2015,-1393.0,1393.0,False,1,0.0
+A same basket,6000,dev 3y,2016,1990.4205535714004,796.0,False,1,-199.0
+A same basket,6000,dev 3y,2017,4478.160698660686,2189.0,False,2,-398.0
+A same basket,6000,dev 3y,2018,19342.662756696467,199.0,False,2,0.0
+A same basket,6000,dev 3y,2019,5987.378334821413,2587.0,False,2,0.0
+A same basket,6000,dev 3y,2020,63270.05012946404,1393.0,False,5,-199.0
+A same basket,6000,seen to end,2021,25726.005541294726,199.0,False,3,-597.0
+A same basket,6000,seen to end,2023,18205.737857143075,597.0,False,3,0.0
+A same basket,6000,seen to end,2025,369.15346428572957,796.0,False,1,-313.0225357142824
+A same basket,10000,dev long (to 2022-12),2012,-1316.5552499999912,1393.0,True,1,0.0
+A same basket,10000,dev long (to 2022-12),2014,123623.05326618272,398.0,False,5,0.0
+A same basket,10000,dev long (to 2022-12),2016,93835.27136383907,796.0,False,5,-199.0
+A same basket,10000,dev long (to 2022-12),2018,95842.39514285696,199.0,False,5,0.0
+A same basket,10000,dev 3y,2012,-1316.5552499999912,1393.0,False,1,0.0
+A same basket,10000,dev 3y,2013,-1592.0,1592.0,False,1,-199.0
+A same basket,10000,dev 3y,2014,-398.0,398.0,False,1,0.0
+A same basket,10000,dev 3y,2015,-1393.0,1393.0,False,1,0.0
+A same basket,10000,dev 3y,2016,1990.4205535714004,796.0,False,1,-199.0
+A same basket,10000,dev 3y,2017,7978.160698660686,2189.0,False,2,-398.0
+A same basket,10000,dev 3y,2018,19342.662756696467,199.0,False,2,0.0
+A same basket,10000,dev 3y,2019,8737.378334821413,2587.0,False,2,0.0
+A same basket,10000,dev 3y,2020,52010.05408482127,1393.0,False,4,-199.0
+A same basket,10000,seen to end,2021,26226.005541294726,199.0,False,3,-597.0
+A same basket,10000,seen to end,2023,18096.97842857161,597.0,False,3,0.0
+A same basket,10000,seen to end,2025,369.15346428572957,796.0,False,1,-313.0225357142824
+A same basket,15000,dev long (to 2022-12),2012,-1316.5552499999912,1393.0,True,1,0.0
+A same basket,15000,dev long (to 2022-12),2014,116539.235566964,398.0,False,5,0.0
+A same basket,15000,dev long (to 2022-12),2016,64168.57199776775,796.0,False,4,-199.0
+A same basket,15000,dev long (to 2022-12),2018,66727.09270535706,199.0,False,4,0.0
+A same basket,15000,dev 3y,2012,-1316.5552499999912,1393.0,False,1,0.0
+A same basket,15000,dev 3y,2013,-1592.0,1592.0,False,1,-199.0
+A same basket,15000,dev 3y,2014,-398.0,398.0,False,1,0.0
+A same basket,15000,dev 3y,2015,-1393.0,1393.0,False,1,0.0
+A same basket,15000,dev 3y,2016,1990.4205535714004,796.0,False,1,-199.0
+A same basket,15000,dev 3y,2017,9728.160698660686,2189.0,False,1,-398.0
+A same basket,15000,dev 3y,2018,19342.662756696467,199.0,False,2,0.0
+A same basket,15000,dev 3y,2019,9987.378334821413,2587.0,False,1,0.0
+A same basket,15000,dev 3y,2020,51221.28952232128,1393.0,False,4,-199.0
+A same basket,15000,seen to end,2021,29599.992969866173,199.0,False,3,-597.0
+A same basket,15000,seen to end,2023,18229.59871428588,597.0,False,2,0.0
+A same basket,15000,seen to end,2025,369.15346428572957,796.0,False,1,-313.0225357142824
+A same basket,Topstep only,dev long (to 2022-12),2012,-1316.5552499999912,1393.0,True,1,0.0
+A same basket,Topstep only,dev long (to 2022-12),2014,70020.41880357129,398.0,False,1,0.0
+A same basket,Topstep only,dev long (to 2022-12),2016,58832.11413169638,796.0,False,1,-199.0
+A same basket,Topstep only,dev long (to 2022-12),2018,61390.63483928569,199.0,False,1,0.0
+A same basket,Topstep only,dev 3y,2012,-1316.5552499999912,1393.0,False,1,0.0
+A same basket,Topstep only,dev 3y,2013,-1592.0,1592.0,False,1,-199.0
+A same basket,Topstep only,dev 3y,2014,-398.0,398.0,False,1,0.0
+A same basket,Topstep only,dev 3y,2015,-1393.0,1393.0,False,1,0.0
+A same basket,Topstep only,dev 3y,2016,1990.4205535714004,796.0,False,1,-199.0
+A same basket,Topstep only,dev 3y,2017,9728.160698660686,2189.0,False,1,-398.0
+A same basket,Topstep only,dev 3y,2018,20592.662756696467,199.0,False,1,0.0
+A same basket,Topstep only,dev 3y,2019,9987.378334821413,2587.0,False,1,0.0
+A same basket,Topstep only,dev 3y,2020,43096.5962187499,1393.0,False,1,-199.0
+A same basket,Topstep only,seen to end,2021,31548.47411272325,199.0,False,1,-597.0
+A same basket,Topstep only,seen to end,2023,23229.59871428588,597.0,False,1,0.0
+A same basket,Topstep only,seen to end,2025,369.15346428572957,796.0,False,1,-313.0225357142824
+B different sleeves,0,dev long (to 2022-12),2012,-1529.9572678571403,1592.0,True,2,0.0
+B different sleeves,0,dev long (to 2022-12),2014,-291.9722857142822,398.0,True,2,0.0
+B different sleeves,0,dev long (to 2022-12),2016,2019.175082589285,1592.0,True,3,-398.0
+B different sleeves,0,dev long (to 2022-12),2018,105260.35763978784,199.0,False,5,0.0
+B different sleeves,0,dev 3y,2012,-1529.9572678571403,1592.0,True,2,0.0
+B different sleeves,0,dev 3y,2013,-3781.0,3781.0,False,1,-1393.0
+B different sleeves,0,dev 3y,2014,-291.9722857142822,398.0,True,2,0.0
+B different sleeves,0,dev 3y,2015,-3184.0,3184.0,False,1,-1393.0
+B different sleeves,0,dev 3y,2016,-1592.0,1592.0,False,1,-398.0
+B different sleeves,0,dev 3y,2017,8853.415244140575,1990.0,False,3,-199.0
+B different sleeves,0,dev 3y,2018,22232.09673465402,199.0,False,4,0.0
+B different sleeves,0,dev 3y,2019,-787.4273482142817,1592.0,False,2,0.0
+B different sleeves,0,dev 3y,2020,-296.08685714285343,199.0,True,2,-199.0
+B different sleeves,0,seen to end,2021,134591.99371205355,796.0,False,5,-385.13760714286013
+B different sleeves,0,seen to end,2023,22016.35454073675,1194.0,False,4,-199.0
+B different sleeves,0,seen to end,2025,-4577.0,2786.0,False,1,-1791.0
+B different sleeves,3000,dev long (to 2022-12),2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,3000,dev long (to 2022-12),2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,3000,dev long (to 2022-12),2016,35248.055546874966,1592.0,False,3,-398.0
+B different sleeves,3000,dev long (to 2022-12),2018,104406.77821121644,199.0,False,5,0.0
+B different sleeves,3000,dev 3y,2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,3000,dev 3y,2013,-3781.0,3781.0,False,1,-1393.0
+B different sleeves,3000,dev 3y,2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,3000,dev 3y,2015,-3184.0,3184.0,False,1,-1393.0
+B different sleeves,3000,dev 3y,2016,-1592.0,1592.0,False,1,-398.0
+B different sleeves,3000,dev 3y,2017,13654.99238699775,1990.0,False,2,-199.0
+B different sleeves,3000,dev 3y,2018,32212.14202036831,199.0,False,2,0.0
+B different sleeves,3000,dev 3y,2019,811.4968482142904,1592.0,False,2,0.0
+B different sleeves,3000,dev 3y,2020,-143.08685714285343,199.0,True,1,-199.0
+B different sleeves,3000,seen to end,2021,148328.98998772318,796.0,False,5,-199.0
+B different sleeves,3000,seen to end,2023,3175.5935022322883,1194.0,False,4,-199.0
+B different sleeves,3000,seen to end,2025,-4577.0,2786.0,False,1,-1791.0
+B different sleeves,6000,dev long (to 2022-12),2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,6000,dev long (to 2022-12),2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,6000,dev long (to 2022-12),2016,34998.055546874966,1592.0,False,3,-398.0
+B different sleeves,6000,dev long (to 2022-12),2018,105392.6679444752,199.0,False,5,0.0
+B different sleeves,6000,dev 3y,2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,6000,dev 3y,2013,-3781.0,3781.0,False,1,-1393.0
+B different sleeves,6000,dev 3y,2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,6000,dev 3y,2015,-3184.0,3184.0,False,1,-1393.0
+B different sleeves,6000,dev 3y,2016,-1592.0,1592.0,False,1,-398.0
+B different sleeves,6000,dev 3y,2017,12404.99238699775,1990.0,False,2,-199.0
+B different sleeves,6000,dev 3y,2018,30962.14202036831,199.0,False,2,0.0
+B different sleeves,6000,dev 3y,2019,3362.4968482142904,1592.0,False,2,0.0
+B different sleeves,6000,dev 3y,2020,-143.08685714285343,199.0,True,1,-199.0
+B different sleeves,6000,seen to end,2021,149176.20520200906,796.0,False,5,-199.0
+B different sleeves,6000,seen to end,2023,6165.593502232288,1194.0,False,4,-199.0
+B different sleeves,6000,seen to end,2025,-4577.0,2786.0,False,1,-1791.0
+B different sleeves,10000,dev long (to 2022-12),2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,10000,dev long (to 2022-12),2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,10000,dev long (to 2022-12),2016,29025.554975446415,1592.0,False,3,-398.0
+B different sleeves,10000,dev long (to 2022-12),2018,92931.08473018953,199.0,False,5,0.0
+B different sleeves,10000,dev 3y,2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,10000,dev 3y,2013,-3781.0,3781.0,False,1,-1393.0
+B different sleeves,10000,dev 3y,2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,10000,dev 3y,2015,-3184.0,3184.0,False,1,-1393.0
+B different sleeves,10000,dev 3y,2016,-1592.0,1592.0,False,1,-398.0
+B different sleeves,10000,dev 3y,2017,13654.99238699775,1990.0,False,2,-199.0
+B different sleeves,10000,dev 3y,2018,32212.14202036831,199.0,False,2,0.0
+B different sleeves,10000,dev 3y,2019,5112.49684821429,1592.0,False,1,0.0
+B different sleeves,10000,dev 3y,2020,-143.08685714285343,199.0,True,1,-199.0
+B different sleeves,10000,seen to end,2021,149176.20520200906,796.0,False,5,-199.0
+B different sleeves,10000,seen to end,2023,8510.635171875096,1194.0,False,2,-199.0
+B different sleeves,10000,seen to end,2025,-4577.0,2786.0,False,1,-1791.0
+B different sleeves,15000,dev long (to 2022-12),2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,15000,dev long (to 2022-12),2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,15000,dev long (to 2022-12),2016,29832.979261160726,1592.0,False,3,-398.0
+B different sleeves,15000,dev long (to 2022-12),2018,107230.43759626074,199.0,False,5,0.0
+B different sleeves,15000,dev 3y,2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,15000,dev 3y,2013,-3781.0,3781.0,False,1,-1393.0
+B different sleeves,15000,dev 3y,2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,15000,dev 3y,2015,-3184.0,3184.0,False,1,-1393.0
+B different sleeves,15000,dev 3y,2016,-1592.0,1592.0,False,1,-398.0
+B different sleeves,15000,dev 3y,2017,9654.99238699775,1990.0,False,2,-199.0
+B different sleeves,15000,dev 3y,2018,26962.14202036831,199.0,False,2,0.0
+B different sleeves,15000,dev 3y,2019,5112.49684821429,1592.0,False,1,0.0
+B different sleeves,15000,dev 3y,2020,-143.08685714285343,199.0,True,1,-199.0
+B different sleeves,15000,seen to end,2021,149426.20520200906,796.0,False,5,-199.0
+B different sleeves,15000,seen to end,2023,8510.635171875096,1194.0,False,2,-199.0
+B different sleeves,15000,seen to end,2025,-4577.0,2786.0,False,1,-1791.0
+B different sleeves,Topstep only,dev long (to 2022-12),2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,Topstep only,dev long (to 2022-12),2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,Topstep only,dev long (to 2022-12),2016,35009.1638325893,1592.0,False,1,-398.0
+B different sleeves,Topstep only,dev long (to 2022-12),2018,69617.75689090397,199.0,False,1,0.0
+B different sleeves,Topstep only,dev 3y,2012,-1672.9572678571403,1592.0,True,1,-80.95726785714032
+B different sleeves,Topstep only,dev 3y,2013,-3781.0,3781.0,False,1,-1393.0
+B different sleeves,Topstep only,dev 3y,2014,-388.9722857142822,398.0,True,1,0.0
+B different sleeves,Topstep only,dev 3y,2015,-3184.0,3184.0,False,1,-1393.0
+B different sleeves,Topstep only,dev 3y,2016,-1592.0,1592.0,False,1,-398.0
+B different sleeves,Topstep only,dev 3y,2017,14904.99238699775,1990.0,False,1,-199.0
+B different sleeves,Topstep only,dev 3y,2018,33462.14202036831,199.0,False,1,0.0
+B different sleeves,Topstep only,dev 3y,2019,5112.49684821429,1592.0,False,1,0.0
+B different sleeves,Topstep only,dev 3y,2020,-143.08685714285343,199.0,True,1,-199.0
+B different sleeves,Topstep only,seen to end,2021,60214.36915513412,796.0,False,1,-199.0
+B different sleeves,Topstep only,seen to end,2023,9760.635171875096,1194.0,False,1,-199.0
+B different sleeves,Topstep only,seen to end,2025,-4577.0,2786.0,False,1,-1791.0

@@ -1,0 +1,139 @@
+{
+ "first_new_session": "2026-07-03",
+ "last_session": "2026-10-15",
+ "sessions": 75,
+ "data": {
+  "zero_volume_share": 0.0,
+  "rth_bars_median": 382.0,
+  "sessions_rth_under_370": 21,
+  "sessions_flagged_roll_or_bad": 6,
+  "sessions_with_holes": 18,
+  "share_sessions_with_holes": 0.24324324324324326,
+  "sessions_with_holes_list": [
+   "2026-07-23",
+   "2026-07-24",
+   "2026-07-27",
+   "2026-07-28",
+   "2026-07-29",
+   "2026-07-30",
+   "2026-07-31",
+   "2026-08-03",
+   "2026-08-05",
+   "2026-08-06",
+   "2026-08-07",
+   "2026-08-19",
+   "2026-08-20",
+   "2026-08-25",
+   "2026-08-27",
+   "2026-09-16",
+   "2026-10-05",
+   "2026-10-12"
+  ],
+  "roll_or_bad_sessions": [
+   "2026-09-09",
+   "2026-09-11",
+   "2026-09-14",
+   "2026-09-15",
+   "2026-09-16",
+   "2026-09-17"
+  ]
+ },
+ "invalid_reasons": [
+  "18 of 74 completed sessions have holes in regular hours (24% > 2%)"
+ ],
+ "valid": false,
+ "sleeves": {
+  "noise": {
+   "total_usd_per_micro": 1487.5999999999997,
+   "mean_daily": 19.834666666666664,
+   "hit_days": 0.18666666666666668,
+   "trades": 47,
+   "sharpe_annualised": 1.5183466335139444,
+   "dev_window_percentile": 91.41221374045801
+  },
+  "gap": {
+   "total_usd_per_micro": 1119.4900000000011,
+   "mean_daily": 14.92653333333335,
+   "hit_days": 0.13333333333333333,
+   "trades": 29,
+   "sharpe_annualised": 1.2805317068135365,
+   "dev_window_percentile": 89.8854961832061
+  }
+ },
+ "R_units": {
+  "sessions_with_atr": 75,
+  "noise_cum_R": 1.9867906862997693,
+  "gap_cum_R": 1.5624304788654624,
+  "pooled_cum_R": 1.8170466033260466,
+  "pooled_mean_R": 0.02422728804434729,
+  "pooled_dev_window_percentile": 58.651399491094146,
+  "dev_window_p5": -2.1204018110074223,
+  "dev_window_median": 1.349361178729156
+ },
+ "R_units_descriptive_without_flagged_sessions": {
+  "sessions_dropped": 24,
+  "noise_cum_R": 1.0720485458755284,
+  "gap_cum_R": 1.80606585169704,
+  "pooled_cum_R": 1.365655468204133,
+  "note": "descriptive only: the PR18 verdict is computed on all sessions; the dropped ones had holes in regular hours or a suspected roll"
+ },
+ "pooled_3_2": {
+  "total_usd_per_micro_set": 6701.780000000001,
+  "dev_window_percentile": 91.50763358778626
+ },
+ "farm": {
+  "net": 2106.505,
+  "fees": 1592.0,
+  "payouts": 3698.505,
+  "groups": {
+   "noise": {
+    "slots": 3,
+    "funded": 2,
+    "waiting": 0,
+    "evals": 0,
+    "n_evals": 5,
+    "n_passed": 2,
+    "n_funded": 2,
+    "n_payouts": 1,
+    "n_paid_accts": 1,
+    "died": 0,
+    "wasted": 0,
+    "fees": 1393.0,
+    "payouts": 3698.505,
+    "first_buy_t": 4137,
+    "first_payout_t": 4195
+   },
+   "gap": {
+    "slots": 2,
+    "funded": 0,
+    "waiting": 0,
+    "evals": 1,
+    "n_evals": 1,
+    "n_passed": 0,
+    "n_funded": 0,
+    "n_payouts": 0,
+    "n_paid_accts": 0,
+    "died": 0,
+    "wasted": 0,
+    "fees": 199.0,
+    "payouts": 0.0,
+    "first_buy_t": 4211,
+    "first_payout_t": null
+   }
+  },
+  "dev_farm_percentile_75_sessions": 89.98410174880763
+ },
+ "stop_looks": [],
+ "first_stop_session": null,
+ "reference_available": true,
+ "kill_criteria_triggered": [
+  "data checks failed: the forward test is invalid"
+ ],
+ "verdict": "INVALID",
+ "gates": {
+  "data_valid": false,
+  "fill_cost_realism": "NOT MEASURABLE in paper trading: needs real fills (no purchases / out-of-pocket money are planned)",
+  "rules": "first-hand Topstep text in docs/TOPSTEP_RULES.md"
+ },
+ "note": "This test can stop the strategy, it cannot confirm it: see results/forward_power.csv (weekly looks from session 60: a zero-edge strategy is stopped within 250 sessions about two times in three, the full development edge falsely about one time in four)."
+}
