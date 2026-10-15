@@ -364,3 +364,26 @@ Scaling UP with profit in the Combine lowers the pass rate (16-20% against 22.9%
 - Other families: recent-performance scaling after the payout (best $16.2k, p25 -$0.6k), number-of-payouts scaling (best $14.2k) and ramps (best $14.6k) all lose profit; "start big, step down" ladders lose the most ($8.9-14.6k) and kill more accounts (90%).
 - **Result:** the Combine and post-payout sizes stay as they are. The one worth freezing for a forward test is "0.4 after the payout, 1.2 at a $3,500 balance" as a lower-risk version of the same profit. No combined Combine + post-payout run was made (nothing passed in either stage, as declared).
 - Looks: 59 here (22 + 37), 185 in total on the sizing questions since section 22; every acceptance rule was declared before the run; the grids and values are mine, the families and triggers the user's.
+
+## 25. Days to payout and accounts paid: baseline against the two forward-test candidates (`run_days_candidates.py`, `results/days_candidates.csv`)
+Asked by the user before choosing which setting to freeze for a forward test. Identical starts for all three (Combine starts every 3 sessions; default split, pooled noise-area x3 + gap-VWAP x2; ten 3-year farms for the whole-farm rows). Option 2 = after the first payout start 0.4 and step to 1.2 at a $3,500 balance (pre-payout unchanged); option 3 = before the first payout start 0.8 and step to 2.0 at +$500 profit (post-payout unchanged).
+| One account | baseline | option 2 | option 3 |
+|---|---|---|---|
+| funded accounts paid, 2010-22 starts (noise-area / gap-VWAP) | 61.5% (57% / 66%) | 61.5% (57% / 66%) | 62.1% (52% / 72%) |
+| funded accounts paid, 2023+ starts (noise-area / gap-VWAP) | 64.5% (64% / 65%) | 64.5% (64% / 65%) | 56.5% (64% / 40%) |
+| median days Combine start -> first payout, 2010-22 (quarter faster / slower than) | 78 (54 / 125) | 78 (54 / 125) | 105 (68 / 171) |
+| median days, 2023+ starts | 79 (56 / 100) | 79 (56 / 100) | 99 (62 / 199) |
+| activation -> first payout, 2010-22 | 35 | 35 | 56 |
+| funded accounts paid within 60 / 90 / 180 days, 2010-22 | 21% / 36% / 55% | 21% / 36% / 55% | 13% / 27% / 48% |
+| funded accounts paid within 90 days, 2023+ | 40% | 40% | 26% |
+| median days between 1st and 2nd payout, 2010-22 | 44 | 70 | 62 |
+| payouts per paid account / paid per paid account, 2010-22 (runs to the end of 2022) | 3.1 / $4.2k | 6.1 / $5.7k | 3.8 / $8.5k |
+| Whole farm (ten 3-year farms, one Combine at a time) | baseline | option 2 | option 3 |
+|---|---|---|---|
+| median days to the farm's first payout (quarter faster / slower) | 152 (100 / 300) | 152 (100 / 300) | 152 (104 / 259) |
+| farms paid within 90 / 180 days (of 10) | 2 / 6 | 2 / 6 | 2 / 5 |
+| accounts paid, farm level (unfinished accounts count as unpaid) | 53.6% | 53.9% | 42.9% |
+| days to the farm's first payout, 2021 / 2023 starts | 179 / 143 | 179 / 143 | 164 / 149 |
+- **Option 2 does not touch the first payout** (by construction: the size changes only after it), so its days and its paid share are identical to the baseline. It changes what happens after: the second payout comes later (70 days instead of 44, because it trades smaller after each payout) but the account survives much longer (67% against 84% of funded accounts die in the dev farms) and pays more often (6.1 payouts per paid account against 3.1 when each account runs to the end of 2022).
+- **Option 3 is slower to the first payout at account level**: 105 days against 78 (2023+: 99 against 79); only 27% of funded accounts are paid within 90 days against 36% (26% against 40% for 2023+ starts). Its paid share is the same on 2010-22 starts (62%) but lower on 2023+ starts (56.5% against 64.5%: the gap-VWAP accounts fall to 40% paid). The farm's first payout is the same median (152 days) since other accounts pay meanwhile, but with a higher farm-level unpaid share (43% against 54%).
+- Neither candidate moves the days to payout in the user's favour; option 2 is neutral on them, option 3 is worse. The baseline is the right choice if days to payout is the priority; option 2 is the only one that costs nothing on that measure.
