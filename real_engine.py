@@ -91,6 +91,7 @@ class Stream:
     low: np.ndarray          # worst intraday MTM $ per micro (<= 0)
     atr_usd: np.ndarray      # $ value of the trailing-14-session range per micro (NaN if unavailable)
     ok: np.ndarray
+    fx: Optional[np.ndarray] = None   # optional per-session factor (price level / reference price, <= 1) that scales per-contract dollar frictions in a cost-re-based counterfactual
 
     @staticmethod
     def from_series(name: str, s: DailySeries) -> "Stream":

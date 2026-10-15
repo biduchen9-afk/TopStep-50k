@@ -150,7 +150,7 @@ def farm_starts(ref: Stream, n_dev: int) -> List[int]:
 def farm_stats(fps: List[FirmPlan], ref: Stream, n_dev: int, starts: Optional[List[int]] = None, seen: bool = True) -> dict:
     pol = Policy(reserve_cycles=None, global_one_eval=True)
     starts = farm_starts(ref, n_dev) if starts is None else starts
-    nets, evals, funded, paid, d1 = [], {}, {}, {}, []
+    nets, evals, funded, paid, d1, npay, peak = [], {}, {}, {}, [], 0, []
     dts = pd.DatetimeIndex(ref.dates)
     for i0 in starts:
         r = run_multifirm(fps, pol, i0, i0 + WINDOW); nets.append(r["net"])
@@ -158,11 +158,12 @@ def farm_stats(fps: List[FirmPlan], ref: Stream, n_dev: int, starts: Optional[Li
         if fb and fp_:
             d1.append((dts[min(min(fp_), len(dts) - 1)] - dts[min(fb)]).days)
         for g, v in r["firms"].items():
-            evals[g] = evals.get(g, 0) + v["n_evals"]; funded[g] = funded.get(g, 0) + v["n_funded"]; paid[g] = paid.get(g, 0) + v["n_paid_accts"]
+            evals[g] = evals.get(g, 0) + v["n_evals"]; funded[g] = funded.get(g, 0) + v["n_funded"]; paid[g] = paid.get(g, 0) + v["n_paid_accts"]; npay += v["n_payouts"]
+        peak.append(r["min_cash"])
     nets = np.array(nets); q = np.percentile(nets, [10, 25, 50, 75, 90])
     out = dict(farms=len(nets), mean=nets.mean(), p10=q[0], p25=q[1], median=q[2], p75=q[3], p90=q[4], share_pos=float((nets > 0).mean()), worst=nets.min(),
                funded_total=sum(funded.values()), paid_share_farm=sum(paid.values()) / max(sum(funded.values()), 1), evals=evals, funded=funded, paid=paid, nets=nets,
-               days_first_payout=float(np.median(d1)) if d1 else np.nan, farms_paid_in_window=len(d1) / len(nets))
+               days_first_payout=float(np.median(d1)) if d1 else np.nan, farms_paid_in_window=len(d1) / len(nets), n_payouts=npay, min_cash=np.array(peak))
     if seen:
         ix = lambda dt: int(np.searchsorted(ref.dates, np.datetime64(dt)))
         pol2 = Policy(reserve_cycles=None, global_one_eval=True)
@@ -174,3 +175,13 @@ def farm_mix(base_stats: dict) -> Tuple[Dict[str, float], Dict[str, float]]:
     """(share of Combine starts, share of funded accounts) per group, as the baseline farm actually produces them."""
     e, f = base_stats["evals"], base_stats["funded"]
     return {g: v / sum(e.values()) for g, v in e.items()}, {g: v / sum(f.values()) for g, v in f.items()}
+
+
+def cohort_stats(fps: List[FirmPlan], ref: Stream, n_dev: int, post: int = 252, seen: bool = False) -> dict:
+    """Cohort accounting (council 1): every payout, to the end of the dev data, of the Combines bought in the 756-session window, minus their fees (no purchases after the window).
+    Only starts with `post` sessions of funded life left after the window (so a late start is not truncated by the data end)."""
+    starts = [i0 for i0 in farm_starts(ref, n_dev) if i0 + WINDOW + post <= n_dev]
+    pol_kw = dict(reserve_cycles=None, global_one_eval=True)
+    nets = np.array([run_multifirm(fps, Policy(stop_buy_at=i0 + WINDOW, **pol_kw), i0, n_dev)["net"] for i0 in starts])
+    q = np.percentile(nets, [10, 25, 50, 75, 90])
+    return dict(farms=len(nets), mean=nets.mean(), p10=q[0], p25=q[1], median=q[2], p75=q[3], p90=q[4], share_pos=float((nets > 0).mean()), worst=nets.min(), nets=nets)

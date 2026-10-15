@@ -30,6 +30,7 @@ class EvalPhase:
     max_micros: int = 150
     day_cap: Optional[float] = None    # overlay: flatten when the day's profit reaches this ($); modelled as p = min(p, cap)
     dll_slip: float = 0.0              # sensitivity: $ lost beyond the daily loss limit when it liquidates the account (0 = booked exactly at the limit)
+    dll_slip_ticks: float = 0.0        # sensitivity: ticks lost per contract held beyond the limit (MNQ tick = $0.50 per micro), scaled by the per-day factor `fx`
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,7 @@ class FundedSpec:
     day_cap: Optional[float] = None    # overlay (see EvalPhase.day_cap)
     net_pos_after_first: bool = False  # Topstep Standard path: net profit since the last payout must be > 0 for every payout after the first
     dll_slip: float = 0.0              # sensitivity: $ lost beyond the daily loss limit when it liquidates the account
+    dll_slip_ticks: float = 0.0        # sensitivity: ticks lost per contract held beyond the limit ($0.50 per micro tick), scaled by `fx`
 
 
 @dataclass(frozen=True)
@@ -108,7 +110,7 @@ def _eval_factor(scale: tuple, bal: float, age: int, hist: List[float]) -> float
     raise ValueError(kind)
 
 
-def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float], nd: List[int], i0: int, scale: Optional[tuple] = None) -> Tuple[int, int]:
+def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float], nd: List[int], i0: int, scale: Optional[tuple] = None, fx: Optional[List[float]] = None) -> Tuple[int, int]:
     """Return (status, tau): 1 pass, 0 breach, -1 data ran out/time limit; tau = sessions used (1-based). `nd` = desired micros per session; `scale` optionally scales them (see `_eval_factor`)."""
     n = len(x)
     t = i0
@@ -127,13 +129,13 @@ def run_eval_firm(phases: Tuple[EvalPhase, ...], x: List[float], lo: List[float]
                 first = lim if ph.dll is None else max(lim, ph.dll)
                 if ph.dd_type == "intraday" and w <= first:
                     if ph.dll is not None and ph.dll > lim and not ph.dll_hard:
-                        p = ph.dll - ph.dll_slip
+                        p = ph.dll - ph.dll_slip - ph.dll_slip_ticks * 0.5 * k * (1.0 if fx is None else fx[t])
                     else:
                         return 0, t - i0 + 1
                 elif ph.dll is not None and w <= ph.dll:
                     if ph.dll_hard:
                         return 0, t - i0 + 1
-                    p = ph.dll - ph.dll_slip
+                    p = ph.dll - ph.dll_slip - ph.dll_slip_ticks * 0.5 * k * (1.0 if fx is None else fx[t])
             if ph.day_cap is not None and p > ph.day_cap:
                 p = ph.day_cap
             bal += p
@@ -183,7 +185,7 @@ def _scaled_a(scale: tuple, a1: float, bal: float, age: int, hist: List[float], 
 
 
 def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[int], i0: int, plan: FundedPlan,
-                    atr: Optional[List[float]] = None, times: Optional[list] = None, atr2: Optional[List[float]] = None) -> Tuple[List[float], int, int, float]:
+                    atr: Optional[List[float]] = None, times: Optional[list] = None, atr2: Optional[List[float]] = None, fx: Optional[List[float]] = None) -> Tuple[List[float], int, int, float]:
     """Return (net payouts in order, sessions, end_state, balance): end_state 1 dead, 2 closed by plan, 0 data end."""
     bal = peak = 0.0
     floor = -spec.dd
@@ -215,13 +217,13 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
             first = lim if spec.dll is None else max(lim, spec.dll)
             if spec.dd_type == "intraday" and w <= first:
                 if spec.dll is not None and spec.dll > lim and not spec.dll_hard:
-                    p = spec.dll - spec.dll_slip
+                    p = spec.dll - spec.dll_slip - spec.dll_slip_ticks * 0.5 * k * (1.0 if fx is None else fx[t])
                 else:
                     return pays, t - i0 + 1, 1, floor
             elif spec.dll is not None and w <= spec.dll:
                 if spec.dll_hard:
                     return pays, t - i0 + 1, 1, floor
-                p = spec.dll - spec.dll_slip
+                p = spec.dll - spec.dll_slip - spec.dll_slip_ticks * 0.5 * k * (1.0 if fx is None else fx[t])
         if spec.day_cap is not None and p > spec.day_cap:
             p = spec.day_cap
         bal += p
@@ -271,19 +273,20 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
 def topstep_150k(path: str = "no_activation_dll", payout_path: str = "standard", rules: Optional[str] = None) -> FirmSpec:
     """Topstep 150K as modelled so far (config.yaml). `path` picks the fee path.
     rules 'v2' (default; env TOPSTEP_RULES) adds the Payout Policy rule that every payout after the first needs a positive net profit since the last payout; 'v1' reproduces all results up to section 27.
-    env TOPSTEP_DLL_SLIP (default 0) books the daily-loss-limit liquidation that many dollars beyond the limit (sensitivity)."""
+    env TOPSTEP_DLL_SLIP (default 0) books the daily-loss-limit liquidation that many dollars beyond the limit, TOPSTEP_DLL_SLIP_TICKS that many ticks per contract held (sensitivity)."""
     import os
     rules = rules or os.environ.get("TOPSTEP_RULES", "v2")
     slip = float(os.environ.get("TOPSTEP_DLL_SLIP", "0"))
+    slip_ticks = float(os.environ.get("TOPSTEP_DLL_SLIP_TICKS", "0"))
     from pricing_config import load_config
     from real_engine import rules_from_config
     cfg = load_config(); r = rules_from_config(cfg, path); p = cfg.paths[path]
     ph = EvalPhase(target=r.profit_target, dd=r.mll, dd_type="intraday" if r.intraday_mll else "eod", trail=True, lock=r.combine_mll_locks, lock_level=0.0,
-                   dll=r.dll, dll_hard=False, consistency=r.consistency_ratio, min_days=0, max_days=r.max_combine_days, max_micros=r.combine_micros, dll_slip=slip)
+                   dll=r.dll, dll_hard=False, consistency=r.consistency_ratio, min_days=0, max_days=r.max_combine_days, max_micros=r.combine_micros, dll_slip=slip, dll_slip_ticks=slip_ticks)
     fd = FundedSpec(dd=r.mll, dd_type="intraday" if r.intraday_mll else "eod", trail=True, lock=True, lock_level=0.0, dll=r.dll, dll_hard=False, ladder=r.ladder,
                     split=r.split, payout_min=r.payout_min, payout_cap=r.cap_standard if payout_path == "standard" else r.cap_consistency, payout_frac=0.5,
                     win_day_amt=r.win_day, win_days_req=r.standard_win_days if payout_path == "standard" else 0,
                     min_days_req=0 if payout_path == "standard" else r.consistency_days, consistency=None if payout_path == "standard" else r.consistency_xfa, after_payout="zero",
-                    net_pos_after_first=(rules == "v2" and payout_path == "standard"), dll_slip=slip)
+                    net_pos_after_first=(rules == "v2" and payout_path == "standard"), dll_slip=slip, dll_slip_ticks=slip_ticks)
     return FirmSpec("Topstep 150K", (ph,), fd, eval_fee=p.monthly_cost, eval_monthly=True, cycle=cfg.billing_cycle_days, activation_fee=p.activation_fee, reset_fee=p.reset_fee,
                     max_funded=5, max_evals=20, micro_commission_rt=cfg.friction.micro_round_turn_commission, payout_delay_days=3)
