@@ -203,7 +203,7 @@ def run_funded_firm(spec: FundedSpec, x: List[float], lo: List[float], nd: List[
             if stage == 1 and plan.scale is not None:
                 a = _scaled_a(plan.scale, plan.a1, bal, t - i0, hist)
             elif stage == 2 and plan.scale2 is not None:     # after the first payout: age / history counted from the LAST payout
-                a = _scaled_a(plan.scale2, a, bal, t - last_pay_t, hist[hist_ps:], len(pays))
+                a = _scaled_a(plan.scale2, a, bal, t - last_pay_t - 1, hist[hist_ps:], len(pays))
             k = 1 if not (a_t > 0) else max(1, int(round(a * max(bal - floor, 250.0) / a_t)))
         k = min(k, xfa_micro_cap(bal, spec.ladder))
         p, w = x[t] * k, lo[t] * k

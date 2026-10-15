@@ -122,7 +122,7 @@ def run_multifirm(firms: List[FirmPlan], pol: Policy, i0: int, n_end: Optional[i
                     pays, days, state, _ = run_funded_firm(spec.funded, f["X"][si], f["L"][si], f["ND"][si], t, fp.plan, f["A"][si], tm, f["A2"][si] if f["A2"] is not None else None)
                     for pt, pv in zip(tm, pays):
                         heapq.heappush(cash_events, (pt + pol.payout_delay_sessions, pv))
-                        if f["first_payout_t"] is None:
+                        if f["first_payout_t"] is None or pt < f["first_payout_t"]:      # earliest payout of the group (audit Oct 2026: it used to be the first-activated paying account's)
                             f["first_payout_t"] = pt
                     if log:
                         events.append((t, spec.name, "activation", fee))

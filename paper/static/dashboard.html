@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topstep paper trading</title>
+<style>
+:root { --bg:#f6f7f9; --panel:#fff; --fg:#14181f; --muted:#5d6675; --line:#dde1e8; --ok:#17803d; --bad:#c0292b; --warn:#b26a00; --acc:#2563eb; --acc2:#8b5cf6; --grid:#e8ebf0; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1319; --panel:#171c24; --fg:#e6e9ef; --muted:#8f99a8; --line:#2a313c; --ok:#4cc38a; --bad:#ff6b6e; --warn:#e5a13b; --acc:#6ea0ff; --acc2:#b39dff; --grid:#232a34; } }
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel); }
+h1 { font-size:18px; margin:0 8px 0 0; font-weight:600; }
+.chip { display:inline-block; padding:2px 10px; border-radius:99px; border:1px solid var(--line); color:var(--muted); font-size:12px; white-space:nowrap; }
+.chip.live { color:var(--ok); border-color:var(--ok); } .chip.replay { color:var(--warn); border-color:var(--warn); } .chip.bad { color:var(--bad); border-color:var(--bad); }
+main { padding:16px 20px 40px; display:grid; gap:16px; max-width:1500px; margin:0 auto; }
+.row { display:grid; gap:16px; grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+@media (max-width:1000px) { .row { grid-template-columns:minmax(0,1fr); } }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; min-width:0; }
+.card h2 { font-size:14px; margin:0 0 10px; font-weight:600; }
+.sub { color:var(--muted); font-size:12px; margin:-6px 0 10px; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+.tile { border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+.tile .k { color:var(--muted); font-size:11px; } .tile .v { font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; }
+.pos { color:var(--ok); } .neg { color:var(--bad); }
+table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:12.5px; }
+th, td { text-align:right; padding:5px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+th { color:var(--muted); font-weight:500; position:sticky; top:0; background:var(--panel); }
+th:first-child, td:first-child, td.l, th.l { text-align:left; }
+.scroll { overflow:auto; max-width:100%; }
+.bar { height:8px; background:var(--grid); border-radius:4px; position:relative; min-width:90px; }
+.bar > i { position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:var(--acc); }
+.sleeve { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+.sleeve b { font-weight:600; } .sleeve .grid { display:grid; grid-template-columns:auto 1fr; column-gap:12px; font-size:12.5px; }
+.sleeve .grid span:nth-child(odd) { color:var(--muted); }
+svg { width:100%; display:block; }
+svg text { fill:var(--muted); font-size:10px; font-family:inherit; }
+.log { max-height:240px; overflow:auto; font-size:12.5px; }
+.log div { padding:3px 0; border-bottom:1px solid var(--line); }
+.note { color:var(--muted); font-size:12px; }
+.pill { padding:1px 8px; border-radius:99px; font-size:11px; border:1px solid var(--line); }
+.pill.trading { color:var(--ok); border-color:var(--ok); } .pill.warn { color:var(--warn); border-color:var(--warn); } .pill.bad { color:var(--bad); border-color:var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Topstep paper trading</h1>
+  <span class="chip" id="mode">—</span><span class="chip" id="symbol">—</span><span class="chip" id="clock">—</span><span class="chip" id="session">—</span><span class="chip" id="atr">—</span><span class="chip" id="roll" hidden></span><span class="chip bad" id="err" hidden></span>
+  <span class="note" id="strategy" style="margin-left:auto"></span>
+</header>
+<main>
+  <div class="row">
+    <div class="card">
+      <h2>Market, VWAP, noise-area edges and trades <span class="note" id="px"></span></h2>
+      <div class="sub">Close of each one-minute bar, session VWAP (anchored 18:00 ET), the noise-area edges at each 30-minute check, trade entries (triangles) and exits (circles). Dotted lines: 09:30, 10:00 and the 15:55 flat time.</div>
+      <svg id="chart" viewBox="0 0 900 340" preserveAspectRatio="none" style="height:340px"></svg>
+    </div>
+    <div class="card">
+      <h2>Strategies today (per one micro contract)</h2>
+      <div id="sleeves"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Accounts</h2>
+    <div class="sub">Live balance = balance at the start of the day plus today's open and closed P&amp;L at the account's size. A breach is checked against the day's worst mark-to-market, as in the back-test; the engine rules are authoritative at the end of the session.</div>
+    <div class="scroll"><table id="accts"><thead><tr><th class="l">Group</th><th class="l">Account</th><th>Contracts</th><th>Balance</th><th>Live balance</th><th>Today</th><th>Loss floor</th><th>Cushion</th><th class="l">Progress</th><th class="l">Details</th><th class="l">Status</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <h2>Farm</h2>
+      <div class="tiles" id="tiles"></div>
+      <h2 style="margin-top:14px">Net kept (payouts minus fees) <span class="note" id="netnote"></span></h2>
+      <svg id="net" viewBox="0 0 900 180" preserveAspectRatio="none" style="height:180px"></svg>
+    </div>
+    <div class="card">
+      <h2>Events</h2>
+      <div class="log" id="events"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Completed sessions</h2>
+    <div class="scroll" style="max-height:300px"><table id="journal"><thead><tr><th class="l">Session</th><th>Noise-area $/micro</th><th>trades</th><th>worst</th><th>Gap-VWAP $/micro</th><th>trades</th><th>worst</th><th>Farm net</th><th>Cash</th><th class="l">Flag</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="note" id="rules"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const money = (v) => v == null || isNaN(v) ? '—' : (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const cls = (v) => v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+const clock = (smin) => { const m = (18 * 60 + smin) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+const svgNS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, text) { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+
+function drawChart(S) {
+  const svg = $('chart'); svg.replaceChildren();
+  const c = S.chart; if (!c || !c.c.length) { svg.appendChild(el('text', { x: 20, y: 30 }, 'waiting for the first bar of the session')); return; }
+  const W = 900, H = 340, m = { l: 52, r: 12, t: 10, b: 22 };
+  let lo = Math.min(...c.l), hi = Math.max(...c.h);
+  (S.bands || []).forEach((b) => { lo = Math.min(lo, b.lb); hi = Math.max(hi, b.ub); });
+  const pad = (hi - lo) * 0.05 || 1; lo -= pad; hi += pad;
+  const x = (s) => m.l + (s / 1320) * (W - m.l - m.r), y = (p) => m.t + (1 - (p - lo) / (hi - lo)) * (H - m.t - m.b);
+  for (let i = 0; i <= 4; i++) { const p = lo + (hi - lo) * i / 4; svg.appendChild(el('line', { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), stroke: 'var(--grid)' })); svg.appendChild(el('text', { x: 4, y: y(p) + 3 }, p.toFixed(1))); }
+  [[0, '18:00'], [330, '23:30'], [690, '05:30'], [930, '09:30'], [960, '10:00'], [1080, '12:00'], [1200, '14:00'], [1315, '15:55']].forEach(([s, t]) => {
+    const dotted = [930, 960, 1315].includes(s);
+    svg.appendChild(el('line', { x1: x(s), x2: x(s), y1: m.t, y2: H - m.b, stroke: dotted ? 'var(--muted)' : 'var(--grid)', 'stroke-dasharray': dotted ? '2 3' : '' }));
+    svg.appendChild(el('text', { x: x(s) - 12, y: H - 6 }, t));
+  });
+  const B = S.bands || [];
+  B.forEach((b, i) => { const x0 = x(b.smin), x1 = x(i + 1 < B.length ? B[i + 1].smin : 1315);
+    svg.appendChild(el('line', { x1: x0, x2: x1, y1: y(b.ub), y2: y(b.ub), stroke: 'var(--acc2)', 'stroke-width': 1.2, opacity: 0.8 }));
+    svg.appendChild(el('line', { x1: x0, x2: x1, y1: y(b.lb), y2: y(b.lb), stroke: 'var(--acc2)', 'stroke-width': 1.2, opacity: 0.8 })); });
+  const pts = (arr) => arr.map((v, i) => x(c.smin[i]).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+  svg.appendChild(el('polyline', { points: pts(c.vwap), fill: 'none', stroke: 'var(--warn)', 'stroke-width': 1.3 }));
+  svg.appendChild(el('polyline', { points: pts(c.c), fill: 'none', stroke: 'var(--acc)', 'stroke-width': 1.4 }));
+  const names = { noise: 'noise-area', gap: 'gap-VWAP' };
+  Object.entries(S.sleeves || {}).forEach(([g, sv]) => (sv.log || []).forEach((t) => {
+    const col = t.dir > 0 ? 'var(--ok)' : 'var(--bad)'; const up = t.dir > 0;
+    const px = x(t.entry_smin), py = y(t.entry);
+    const tri = el('polygon', { points: up ? `${px},${py - 7} ${px - 5},${py + 3} ${px + 5},${py + 3}` : `${px},${py + 7} ${px - 5},${py - 3} ${px + 5},${py - 3}`, fill: col });
+    tri.appendChild(el('title', {}, `${names[g]} ${up ? 'long' : 'short'} @ ${t.entry} ${clock(t.entry_smin)} ET` + (t.exit != null ? `, exit ${t.exit} ${clock(t.exit_smin)} (${t.reason}) ${money(t.usd)}/micro` : ' (open)')));
+    svg.appendChild(tri);
+    if (t.exit != null) { const c2 = el('circle', { cx: x(t.exit_smin), cy: y(t.exit), r: 3.5, fill: 'none', stroke: col, 'stroke-width': 1.6 }); svg.appendChild(c2); }
+  }));
+}
+
+function drawNet(S) {
+  const svg = $('net'); svg.replaceChildren();
+  const d = S.net_curve || []; if (d.length < 2) { svg.appendChild(el('text', { x: 20, y: 30 }, 'the curve appears after the second completed session')); return; }
+  const W = 900, H = 180, m = { l: 52, r: 12, t: 8, b: 20 };
+  const vs = d.map((r) => r[1]); let lo = Math.min(0, ...vs), hi = Math.max(0, ...vs); const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const x = (i) => m.l + (i / (d.length - 1)) * (W - m.l - m.r), y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+  for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3; svg.appendChild(el('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: 'var(--grid)' })); svg.appendChild(el('text', { x: 4, y: y(v) + 3 }, money(v))); }
+  svg.appendChild(el('line', { x1: m.l, x2: W - m.r, y1: y(0), y2: y(0), stroke: 'var(--muted)', 'stroke-dasharray': '3 3' }));
+  svg.appendChild(el('polyline', { points: d.map((r, i) => x(i).toFixed(1) + ',' + y(r[1]).toFixed(1)).join(' '), fill: 'none', stroke: 'var(--acc)', 'stroke-width': 1.6 }));
+  svg.appendChild(el('text', { x: m.l, y: H - 4 }, d[0][0])); svg.appendChild(el('text', { x: W - 70, y: H - 4 }, d[d.length - 1][0]));
+}
+
+function render(S) {
+  const me = S.meta || {}, se = S.session || {};
+  $('mode').textContent = me.mode || '—'; $('mode').className = 'chip ' + ((me.mode || '').toLowerCase() === 'live' ? 'live' : 'replay');
+  $('symbol').textContent = me.symbol || '—'; $('strategy').textContent = me.strategy || '';
+  $('clock').textContent = S.now ? 'last bar ' + S.now.replace('T', ' ').slice(0, 16) + ' ET' : 'no bars yet';
+  $('session').textContent = se.label ? 'session ' + se.label + ' · ' + se.bars + ' bars' : 'between sessions';
+  $('atr').textContent = se.atr_pts != null ? 'ATR14 ' + se.atr_pts.toFixed(1) + ' pts' : 'ATR n/a';
+  $('roll').hidden = !se.roll; $('roll').className = 'chip bad'; $('roll').textContent = se.roll ? 'roll day — no trades' : ''; $('roll').title = se.roll_note || '';
+  $('err').hidden = !me.error; $('err').textContent = me.error || '';
+  $('px').textContent = se.last != null ? ' last ' + se.last.toFixed(2) + (se.last_smin != null ? ' @ ' + clock(se.last_smin) : '') : '';
+  drawChart(S); drawNet(S);
+  const nm = { noise: 'Noise-area momentum (3 accounts)', gap: 'Gap-VWAP momentum (2 accounts)' };
+  $('sleeves').replaceChildren(...Object.entries(S.sleeves || {}).map(([g, sv]) => {
+    const d = document.createElement('div'); d.className = 'sleeve';
+    const pos = sv.pos > 0 ? 'LONG' : sv.pos < 0 ? 'SHORT' : 'flat';
+    d.innerHTML = `<b>${nm[g]}</b> <span class="pill ${sv.pos ? 'trading' : ''}">${pos}</span>${sv.tradable ? '' : ' <span class="pill warn">not trading today</span>'}<div class="grid">
+      <span>Entry</span><span>${sv.entry != null ? sv.entry.toFixed(2) : '—'}${sv.stop != null && sv.pos ? ' · stop ' + sv.stop.toFixed(2) : ''}</span>
+      <span>Open P&amp;L</span><span class="${cls(sv.unreal_usd)}">${money(sv.unreal_usd)}</span>
+      <span>Closed today</span><span class="${cls(sv.realized_usd)}">${money(sv.realized_usd)}</span>
+      <span>Worst so far</span><span>${money(sv.day_low_usd)}</span><span>Trades</span><span>${sv.trades}</span></div>`;
+    return d;
+  }));
+  const tb = $('accts').tBodies[0]; tb.replaceChildren();
+  (S.accounts || []).forEach((a) => {
+    const tr = tb.insertRow(); const base = a.kind === 'Funded' ? Math.max(a.target, 1) : Math.max(a.target, 1); const frac = Math.max(0, Math.min(1, a.bal / base));
+    const det = a.kind === 'Funded' ? `stage ${a.stage} · winning days ${a.wins}/${a.needs_wins} · payouts ${a.payouts && a.payouts.length ? a.payouts.map(money).join(', ') : 'none yet'}` : a.kind === 'Combine' ? `target ${money(a.target)}` : '';
+    const pill = a.status === 'trading' ? 'trading' : a.status === 'waiting' ? 'warn' : a.status === 'WOULD BREACH' ? 'bad' : 'warn';
+    tr.innerHTML = `<td class="l">${a.group === 'noise' ? 'Noise-area' : 'Gap-VWAP'}</td><td class="l">${a.kind} #${a.id}</td><td>${a.k || '—'}</td><td>${money(a.bal)}</td><td class="${cls(a.live_bal - a.bal)}">${money(a.live_bal)}</td><td class="${cls(a.today_usd)}">${money(a.today_usd)}</td><td>${money(a.floor)}</td><td>${money(a.cushion)}</td>
+      <td class="l"><div class="bar"><i style="width:${(frac * 100).toFixed(0)}%"></i></div><span class="note">${money(a.bal)} / ${money(a.target)}</span></td><td class="l note">${det}</td><td class="l"><span class="pill ${pill}">${a.status}</span></td>`;
+  });
+  if (!(S.accounts || []).length) { const tr = tb.insertRow(); tr.innerHTML = '<td class="l" colspan="11">no accounts yet — the farm buys its first Combine at the start of the next session</td>'; }
+  const f = S.farm || {}, G = f.groups || {};
+  const sum = (k) => Object.values(G).reduce((a, g) => a + (g[k] || 0), 0);
+  const T = [['Net kept', f.net, true], ['Payouts', f.payouts, false], ['Fees paid', f.fees, false], ['Cash', f.cash, true], ['Combines bought', sum('n_evals')], ['Passed', sum('n_passed')], ['Funded opened', sum('n_funded')], ['Funded paid', sum('n_paid_accts')], ['Funded died', sum('died')], ['Payouts made', sum('n_payouts')]];
+  $('tiles').replaceChildren(...T.map(([k, v, s]) => { const d = document.createElement('div'); d.className = 'tile'; d.innerHTML = `<div class="k">${k}</div><div class="v ${s ? cls(v) : ''}">${typeof v === 'number' && ['Net kept', 'Payouts', 'Fees paid', 'Cash'].includes(k) ? money(v) : (v ?? '—')}</div>`; return d; }));
+  $('netnote').textContent = (S.net_curve || []).length ? ' · ' + S.net_curve.length + ' sessions' : '';
+  $('events').replaceChildren(...(S.events || []).slice().reverse().map((e) => { const d = document.createElement('div'); const g = e.group === 'noise' ? 'noise-area' : 'gap-VWAP'; const what = { eval_fee: 'Combine fee ' + money(e.fee), eval_pass: 'Combine PASSED after ' + e.sessions + ' sessions', eval_fail: 'Combine FAILED after ' + e.sessions + ' sessions', eval_timeout: 'Combine timed out',
+      activation: 'funded account opened', payout: 'PAYOUT ' + money(e.amount), funded_died: 'funded account died (' + e.payouts + ' payouts)', funded_closed: 'funded account closed', pass_wasted: 'passed Combine expired without a free slot' }[e.kind] || e.kind; d.textContent = `${e.date}  ${g} #${e.id ?? ''}  ${what}`; return d; }));
+  if (!(S.events || []).length) $('events').textContent = 'no events yet';
+  const jb = $('journal').tBodies[0]; jb.replaceChildren();
+  (S.journal || []).slice().reverse().forEach((r) => { const tr = jb.insertRow(); tr.innerHTML = `<td class="l">${r.date}</td><td class="${cls(r.noise.usd)}">${money(r.noise.usd)}</td><td>${r.noise.trades}</td><td>${money(r.noise.low)}</td><td class="${cls(r.gap.usd)}">${money(r.gap.usd)}</td><td>${r.gap.trades}</td><td>${money(r.gap.low)}</td><td class="${cls(r.farm_net)}">${money(r.farm_net)}</td><td>${money(r.cash)}</td><td class="l note">${r.roll ? 'contract roll — skipped' : ''}</td>`; });
+  const ru = S.rules || {};
+  $('rules').textContent = `Paper trading only: orders are simulated at the next bar's open with the back-test costs ($1.22 commission + 1 tick per micro round trip); no real orders are sent. Rules modelled: Combine target ${money(ru.combine_target)}, trailing loss limit ${money(ru.mll)}, soft daily loss limit ${money(ru.dll)}, ${(ru.consistency * 100).toFixed(0)}% consistency; funded size ${ru.a1} × cushion/ATR before the first payout (at ${money(ru.first_payout_balance)}) and ${ru.a2} after; Combine size R = ${money(ru.R)} per ATR; $${ru.point_usd_per_micro} per index point per micro.`;
+}
+async function tick() { try { const r = await fetch('/api/state', { cache: 'no-store' }); render(await r.json()); } catch (e) { $('err').hidden = false; $('err').textContent = 'dashboard cannot reach the harness: ' + e; } }
+tick(); setInterval(tick, 2000);
+</script>
+</body>
+</html>
