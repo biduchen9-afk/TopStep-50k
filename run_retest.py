@@ -21,7 +21,15 @@ OUT = "results"
 BASE_CELL = (T.BASE["a1"], T.BASE["t1"], T.BASE["a2"], T.BASE["R"])
 D = T.load(); ST, REF, N, N_DEV = D["ST"], D["ref"], D["n"], D["n_dev"]
 F = T.features(REF)
-HOLD = "STATE"  # tag for the mix file
+def _base_paid() -> dict:
+    p = f"{OUT}/retest_base_account.csv"
+    if not os.path.exists(p):
+        return {}
+    b = pd.read_csv(p).set_index("group")
+    return {g: float(b.loc[g, "paid_share"]) for g in ("noise", "gap") if g in b.index}
+
+
+BASE_PAID = _base_paid()
 
 
 def tag_check() -> None:
@@ -106,10 +114,12 @@ def pick_s1(R: pd.DataFrame, P: pd.DataFrame, bf: dict) -> dict:
     for g in ST:
         rg = R[R.group == g]; allowance = float(P[P.group == g].gain.max())
         b = rg[(rg.a1 == BASE_CELL[0]) & (rg.t1 == BASE_CELL[1]) & (rg.a2 == BASE_CELL[2]) & (rg.R == BASE_CELL[3])].iloc[0]
-        ok = rg[(rg.gain > 2 * rg.se) & (rg.gain > allowance) & (rg.gain_h0 > 0) & (rg.gain_h1 > 0) & (rg.paid_share >= b.paid_share - 0.05)].sort_values("gain", ascending=False)
+        other = [x for x in ST if x != g][0]; mix_paid = lambda pg: bf["w_fund"][g] * pg + bf["w_fund"][other] * BASE_PAID[other]
+        base_mix = sum(bf["w_fund"][x] * BASE_PAID[x] for x in ST)
+        ok = rg[(rg.gain > 2 * rg.se) & (rg.gain > allowance) & (rg.gain_h0 > 0) & (rg.gain_h1 > 0) & (mix_paid(rg.paid_share) >= base_mix - 0.05)].sort_values("gain", ascending=False)
         print(f"\nS1 {g}: allowance ${allowance:,.0f}; account-level survivors {len(ok)}", flush=True)
         passers = []
-        for _, c in ok.head(5).iterrows():
+        for _, c in ok.iterrows():
             groups = [("noise", 3, dict(a1=BASE_CELL[0], t1=BASE_CELL[1], a2=BASE_CELL[2], R=BASE_CELL[3])), ("gap", 2, dict(a1=BASE_CELL[0], t1=BASE_CELL[1], a2=BASE_CELL[2], R=BASE_CELL[3]))]
             for k, (gg, n, pp) in enumerate(groups):
                 if gg == g:
@@ -119,7 +129,6 @@ def pick_s1(R: pd.DataFrame, P: pd.DataFrame, bf: dict) -> dict:
             if not fs["median"] >= base_q[1]: why.append("lower farm median")
             if not fs["p25"] >= base_q[0]: why.append("lower farm p25")
             if not fs["worst"] >= (bf["worst"] * 1.25 if bf["worst"] < 0 else bf["worst"] * 0.75): why.append("deeper worst farm")
-            if not fs["paid_share_farm"] >= bf["paid_share_farm"] - 0.05: why.append("fewer accounts paid")
             print(f"   cell a1 {c.a1} t1 {c.t1:.0f} a2 {c.a2} R {c.R:.0f}: rate gain ${c.gain:.2f}/session (SE {c.se:.2f}); farm mean {fs['mean']:,.0f} median {fs['median']:,.0f} p25 {fs['p25']:,.0f} worst {fs['worst']:,.0f} paid {fs['paid_share_farm']:.0%} -> {why or 'PASS'}", flush=True)
             if not why:
                 passers.append((fs["p25"], dict(a1=float(c.a1), t1=float(c.t1), a2=float(c.a2), R=float(c.R), ev_gain=float(c.gain), farm_p25=float(fs["p25"]), farm_median=float(fs["median"]), farm_mean=float(fs["mean"]))))
@@ -147,10 +156,11 @@ def s2_stage(chosen: dict, bf: dict) -> dict:
     for g in ST:
         sg = S2[S2.group == g]; allowance = float(sg.placebo_gain.max())
         cell = chosen.get(g) or dict(a1=BASE_CELL[0], t1=BASE_CELL[1], a2=BASE_CELL[2], R=BASE_CELL[3])
-        ok = sg[(sg.gain > 2 * sg.se) & (sg.gain > allowance) & (sg.gain_h0 > 0) & (sg.gain_h1 > 0)].sort_values("gain", ascending=False)
+        other = [x for x in ST if x != g][0]; base_mix = sum(bf["w_fund"][x] * BASE_PAID[x] for x in ST)
+        ok = sg[(sg.gain > 2 * sg.se) & (sg.gain > allowance) & (sg.gain_h0 > 0) & (sg.gain_h1 > 0) & (bf["w_fund"][g] * sg.paid_share + bf["w_fund"][other] * BASE_PAID[other] >= base_mix - 0.05)].sort_values("gain", ascending=False)
         print(f"\nS2 {g}: filter placebo allowance ${allowance:,.0f}; survivors {len(ok)}")
         sel2[g] = None
-        for _, c in ok.head(3).iterrows():
+        for _, c in ok.iterrows():
             ST2 = dict(ST); ST2[g] = T.filtered(ST[g], T.skip_mask(F, c["filter"], c.thr))
             groups = [(gg, n, (dict(a1=(chosen.get(gg) or {}).get("a1", BASE_CELL[0]), t1=(chosen.get(gg) or {}).get("t1", BASE_CELL[1]), a2=(chosen.get(gg) or {}).get("a2", BASE_CELL[2]), R=(chosen.get(gg) or {}).get("R", BASE_CELL[3])))) for gg, n in (("noise", 3), ("gap", 2))]
             fs = T.farm_stats(T.farm_plans(ST2, groups), REF, N_DEV, seen=False)
@@ -158,7 +168,6 @@ def s2_stage(chosen: dict, bf: dict) -> dict:
             if not fs["median"] >= base_q[1]: why.append("lower farm median")
             if not fs["p25"] >= base_q[0]: why.append("lower farm p25")
             if not fs["worst"] >= (bf["worst"] * 1.25 if bf["worst"] < 0 else bf["worst"] * 0.75): why.append("deeper worst farm")
-            if not fs["paid_share_farm"] >= bf["paid_share_farm"] - 0.05: why.append("fewer accounts paid")
             print(f"   {c['filter']} {c.thr}: rate gain ${c.gain:.2f}/session; farm mean {fs['mean']:,.0f} median {fs['median']:,.0f} p25 {fs['p25']:,.0f} worst {fs['worst']:,.0f} paid {fs['paid_share_farm']:.0%} -> {why or 'PASS'}", flush=True)
             if not why and sel2[g] is None:
                 sel2[g] = dict(filter=c["filter"], thr=float(c.thr), ev_gain=float(c.gain), farm_p25=float(fs["p25"]), farm_median=float(fs["median"]), farm_mean=float(fs["mean"]))

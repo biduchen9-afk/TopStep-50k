@@ -166,7 +166,7 @@ def farm_stats(fps: List[FirmPlan], ref: Stream, n_dev: int, starts: Optional[Li
     if seen:
         ix = lambda dt: int(np.searchsorted(ref.dates, np.datetime64(dt)))
         pol2 = Policy(reserve_cycles=None, global_one_eval=True)
-        out["seen"] = [round(run_multifirm(fps, pol2, ix(x))["net"]) for x in ("2021-01-04", "2023-01-02", "2025-01-02", "2025-07-01")]
+        out["seen"] = [round(run_multifirm(fps, pol2, ix(x), min(len(ref.dates), ix(x) + WINDOW))["net"]) for x in ("2021-01-04", "2023-01-02", "2025-01-02", "2025-07-01")]   # 756 sessions or the end of the data
     return out
 
 
