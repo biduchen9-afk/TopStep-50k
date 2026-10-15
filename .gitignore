@@ -3,3 +3,7 @@ __pycache__/
 paper_state*.pkl
 *.tmp
 data_new/
+
+# scratch outputs written by council agents
+exp[A-Z]*.csv
+vec*.pkl
