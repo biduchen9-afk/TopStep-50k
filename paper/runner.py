@@ -2,6 +2,7 @@
 and persists its state after every completed session (so it can be stopped and resumed; missed sessions are replayed from the feed)."""
 from __future__ import annotations
 
+import json
 import math
 import os
 import pickle
@@ -18,6 +19,18 @@ from paper.history import History
 from paper.sleeves import CASH_OPEN, FLAT_BY, K_DEC, STEP, NoiseAreaSleeve, VwapAtrSleeve, OR_END
 
 GROUP_SLEEVE = {"noise": "nq_noise", "gap": "nq_gap30"}
+_TH18: Optional[dict] = None
+
+
+def _thresholds18() -> Optional[dict]:
+    global _TH18
+    if _TH18 is None:
+        try:
+            _TH18 = json.load(open(os.path.join(os.path.dirname(__file__), "..", "results", "forward_thresholds_R.json")))
+        except OSError:
+            _TH18 = {}
+    return _TH18 or None
+
 POINT_USD_PER_MICRO = 2.0           # MNQ: $2.00 per index point (NQ $20 / 10)
 ROLL_REL_JUMP = 0.0008              # a one-minute splice of 8bp or more inside a roll window marks a contract roll (the back-test skips that session)
 ROLL_SESSION_JUMP = 0.004           # live guard: a first bar this far (0.4%, about 120 NQ points) from the previous session's last close inside a roll window is the front-month splice (the quarterly calendar spread is about 1%)
@@ -79,7 +92,8 @@ class PaperRunner:
         return True
 
     def _make_sleeves(self) -> None:
-        self.sleeves = {"noise": NoiseAreaSleeve(self.cost), "gap": VwapAtrSleeve(self.cost, 0.3, 0.2, OR_END, True)}
+        # "vwap" is a SHADOW sleeve (PR19): it trades the same bars and is journalled (per-micro $ and low) but no account uses it and the farm never reads it
+        self.sleeves = {"noise": NoiseAreaSleeve(self.cost), "gap": VwapAtrSleeve(self.cost, 0.3, 0.2, OR_END, True), "vwap": VwapAtrSleeve(self.cost, 0.3, 0.2, CASH_OPEN, False)}
 
     def _start_session(self, label) -> None:
         self.cur_label = label
@@ -244,6 +258,14 @@ class PaperRunner:
         return dict(group=g, kind=kind, id=id_, k=int(k), bal=float(a.bal), live_bal=float(live), floor=float(a.floor), cushion=float(a.bal - a.floor), target=float(target), today_usd=float(day),
                     day_low_usd=float(low * k), status={"ok": "trading", "dll": "daily loss limit", "breach": "WOULD BREACH"}[st])
 
+    def _forward(self) -> dict:
+        """PR19 status for the dashboard (paper/verdict.py); never allowed to break the snapshot."""
+        try:
+            from paper.verdict import verdict19
+            return verdict19(self.journal, _thresholds18())
+        except Exception as e:                                       # pragma: no cover
+            return dict(status="ERROR", reason=f"{type(e).__name__}: {e}")
+
     def snapshot(self) -> dict:
         with self.lock:
             lastb = self.bars[-1] if self.bars else None
@@ -263,5 +285,5 @@ class PaperRunner:
                              prev_close=self.ctx.get("prev_close") if self.ctx else None, ok=bool(self.ctx.get("ok")) if self.ctx else False, roll=self.roll_today or self.bad_data, roll_note=self.roll_note,
                              flat_by_smin=FLAT_BY, last_completed=str(self.last_label) if self.last_label else None),
                 sleeves={g: self._sleeve_view(g, lc) for g in GROUP_SLEEVE}, accounts=self._accounts_view(lc), farm=sm, bands=bands, chart=chart,
-                journal=self.journal[-60:], net_curve=[[str(d), float(v)] for d, v in self.farm.net_curve[-400:]], events=self.farm.log[-60:],
+                journal=self.journal[-60:], forward=self._forward(), net_curve=[[str(d), float(v)] for d, v in self.farm.net_curve[-400:]], events=self.farm.log[-60:],
                 rules=dict(combine_target=9000, mll=4500, dll=-3000, consistency=0.55, first_payout_balance=self.farm.plan.t1, a1=self.farm.plan.a1, a2=self.farm.plan.a2, R=self.R, point_usd_per_micro=POINT_USD_PER_MICRO))

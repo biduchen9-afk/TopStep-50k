@@ -567,3 +567,73 @@ def test_tick_feed_reconnects_when_the_socket_goes_silent():
     finally:
         stop.set()
     assert len(calls) == 2 and tf.n_stall >= 1 and "reconnecting" in (tf.last_error or "")
+
+
+# ------------------------------------------------------------------------------------------------ PR19: verdict rules and the VWAP shadow sleeve
+def _jrow(r_noise=0.0, r_gap=0.0, r_vwap=0.0, gap=False, atr=1000.0):
+    return dict(date="2026-10-19", atr_usd=atr, noise=dict(usd=r_noise * atr, low=0.0, trades=1), gap=dict(usd=r_gap * atr, low=0.0, trades=1), vwap=dict(usd=r_vwap * atr, low=0.0, trades=1), data_gap=gap)
+
+
+def test_pr19_verdict_kill_line_confirm_latch_and_data_rules():
+    import math
+    from paper.verdict import CONFIRM_R, kill_threshold, verdict19
+    assert abs(kill_threshold(252) - (-3.482)) < 1e-9 and abs(kill_threshold(504) - (-1.214)) < 1e-9 and abs(kill_threshold(756) - 1.054) < 1e-9
+    assert abs(CONFIRM_R - 10.887) < 0.01
+    th = {str(k): -2.0 for k in range(60, 255, 5)}
+    assert verdict19([_jrow() for _ in range(30)])["status"] == "TOO EARLY"
+    # a steady development-sized edge continues; no kill, no confirm before 36 months
+    v = verdict19([_jrow(0.0183, 0.0183) for _ in range(300)], th)
+    assert v["status"] == "CONTINUE" and v["kill_session"] is None and v["next_look"] == 315 and v["pooled_R"] > 5
+    # the kill line at the first look (session 63): -5.75 + 0.009 * 63 = -5.183
+    j = [_jrow(-0.1, -0.1)] * 51 + [_jrow(0.0, 0.0)] * 12                          # cumulative -5.1 at session 63: not yet
+    assert verdict19(j, th)["status"] != "KILL"
+    j = [_jrow(-0.0825, -0.0825)] * 63                                               # -5.1975 <= -5.183: kill at 63
+    v = verdict19(j, th); assert v["status"] == "KILL" and v["kill_session"] == 63
+    # latched: a recovery after the kill look does not undo it
+    v = verdict19(j + [_jrow(0.5, 0.5)] * 200, th); assert v["status"] == "KILL" and v["kill_session"] == 63
+    # a loss that stays above the line is only a WATCH when it is below the PR18 5th percentile
+    v = verdict19([_jrow(-0.04, -0.04)] * 70, th); assert v["status"] == "WATCH" and v["watch"] and v["kill_session"] is None
+    # confirm needs 756 valid sessions, no kill, cumulative pooled R >= 10.89
+    ok = verdict19([_jrow(0.016, 0.016)] * 756, th); assert ok["status"] == "CONFIRMED (36 months)" and ok["pooled_R"] >= CONFIRM_R
+    no = verdict19([_jrow(0.012, 0.012)] * 756, th); assert no["status"] == "CANNOT TELL (36 months)"
+    # data rules: gate at session 20, invalid looks, two invalid looks in a row
+    v = verdict19([_jrow(gap=(i in (3, 11))) for i in range(25)]); assert v["status"] == "DATA FAILURE" and v["data_failure_session"] == 20
+    jj = [_jrow(gap=(i % 30 == 5)) for i in range(63)]                              # 2 holes of 63 = 3.2% > 2%: the look at 63 is invalid (and the gate at 20 saw one hole)
+    v = verdict19(jj); assert v["status"] == "INVALID" and v["invalid_looks"] == [63]
+    jj = [_jrow(gap=(i % 30 == 5)) for i in range(90)]
+    v = verdict19(jj); assert v["status"] == "DATA FAILURE" and v["data_failure_session"] == 84
+    # shadow columns are descriptive: VWAP R and the equal-weight basket are reported, not used
+    v = verdict19([_jrow(0.01, 0.02, 0.03)] * 100); assert abs(v["shadow_vwap_R"] - 3.0) < 1e-9 and abs(v["shadow_basket_R"] - 2.0) < 1e-9 and abs(v["pooled_R"] - 1.4) < 1e-9
+    assert not math.isnan(v["likelihood_ratio_full_vs_zero"])
+
+
+def test_runner_vwap_shadow_sleeve_matches_the_batch_sleeve_and_does_not_touch_the_farm():
+    import pandas as pd
+    from market_data import build_sessions
+    from paper.farm import PaperFarm
+    from paper.feed import ReplayFeed
+    from paper.history import History
+    from paper.runner import PaperRunner
+    from portfolio import make_sleeve
+    from pricing_config import load_config
+    from real_engine import costs_from_config
+    sess = build_sessions("nq"); costs = costs_from_config(load_config()); cost = costs.points(sess)
+    dates = sess.dates.astype("datetime64[D]")
+    i0 = int(np.searchsorted(dates, np.datetime64("2019-03-01"))); i1 = i0 + 25
+    r = PaperRunner(History.from_sessions(sess, i0), PaperFarm(), cost, None, {}, t0=i0)
+    r.last_label = pd.Timestamp(sess.dates[i0 - 1]).date()
+    for b in ReplayFeed(sess, pd.Timestamp(sess.dates[i0]), pd.Timestamp(sess.dates[i1])):
+        r.process(b)
+    r.close_open_session()
+    ref = make_sleeve("nq", "vwap_atr", dict(k=0.3, s=0.2, start_min=930), costs=costs, name="nq_vwap")
+    pos = {str(d)[:10]: k for k, d in enumerate(ref.dates)}
+    n = 0
+    for row in r.journal:
+        k = pos.get(row["date"])
+        if k is None or not ref.ok[k] or row["roll"]:
+            continue
+        assert abs(row["vwap"]["usd"] - ref.pnl[k]) < 1e-6 and abs(row["vwap"]["low"] - ref.low[k]) < 1e-6, (row["date"], row["vwap"], ref.pnl[k])
+        n += 1
+    assert n >= 15
+    f = r.snapshot()["forward"]
+    assert f["status"] == "TOO EARLY" and f["sessions"] == len(r.journal)

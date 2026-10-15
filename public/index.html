@@ -88,7 +88,7 @@ svg text { fill:var(--muted); font-size:10px; font-family:inherit; }
 <div id="login" hidden><form id="lform" class="glass"><h2>Topstep paper trading</h2><div class="note" id="lmsg"></div><input id="lkey" type="password" autocomplete="current-password" placeholder="access key" aria-label="access key" required><button type="submit">Open</button></form></div>
 <header>
   <h1>Topstep paper trading</h1>
-  <span class="chip" id="mode">—</span><span class="chip" id="symbol">—</span><span class="chip" id="clock">—</span><span class="chip" id="session">—</span><span class="chip" id="atr">—</span><span class="chip" id="roll" hidden></span><span class="chip" id="gaps" hidden></span><span class="chip bad" id="err" hidden></span>
+  <span class="chip" id="mode">—</span><span class="chip" id="symbol">—</span><span class="chip" id="clock">—</span><span class="chip" id="session">—</span><span class="chip" id="atr">—</span><span class="chip" id="pr19" title="Forward test PR19 (docs/PREREGISTRATION_19.md)">—</span><span class="chip" id="roll" hidden></span><span class="chip" id="gaps" hidden></span><span class="chip bad" id="err" hidden></span>
   <span class="note" id="strategy" style="margin-left:auto"></span>
 </header>
 <main>
@@ -189,6 +189,8 @@ function render(S) {
   const ng = (S.journal || []).filter((r) => r.data_gap).length; $('gaps').hidden = !ng; $('gaps').className = 'chip bad'; $('gaps').textContent = ng + (ng === 1 ? ' session' : ' sessions') + ' with data holes'; $('gaps').title = 'sessions with holes in regular hours are kept out of the ATR history; a run on a feed with holes is not a valid forward test';
   $('err').hidden = !me.error; $('err').textContent = me.error || '';
   $('px').textContent = se.last != null ? ' last ' + se.last.toFixed(2) + (se.last_smin != null ? ' @ ' + clock(se.last_smin) : '') : '';
+  const fw = S.forward || {}; const fs = fw.status || '—'; $('pr19').textContent = 'PR19 ' + fs + (fw.sessions != null ? ' · ' + fw.sessions + '/756' : ''); $('pr19').className = 'chip ' + (fs === 'KILL' || fs === 'DATA FAILURE' ? 'bad' : fs === 'WATCH' || fs === 'INVALID' ? 'replay' : fs === 'CONTINUE' || fs.startsWith('CONFIRMED') ? 'live' : '');
+  $('pr19').title = [fw.reason, fw.sessions != null ? 'pooled R ' + (fw.pooled_R || 0).toFixed(2) + ' (kill line ' + (fw.kill_threshold_now != null ? fw.kill_threshold_now.toFixed(2) : 'n/a') + '), VWAP shadow ' + (fw.shadow_vwap_R || 0).toFixed(2) + ', basket shadow ' + (fw.shadow_basket_R || 0).toFixed(2) + ', hole sessions ' + (fw.hole_sessions || 0) : '', (fw.watch || []).join('; ')].filter(Boolean).join(' | ');
   drawChart(S); drawNet(S);
   const nm = { noise: 'Noise-area momentum (3 accounts)', gap: 'Gap-VWAP momentum (2 accounts)' };
   $('sleeves').replaceChildren(...Object.entries(S.sleeves || {}).map(([g, sv]) => {
