@@ -1,0 +1,26 @@
+# Devil's advocate (Council 2)
+
+**Position.** The coin flip is not a risk-matched null, and against better nulls the recent Combine record fits "zero edge" and "full edge" about equally (one bad year = likelihood ratio 1.6-2.5). I could not break the edge itself (post-publication pooled R is +0.2 sigma against dev), but the farm is a long shot: 3-year mean +$1k to +$4k, median -$2k to -$3k, the mean carried by a 10-15% tail that Topstep's discretion taxes, unresolvable by data in under 3-5 years. End the analysis phase; the next step is one user decision (park, or one capped live Combine).
+
+**Evidence** (C = computed by me, scripts in `scratchpad/council2/advocate/`; J = judgement). I reproduced the authors' numbers exactly (coin 13.6/15.3/16.2%, real 6.5/9.7%, farm $38.7k/$22.3k). By severity:
+1. **Coin null not risk-matched (C).** Coin daily R sd 0.58 vs 0.30 noise-area / 0.22 gap; trades 97% of days vs 61% / 31%; Combines last 3 sessions vs 9-17. Vol-matched coin (R and a1/a2 x0.5 / x0.375) passes 15.7% dev, 19% 2023-24, **19.5-20.2% since 2024-12**: real 6.5% / 9.7% is 10-14 points *below* zero edge (block bootstrap p<0.01 / 0.03; independent-Combine binomial 0.04-0.12 / 0.25). Yet a shape-matched null (real sleeve de-meaned by the period's mean) passes 3.2% / 2.2%: real is *above* it. Null range 2-20%: pass rate cannot test edge (separating noise-area dev from zero edge needs ~270 independent Combines, 17 years). Zero-edge EV per try: -$31 / -$45 dev, +$66 / +$35 in 2023-24 (stated -$65 / +$60); "zero edge has negative EV" is not established.
+2. **Consistency count double-counts (C).** Rule off, since-2024-12 pass is 19.4% noise-area / 16.1% gap (dev 27.0 / 33.8). The 10 "blocked" Combines are about 3 events: a $9.7k day (Feb 2025), Aug-Sep, a $27.5k day = 2.9 R (Oct 2025; three Combines paid 4-10 fee cycles while unreachable). Blocked share of target-reachers: 5% before Dec 2024, ~two thirds after: profit concentration meeting a rule built to reject it, not decay.
+3. **One year, breakpoint chosen after the outcomes (C).** 11 passes (~7 events), 1 payout. P(12-month farm net <= -$4.2k, no payout) = 11% at full dev edge, 17% at half, 27% at none. Pooled 3:2 R: dev Sharpe 0.81; 2024-06 to 2026-07 +7.8 R vs +6.7 expected (z +0.2); 2025 on z -0.6, and 35% of dev 18-month windows are worse. Decay is not shown, nor persistence. Hold-out (J): noise-area is SSRN 4824172 (2024), sample probably reaching 2023-24, and the hold-out fed 4,752 configurations, so 2023-24 is not clean; yet post-publication R shows no collapse.
+4. **Exact re-basing (C).** No leakage, but the headline moves with the reference price (which uses hold-out years): 6,000 gives $17.7k / $11.9k, 22,123 $38.8k / $22.8k, 30,000 $45.3k / $32.0k. Price-independence is supported (gross Sharpe vs log price correlation +0.46 noise, +0.24 gap). The farm is hypersensitive to edge (3-year mean / median): half the dev edge $3.3k / $0.6k, a quarter $0.0k / -$3.4k, none -$6.6k / -$6.4k.
+5. **Switchers (C).** Code is correct (`rolling().shift(1)`; multiplier scales pnl and low together). Not a test: the null is a random pick (~$450 dev EV), not the best fixed sleeve; argmax of raw mean R favours high-vol VWAP (24-61% of days); corr(trailing, next-day R) -0.005 to -0.065.
+
+**EV of the farm** (3-year, exact costs; share of dev edge kept: mean / median): 100% $38.7k / $22.3k; 75% $22.6k / $14.0k; 50% $3.3k / $0.6k; 25% $0.0k / -$3.4k; 0% -$6.6k / -$6.4k. My weights (J: 7/13/20/20/40%): mean +$3.7k, median -$2.0k, P(>0) 42%, P(>=$10k) 23%, P(<=-$5k) 41%; with a 12-month stop unless net>0: +$2.3k / -$3.0k / 27% / 15% / 25%. The mean is positive if >=10% weight sits on near-full edge; the median is not. Topstep (J): "excessive purchases" and "account stacking" describe 16 Combines a year with 86-94% breaching; with the "only one Account" wording I put 20-35% on closure, voided payouts or a forced Consistency path ($6.5k / $5.3k at full edge) over 3 years, 5-10% for one Combine. A 25% payout haircut puts the mean at -$1k to +$1k.
+
+**Recommended next steps**
+1. Declare analysis finished. Cost zero; further 2010-26 tests move credence <2:1 and add multiplicity.
+2. Written Topstep question (free): personal-device automation, many Combines/XFAs per profile, "excessive purchases". Stop if vague.
+3. User chooses park, or one live Combine: baseline cells, $1.2k out-of-pocket cap, stop at 6 months without payout. Odds (J): payout in 6 months ~48%, net>0 at stop ~25%, mean +$1.4k, median ~-$2.5k.
+4. If parked: revisit 2027-07-01.
+
+Scale to a farm only if: written Topstep OK; a Combine-XFA-payout cycle matches the engine; cost <= $2.22 per micro; 250 forward sessions with pooled R >= +1.6 and no PR18 STOP.
+
+**What not to do.** More regime, zero-edge or switcher variants; quoting the coin benchmark; five accounts; buying data.
+
+**Biggest thing the chair may be wrong about.** Treating "is the edge dead?" as the open question. It is indeterminate both ways for 3-5 years (LR ~2.6 after three years even if dev Sharpe is real).
+
+**Questions for the user.** (1) Does "only the first account out of pocket" mean fees are paid until the first payout (my reading), with what cap? (2) Is mean ~+$2k / median ~-$3k acceptable against the "$2k in 3 years" bar? (3) Is an always-on machine available for 20:30-02:55 local time?
