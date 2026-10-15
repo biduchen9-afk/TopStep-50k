@@ -92,7 +92,7 @@ def main() -> None:
     # ---------- Part B: pipeline
     R = pd.read_csv("results/scaling_pipeline.csv")
     g = R.groupby(["case", "unlock", "kind"], dropna=False).agg(mean_net=("net", "mean"), worst_net=("net", "min"), green=("net", lambda v: int((v > 0).sum())), runs=("net", "size"), ruined=("ruined", "sum"), oop_max=("oop", "max"), days_first_payout=("days_first_payout", "median")).reset_index()
-    g["rule"] = np.where(g.unlock.isna(), "Topstep only", "Topstep + FundedNext" + (" + FTMO" if "FTMO" in g.case else "") + " (unlock at $" + g.unlock.fillna(0).astype(int).astype(str) + ")")
+    g["rule"] = np.where(g.unlock.isna(), "Topstep only", "Topstep + FundedNext" + np.where(g.case.str.contains("FTMO"), " + FTMO", "") + " (unlock at $" + g.unlock.fillna(0).astype(int).astype(str) + ")")
     g["rule"] = np.where(g.case == "Topstep only", "Topstep only", g.rule)
     prows = [dict(rule=r.rule, kind=r.kind, mean_net=round(r.mean_net), worst_net=round(r.worst_net), green=int(r.green), runs=int(r.runs), ruined=int(r.ruined), oop_max=round(r.oop_max), median_days_first_payout=None if pd.isna(r.days_first_payout) else round(r.days_first_payout)) for r in g.itertuples()]
     json.dump(prows, open(f"{OUT}/pipeline_summary.json", "w"))
