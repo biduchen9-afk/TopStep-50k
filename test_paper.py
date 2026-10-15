@@ -285,3 +285,114 @@ def test_warm_up_from_bars_equals_history_from_sessions():
     got = r.hist.trimmed(60).context()
     assert abs(got["atr"] - ref["atr"]) < 1e-9 and abs(got["prev_close"] - ref["prev_close"]) < 1e-9
     assert np.allclose(got["sigma"], ref["sigma"], equal_nan=True)
+
+
+import numpy as np
+import pandas as pd
+
+# ------------------------------------------------------------------------------------------------ tick feed (paper/tickfeed.py)
+class _Tick:
+    def __init__(self, ts, price, size, replay=False):
+        self.symbol, self.price, self.timestamp, self.replay, self.size = "NQ.F", price, ts, replay, size
+
+
+def _ticks_from_bars(bars):
+    out = []
+    for b in bars:
+        t0 = b.ts.tz_convert("UTC")
+        for k, p in enumerate((b.o, b.h, b.l, b.c)):
+            out.append(_Tick((t0 + pd.Timedelta(seconds=5 + 15 * k)).isoformat(), p, b.v / 4.0))
+    return out
+
+
+def _some_bars(n=150):
+    import numpy as np
+    from market_data import build_sessions
+    from paper.feed import ReplayFeed
+    sess = build_sessions("nq")
+    i = int(np.searchsorted(sess.dates.astype("datetime64[D]"), np.datetime64("2024-01-09")))
+    return [b for _, b in zip(range(n), ReplayFeed(sess, str(pd.Timestamp(sess.dates[i]).date()), str(pd.Timestamp(sess.dates[i]).date()), speed=None))]
+
+
+def test_tick_feed_rebuilds_the_bars_exactly():
+    from paper.tickfeed import TickBars
+    bars = _some_bars(120); ticks = _ticks_from_bars(bars)
+    tf = TickBars(lambda start: iter([t for t in ticks if start is None or pd.Timestamp(t.timestamp) >= pd.Timestamp(start, tz="UTC")]), settle=0.2, backoff=0.0, max_reconnects=0)
+    got = list(tf)
+    assert len(got) == len(bars)
+    for a, b in zip(got, bars):
+        assert a.ts == b.ts and abs(a.o - b.o) < 1e-9 and abs(a.h - b.h) < 1e-9 and abs(a.l - b.l) < 1e-9 and abs(a.c - b.c) < 1e-9 and abs(a.v - b.v) < 1e-6
+    assert tf.volume_basis == "size"
+
+
+def test_tick_feed_reconnects_without_double_counting():
+    from paper.tickfeed import TickBars
+    bars = _some_bars(60); ticks = _ticks_from_bars(bars)
+    calls = []
+    def connect(start):
+        calls.append(start)
+        sel = [t for t in ticks if start is None or pd.Timestamp(t.timestamp) >= pd.Timestamp(start, tz="UTC")]
+        if len(calls) == 1:                                   # the first connection drops in the middle of minute 31
+            cut = 4 * 30 + 2
+            def g():
+                yield from sel[:cut]
+                raise ConnectionError("dropped")
+            return g()
+        return iter(sel)
+    tf = TickBars(connect, settle=0.2, backoff=0.0, sleep=lambda s: None, max_reconnects=1)
+    got = list(tf)
+    assert len(calls) == 2 and calls[1] is not None
+    assert [b.ts for b in got] == [b.ts for b in bars]
+    assert all(abs(a.v - b.v) < 1e-6 and abs(a.h - b.h) < 1e-9 for a, b in zip(got, bars))
+    assert tf.reconnects >= 1
+
+
+def test_tick_feed_flushes_the_last_minute_when_ticks_stop():
+    import threading, time
+    from paper.tickfeed import TickBars
+    now = pd.Timestamp.now(tz="UTC").floor("min") - pd.Timedelta(minutes=3)
+    block = threading.Event()
+    def connect(start):
+        def g():
+            yield _Tick((now + pd.Timedelta(seconds=10)).isoformat(), 100.0, 1.0)
+            yield _Tick((now + pd.Timedelta(seconds=40)).isoformat(), 101.0, 2.0)
+            block.wait(10)                                    # the stream goes quiet
+        return g()
+    tf = TickBars(connect, settle=0.6, max_idle=3.0, max_reconnects=0)
+    t0 = time.time(); got = []
+    for b in tf:
+        got.append(b); block.set()
+        break
+    assert got and got[0].h == 101.0 and got[0].v == 3.0 and time.time() - t0 < 5
+
+
+def test_runner_on_tick_built_bars_equals_runner_on_the_original_bars():
+    """End to end: bars -> ticks -> TickBars -> PaperRunner gives the same session P&L as feeding the original bars."""
+    import numpy as np
+    from market_data import build_sessions
+    from paper.farm import PaperFarm
+    from paper.feed import ReplayFeed
+    from paper.history import History
+    from paper.runner import PaperRunner
+    from paper.tickfeed import TickBars
+    sess = build_sessions("nq")
+    i0 = int(np.searchsorted(sess.dates.astype("datetime64[D]"), np.datetime64("2024-01-09")))
+    lab = lambda i: str(pd.Timestamp(sess.dates[i]).date())
+    bars = list(ReplayFeed(sess, lab(i0), lab(i0 + 2), speed=None))
+    ticks = _ticks_from_bars(bars)
+    def mk():
+        r = PaperRunner(History.from_sessions(sess, i0), PaperFarm(), 0.86, None, {}, t0=i0, live_guards=False)
+        r.last_label = pd.Timestamp(sess.dates[i0 - 1]).date()
+        return r
+    a, b = mk(), mk()
+    for bar in bars:
+        a.process(bar)
+    a.close_open_session()
+    tf = TickBars(lambda start: iter([t for t in ticks if start is None or pd.Timestamp(t.timestamp) >= pd.Timestamp(start, tz="UTC")]), settle=0.2, backoff=0.0, max_reconnects=0)
+    for bar in tf:
+        b.process(bar)
+    b.close_open_session()
+    ja, jb = a.journal, b.journal
+    assert len(ja) == len(jb) == 3
+    for x, y in zip(ja, jb):
+        assert x["date"] == y["date"] and abs(x["noise"]["usd"] - y["noise"]["usd"]) < 1e-6 and abs(x["gap"]["usd"] - y["gap"]["usd"]) < 1e-6 and x["noise"]["trades"] == y["noise"]["trades"]

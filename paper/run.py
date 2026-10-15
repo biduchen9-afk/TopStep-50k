@@ -35,7 +35,7 @@ def load_costs_and_sessions():
 
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--source", choices=["replay", "lse"], default="replay")
+    ap.add_argument("--source", choices=["replay", "lse", "ticks"], default="replay", help="replay: stored Databento sessions; lse: vault candles polled over REST; ticks: one-minute bars built from the live LSE tick stream (WebSocket, needs `pip install lse-data`)")
     ap.add_argument("--from", dest="from_", default="2026-04-01", help="replay: first session label")
     ap.add_argument("--to", default=None, help="replay: last session label")
     ap.add_argument("--speed", type=float, default=600.0, help="replay: bars per second (0 = as fast as possible)")
@@ -58,7 +58,7 @@ def main(argv=None) -> None:
         sess, cost_pts = None, 0.86                                   # NQ: ($1.22 x 10 per mini) / $20 per point + one 0.25 tick = 0.86 points per round trip (same as costs_from_config)
     else:
         sess, cost_pts = load_costs_and_sessions()
-    meta = dict(mode=a.source.upper(), symbol=a.symbol or "NQ (Databento replay)", strategy="3 noise-area + 2 gap-VWAP accounts, balanced sizing (the baseline)")
+    meta = dict(mode=("LIVE" if a.source in ("lse", "ticks") else "REPLAY"), symbol=a.symbol or "NQ (Databento replay)", strategy="3 noise-area + 2 gap-VWAP accounts, balanced sizing (the baseline)")
     if os.path.exists(a.state) and not a.fresh:
         runner = PaperRunner.load(a.state)
         runner.meta = meta
@@ -98,10 +98,25 @@ def main(argv=None) -> None:
         if not a.symbol:
             sys.exit("--symbol is required for --source lse (find it with: python -m paper.lse_probe NQ)")
         nxt = runner.next_label()
+        if a.source == "ticks":
+            import itertools
+            from paper.feed import lse_fetch
+            from paper.tickfeed import TickBars, sdk_ticks
+            key = os.environ.get("LSE_API_KEY")
+            if not key:
+                sys.exit("LSE_API_KEY is not set in the environment")
+            now = pd.Timestamp.now(tz="UTC")
+            first = (pd.Timestamp(nxt) - pd.Timedelta(days=1) + pd.Timedelta(hours=18)).tz_localize("America/New_York").tz_convert("UTC")
+            tick_from = max(first, now - pd.Timedelta(hours=23))                 # the stream replays at most 24 hours; anything older is caught up from the vault candles
+            pre = lse_fetch(a.symbol, first.strftime("%Y-%m-%dT%H:%M:%S"), end=tick_from.strftime("%Y-%m-%dT%H:%M:%S"), dataset=a.dataset) if first < tick_from else []
+            tb = TickBars(lambda s: sdk_ticks(a.symbol, key, s), start=tick_from.strftime("%Y-%m-%dT%H:%M:%S"))
+            runner.meta["volume_basis"] = "see tick fields (size/volume) once ticks arrive"
+            feed = itertools.chain(pre, tb)
         start = a.start or (pd.Timestamp(nxt) - pd.Timedelta(days=1)).strftime("%Y-%m-%dT18:00:00")     # wall clock; converted below
         if not a.start:
             start = pd.Timestamp(start).tz_localize("America/New_York").tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%S")
-        feed = LSEBars(a.symbol, start, dataset=a.dataset, poll=a.poll)
+        if a.source != "ticks":
+            feed = LSEBars(a.symbol, start, dataset=a.dataset, poll=a.poll)
 
     def pump():
         try:

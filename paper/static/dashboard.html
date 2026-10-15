@@ -5,48 +5,83 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Topstep paper trading</title>
 <style>
-:root { --bg:#f6f7f9; --panel:#fff; --fg:#14181f; --muted:#5d6675; --line:#dde1e8; --ok:#17803d; --bad:#c0292b; --warn:#b26a00; --acc:#2563eb; --acc2:#8b5cf6; --grid:#e8ebf0; }
-@media (prefers-color-scheme: dark) { :root { --bg:#0f1319; --panel:#171c24; --fg:#e6e9ef; --muted:#8f99a8; --line:#2a313c; --ok:#4cc38a; --bad:#ff6b6e; --warn:#e5a13b; --acc:#6ea0ff; --acc2:#b39dff; --grid:#232a34; } }
+/* Liquid-glass look: translucent, blurred, specular panels over a soft colour field. Falls back to opaque panels when blur or transparency is unavailable or reduced. */
+:root {
+  color-scheme: light dark;
+  --fg:#12161d; --muted:rgba(18,22,29,.58); --line:rgba(18,22,29,.10); --grid:rgba(18,22,29,.08);
+  --ok:#1f9d55; --bad:#d64045; --warn:#c77700; --acc:#2f6bff; --acc2:#8a5cf6;
+  --glass-a:rgba(255,255,255,.62); --glass-b:rgba(255,255,255,.28); --glass-edge:rgba(255,255,255,.78); --glass-shadow:rgba(40,60,120,.16);
+  --chip:rgba(255,255,255,.45); --field:rgba(255,255,255,.35);
+  --bg1:#dfe9ff; --bg2:#f4e8ff; --bg3:#e1fbf3;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --fg:#eef1f7; --muted:rgba(238,241,247,.60); --line:rgba(255,255,255,.11); --grid:rgba(255,255,255,.08);
+  --ok:#4ad08f; --bad:#ff6b70; --warn:#f0b24a; --acc:#7aa7ff; --acc2:#b9a2ff;
+  --glass-a:rgba(44,50,66,.58); --glass-b:rgba(24,28,40,.40); --glass-edge:rgba(255,255,255,.22); --glass-shadow:rgba(0,0,0,.45);
+  --chip:rgba(255,255,255,.08); --field:rgba(255,255,255,.06);
+  --bg1:#0b1226; --bg2:#1a1030; --bg3:#07201f;
+} }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
-body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel); }
-h1 { font-size:18px; margin:0 8px 0 0; font-weight:600; }
-.chip { display:inline-block; padding:2px 10px; border-radius:99px; border:1px solid var(--line); color:var(--muted); font-size:12px; white-space:nowrap; }
-.chip.live { color:var(--ok); border-color:var(--ok); } .chip.replay { color:var(--warn); border-color:var(--warn); } .chip.bad { color:var(--bad); border-color:var(--bad); }
-main { padding:16px 20px 40px; display:grid; gap:16px; max-width:1500px; margin:0 auto; }
-.row { display:grid; gap:16px; grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+html { background:var(--bg1); }
+body { margin:0; color:var(--fg); font:14px/1.45 var(--font); letter-spacing:-.003em; min-height:100vh; -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(900px 600px at 8% -5%, color-mix(in srgb, var(--acc) 38%, transparent), transparent 62%),
+    radial-gradient(800px 560px at 95% 8%, color-mix(in srgb, var(--acc2) 34%, transparent), transparent 60%),
+    radial-gradient(900px 700px at 55% 105%, color-mix(in srgb, var(--ok) 26%, transparent), transparent 62%),
+    linear-gradient(160deg, var(--bg1), var(--bg2) 55%, var(--bg3)); background-attachment:fixed; }
+.glass, header, .card, .tile, .sleeve { position:relative; background:linear-gradient(145deg, var(--glass-a), var(--glass-b)); border:1px solid var(--glass-edge);
+  box-shadow:0 10px 34px var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter:blur(26px) saturate(185%); backdrop-filter:blur(26px) saturate(185%); }
+.card::before, header::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(520px 160px at 12% -8%, rgba(255,255,255,.34), transparent 62%), linear-gradient(180deg, rgba(255,255,255,.10), transparent 30%); mix-blend-mode:soft-light; }
+header { display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin:14px auto 0; width:min(1500px, calc(100% - 28px)); padding:12px 18px; border-radius:26px; position:sticky; top:12px; z-index:5; }
+h1 { font-size:19px; margin:0 10px 0 2px; font-weight:650; letter-spacing:-.02em; }
+h1::before { content:""; display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:9px; background:var(--ok); box-shadow:0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); animation:pulse 2.4s ease-in-out infinite; vertical-align:1px; }
+@keyframes pulse { 50% { box-shadow:0 0 0 7px color-mix(in srgb, var(--ok) 6%, transparent); } }
+@media (prefers-reduced-motion: reduce) { h1::before { animation:none; } }
+.chip { display:inline-block; padding:3px 12px; border-radius:99px; background:var(--chip); border:1px solid var(--line); color:var(--muted); font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); }
+.chip.live { color:var(--ok); border-color:color-mix(in srgb, var(--ok) 55%, transparent); } .chip.replay { color:var(--warn); border-color:color-mix(in srgb, var(--warn) 55%, transparent); } .chip.bad { color:var(--bad); border-color:color-mix(in srgb, var(--bad) 55%, transparent); }
+main { padding:18px 0 48px; display:grid; gap:18px; width:min(1500px, calc(100% - 28px)); margin:0 auto; }
+.row { display:grid; gap:18px; grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
 @media (max-width:1000px) { .row { grid-template-columns:minmax(0,1fr); } }
-.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; min-width:0; }
-.card h2 { font-size:14px; margin:0 0 10px; font-weight:600; }
-.sub { color:var(--muted); font-size:12px; margin:-6px 0 10px; }
-.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
-.tile { border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
-.tile .k { color:var(--muted); font-size:11px; } .tile .v { font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; }
+.card { border-radius:28px; padding:18px 20px; min-width:0; overflow:hidden; }
+.card > * { position:relative; }
+.card h2 { font-size:15px; margin:0 0 10px; font-weight:650; letter-spacing:-.012em; }
+.sub { color:var(--muted); font-size:12px; margin:-6px 0 12px; max-width:90ch; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(138px,1fr)); gap:10px; }
+.tile { border-radius:18px; padding:10px 13px; box-shadow:0 4px 14px var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.5); }
+.tile .k { color:var(--muted); font-size:11px; letter-spacing:.02em; text-transform:none; } .tile .v { font-size:23px; font-weight:620; letter-spacing:-.025em; font-variant-numeric:tabular-nums; }
 .pos { color:var(--ok); } .neg { color:var(--bad); }
-table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:12.5px; }
-th, td { text-align:right; padding:5px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
-th { color:var(--muted); font-weight:500; position:sticky; top:0; background:var(--panel); }
+table { width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums; font-size:12.5px; }
+th, td { text-align:right; padding:7px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+tbody tr:hover td { background:color-mix(in srgb, var(--acc) 7%, transparent); }
+th { color:var(--muted); font-weight:550; position:sticky; top:0; background:var(--field); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-size:11.5px; }
 th:first-child, td:first-child, td.l, th.l { text-align:left; }
-.scroll { overflow:auto; max-width:100%; }
-.bar { height:8px; background:var(--grid); border-radius:4px; position:relative; min-width:90px; }
-.bar > i { position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:var(--acc); }
-.sleeve { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
-.sleeve b { font-weight:600; } .sleeve .grid { display:grid; grid-template-columns:auto 1fr; column-gap:12px; font-size:12.5px; }
+.scroll { overflow:auto; max-width:100%; border-radius:16px; }
+.scroll::-webkit-scrollbar { height:8px; width:8px; } .scroll::-webkit-scrollbar-thumb, .log::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
+.bar { height:8px; background:var(--grid); border-radius:99px; position:relative; min-width:90px; box-shadow:inset 0 1px 2px rgba(0,0,0,.12); }
+.bar > i { position:absolute; left:0; top:0; bottom:0; border-radius:99px; background:linear-gradient(90deg, var(--acc), var(--acc2)); box-shadow:0 0 10px color-mix(in srgb, var(--acc) 55%, transparent); }
+.sleeve { border-radius:18px; padding:11px 14px; margin-bottom:10px; box-shadow:0 4px 14px var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.5); }
+.sleeve b { font-weight:620; } .sleeve .grid { display:grid; grid-template-columns:auto 1fr; column-gap:12px; font-size:12.5px; }
 .sleeve .grid span:nth-child(odd) { color:var(--muted); }
 svg { width:100%; display:block; }
 svg text { fill:var(--muted); font-size:10px; font-family:inherit; }
-.log { max-height:240px; overflow:auto; font-size:12.5px; }
-.log div { padding:3px 0; border-bottom:1px solid var(--line); }
+.log { max-height:250px; overflow:auto; font-size:12.5px; }
+.log div { padding:5px 0; border-bottom:1px solid var(--line); }
 .note { color:var(--muted); font-size:12px; }
-.pill { padding:1px 8px; border-radius:99px; font-size:11px; border:1px solid var(--line); }
-.pill.trading { color:var(--ok); border-color:var(--ok); } .pill.warn { color:var(--warn); border-color:var(--warn); } .pill.bad { color:var(--bad); border-color:var(--bad); }
+.pill { padding:2px 10px; border-radius:99px; font-size:11px; border:1px solid var(--line); background:var(--chip); }
+.pill.trading { color:var(--ok); border-color:color-mix(in srgb, var(--ok) 55%, transparent); } .pill.warn { color:var(--warn); border-color:color-mix(in srgb, var(--warn) 55%, transparent); } .pill.bad { color:var(--bad); border-color:color-mix(in srgb, var(--bad) 55%, transparent); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass, header, .card, .tile, .sleeve { background:var(--glass-a); } }
+@media (prefers-reduced-transparency: reduce) { .glass, header, .card, .tile, .sleeve, .chip, th { -webkit-backdrop-filter:none; backdrop-filter:none; background:var(--glass-a); } .card::before, header::before { display:none; } }
 </style>
 </head>
 <body>
 <header>
   <h1>Topstep paper trading</h1>
-  <span class="chip" id="mode">—</span><span class="chip" id="symbol">—</span><span class="chip" id="clock">—</span><span class="chip" id="session">—</span><span class="chip" id="atr">—</span><span class="chip" id="roll" hidden></span><span class="chip bad" id="err" hidden></span>
+  <span class="chip" id="mode">—</span><span class="chip" id="symbol">—</span><span class="chip" id="clock">—</span><span class="chip" id="session">—</span><span class="chip" id="atr">—</span><span class="chip" id="roll" hidden></span><span class="chip" id="gaps" hidden></span><span class="chip bad" id="err" hidden></span>
   <span class="note" id="strategy" style="margin-left:auto"></span>
 </header>
 <main>
@@ -104,7 +139,7 @@ function drawChart(S) {
   [[0, '18:00'], [330, '23:30'], [690, '05:30'], [930, '09:30'], [960, '10:00'], [1080, '12:00'], [1200, '14:00'], [1315, '15:55']].forEach(([s, t]) => {
     const dotted = [930, 960, 1315].includes(s);
     svg.appendChild(el('line', { x1: x(s), x2: x(s), y1: m.t, y2: H - m.b, stroke: dotted ? 'var(--muted)' : 'var(--grid)', 'stroke-dasharray': dotted ? '2 3' : '' }));
-    svg.appendChild(el('text', { x: x(s) - 12, y: H - 6 }, t));
+    if (s !== 960) svg.appendChild(el('text', { x: x(s) - 12, y: H - 6 }, t));
   });
   const B = S.bands || [];
   B.forEach((b, i) => { const x0 = x(b.smin), x1 = x(i + 1 < B.length ? B[i + 1].smin : 1315);
@@ -144,6 +179,7 @@ function render(S) {
   $('session').textContent = se.label ? 'session ' + se.label + ' · ' + se.bars + ' bars' : 'between sessions';
   $('atr').textContent = se.atr_pts != null ? 'ATR14 ' + se.atr_pts.toFixed(1) + ' pts' : 'ATR n/a';
   $('roll').hidden = !se.roll; $('roll').className = 'chip bad'; $('roll').textContent = se.roll ? 'roll day — no trades' : ''; $('roll').title = se.roll_note || '';
+  const ng = (S.journal || []).filter((r) => r.data_gap).length; $('gaps').hidden = !ng; $('gaps').className = 'chip bad'; $('gaps').textContent = ng + (ng === 1 ? ' session' : ' sessions') + ' with data holes'; $('gaps').title = 'sessions with holes in regular hours are kept out of the ATR history; a run on a feed with holes is not a valid forward test';
   $('err').hidden = !me.error; $('err').textContent = me.error || '';
   $('px').textContent = se.last != null ? ' last ' + se.last.toFixed(2) + (se.last_smin != null ? ' @ ' + clock(se.last_smin) : '') : '';
   drawChart(S); drawNet(S);
