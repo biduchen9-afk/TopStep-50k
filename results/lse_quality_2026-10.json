@@ -1,0 +1,111 @@
+{
+ "source": "London Strategic Edge vault, symbol NQ.F, dataset futures, timeframe 1m",
+ "generated": "2026-10-15",
+ "metrics_only": true,
+ "fetched": {
+  "bars": 132727,
+  "first": "2026-05-31 20:00:00-04:00",
+  "last": "2026-10-15 01:49:00-04:00",
+  "duplicates": 0,
+  "zero_volume_share": 0.0,
+  "sessions": 99,
+  "sessions_without_regular_hours": 1,
+  "rth_bars_median": 385.0,
+  "sessions_rth_under_370": 21
+ },
+ "after_2026_07_02": {
+  "sessions_with_bars": 75,
+  "sessions_with_regular_hours": 74,
+  "rth_bars_median": 382.0,
+  "rth_sessions_385_or_more": 28,
+  "rth_sessions_370_to_384": 26,
+  "rth_sessions_under_370": 20,
+  "bars_per_session_median": 1315.0
+ },
+ "regular_hours_definition": "09:30 to 15:55 ET, 385 one-minute bars in a full session; a minute with no trade has no bar",
+ "sessions_with_fewer_than_370_rth_bars": [
+  {
+   "date": "2026-07-03",
+   "rth_bars": 210
+  },
+  {
+   "date": "2026-07-23",
+   "rth_bars": 356
+  },
+  {
+   "date": "2026-07-24",
+   "rth_bars": 353
+  },
+  {
+   "date": "2026-07-27",
+   "rth_bars": 338
+  },
+  {
+   "date": "2026-07-28",
+   "rth_bars": 362
+  },
+  {
+   "date": "2026-07-29",
+   "rth_bars": 324
+  },
+  {
+   "date": "2026-07-30",
+   "rth_bars": 342
+  },
+  {
+   "date": "2026-07-31",
+   "rth_bars": 337
+  },
+  {
+   "date": "2026-08-03",
+   "rth_bars": 369
+  },
+  {
+   "date": "2026-08-05",
+   "rth_bars": 349
+  },
+  {
+   "date": "2026-08-06",
+   "rth_bars": 353
+  },
+  {
+   "date": "2026-08-07",
+   "rth_bars": 360
+  },
+  {
+   "date": "2026-08-19",
+   "rth_bars": 366
+  },
+  {
+   "date": "2026-08-20",
+   "rth_bars": 366
+  },
+  {
+   "date": "2026-08-25",
+   "rth_bars": 368
+  },
+  {
+   "date": "2026-08-27",
+   "rth_bars": 367
+  },
+  {
+   "date": "2026-09-07",
+   "rth_bars": 210
+  },
+  {
+   "date": "2026-09-16",
+   "rth_bars": 360
+  },
+  {
+   "date": "2026-10-05",
+   "rth_bars": 282
+  },
+  {
+   "date": "2026-10-12",
+   "rth_bars": 72
+  }
+ ],
+ "databento_overlap_checked": false,
+ "databento_overlap_note": "stored Databento files not present in the container; overlap, price-level and join checks not done",
+ "forward_test_run": false
+}
